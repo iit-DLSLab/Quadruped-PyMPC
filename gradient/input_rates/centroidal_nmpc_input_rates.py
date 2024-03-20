@@ -284,7 +284,7 @@ class Acados_NMPC_InputRates:
             temp = foot_force_fl + foot_force_fr + foot_force_rl + foot_force_rr
             gravity = np.array([0, 0, -9.81])
             linear_com_acc = (1/self.centroidal_model.mass)@temp + gravity
-            zmp = base_w[0:2] - linear_com_acc[0:2]*(robotHeight/(-gravity[2] + linear_com_acc[2]))
+            zmp = base_w[0:2] - linear_com_acc[0:2]*(robotHeight/(-gravity[2]))
             #zmp = base_w[0:2] - base_vel_w[0:2]*(robotHeight/gravity[2]) 
             zmp = h_R_w@(zmp - base_w[0:2])
             x = zmp[0]
