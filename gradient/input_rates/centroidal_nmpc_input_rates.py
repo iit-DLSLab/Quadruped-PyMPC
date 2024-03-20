@@ -1359,10 +1359,10 @@ class Acados_NMPC_InputRates:
 
 
         # Set stage constraint
+        h_R_w = np.array([np.cos(yaw), np.sin(yaw),
+                        -np.sin(yaw), np.cos(yaw)])
         if(self.use_foothold_constraints or self.use_stability_constraints):
 
-            h_R_w = np.array([np.cos(yaw), np.sin(yaw),
-                            -np.sin(yaw), np.cos(yaw)])
             stance_proximity = np.vstack((stance_proximity_FL, stance_proximity_FR,
                                             stance_proximity_RL, stance_proximity_RR))
             self.set_stage_constraint(constraint, state, reference, contact_sequence, h_R_w, stance_proximity)
@@ -1408,8 +1408,6 @@ class Acados_NMPC_InputRates:
             self.force_RL = optimal_next_GRF[6:9]
             self.force_RR = optimal_next_GRF[9:12]
 
-        # Saturation of the GRF
-        optimal_GRF = np.clip(optimal_GRF, 0.0, config.mpc_params['grf_max'])
 
 
         optimal_foothold = np.zeros((4, 3))

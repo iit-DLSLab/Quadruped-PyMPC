@@ -1334,8 +1334,6 @@ class Acados_NMPC_Nominal:
         optimal_foothold = np.zeros((4, 3))
         optimal_footholds_assigned = np.zeros((4, ), dtype='bool')
 
-        # Saturation of the GRF
-        optimal_GRF = np.clip(optimal_GRF, 0.0, config.mpc_params['grf_max'])
         
 
         # We need to provide the next touchdown foothold position.
