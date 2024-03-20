@@ -1,0 +1,23 @@
+name: quadruped_pympc_env
+channels:
+- conda-forge
+- nvidia
+- robostack-staging
+dependencies:
+- python=3.11.8
+- casadi
+- numpy
+- matplotlib
+- jaxlib=*=*cuda*
+- jax
+- cuda-nvcc
+- hpp-fcl 
+- example-robot-data 
+- pinocchio
+- jupyterlab 
+- meshcat-python 
+- scipy 
+- ipywidgets
+- pip:
+  - mujoco
+
