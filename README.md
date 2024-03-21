@@ -69,7 +69,7 @@ Gradient-based MPC: It uses [CasADI](https://web.casadi.org/) to define the mode
     pip install -e ./../interfaces/acados_template
     ```
 
-6. inside the file .bashrc, put:
+6. inside the file .bashrc, given your **path_to_acados**, put:
     
     ```
     export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:"/path_to_acados/lib"
