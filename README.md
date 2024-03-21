@@ -14,7 +14,7 @@ Features gradient-based mpc:
 Features sampling-based mpc:
 - less than 10ms computation on an nvidia 4050 mobile gpu 
 - 10000 parallel rollouts in less than 2ms!
-- optional step frequency adapation for enhancing robustness
+- optional step frequency adaptation for enhancing robustness
 - implements different strategies: [random sampling](https://arxiv.org/pdf/2212.00541.pdf), [mppi](https://sites.gatech.edu/acds/mppi/), or [cemppi](https://arxiv.org/pdf/2203.16633.pdf) 
 - different control parametrizations: zero-order, linear splines or cubic splines (see [mujoco-mpc](https://arxiv.org/pdf/2212.00541.pdf))
 
