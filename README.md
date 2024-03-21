@@ -7,7 +7,7 @@ Features gradient-based mpc:
 - optional integrators for model mismatch
 - optional smoothing for the ground reaction forces 
 - optional foothold optimization
-- optional [real time iteration](http://cse.lab.imtlucca.it/~bemporad/publications/papers/ijc_rtiltv.pdf) or [advanced real time iteration](https://arxiv.org/pdf/2403.07101.pdf)
+- optional [real-time iterations](http://cse.lab.imtlucca.it/~bemporad/publications/papers/ijc_rtiltv.pdf) or [advanced-step real-time iterations](https://arxiv.org/pdf/2403.07101.pdf)
 - optional zero moment point/center of mass constraints
 
 
