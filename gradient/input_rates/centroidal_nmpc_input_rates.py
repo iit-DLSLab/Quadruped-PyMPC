@@ -220,6 +220,20 @@ class Acados_NMPC_InputRates:
         if(self.use_RTI):
             ocp.solver_options.nlp_solver_type = "SQP_RTI"  
             ocp.solver_options.nlp_solver_max_iter = 1
+            # Set the RTI type for the advanced RTI method 
+            # (see https://arxiv.org/pdf/2403.07101.pdf)
+            if(config.mpc_params['as_rti_type'] == "AS-RTI-A"):
+                ocp.solver_options.as_rti_iter = 1
+                ocp.solver_options.as_rti_level = 0
+            elif(config.mpc_params['as_rti_type'] == "AS-RTI-B"):
+                ocp.solver_options.as_rti_iter = 1
+                ocp.solver_options.as_rti_level = 1
+            elif(config.mpc_params['as_rti_type'] == "AS-RTI-C"):
+                ocp.solver_options.as_rti_iter = 1
+                ocp.solver_options.as_rti_level = 2
+            elif(config.mpc_params['as_rti_type'] == "AS-RTI-D"):
+                ocp.solver_options.as_rti_iter = 1
+                ocp.solver_options.as_rti_level = 3
         else:
             ocp.solver_options.nlp_solver_type = "SQP"  
             ocp.solver_options.nlp_solver_max_iter = config.mpc_params['num_qp_iterations']
