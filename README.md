@@ -3,16 +3,16 @@ This repo contains a model predictive controller based on the **single rigid bod
 
 
 Features gradient-based mpc:
-- less than 10ms computation on an intel i7-13700H cpu 
+- less than 5ms computation on an intel i7-13700H cpu 
 - optional integrators for model mismatch
 - optional smoothing for the ground reaction forces 
 - optional foothold optimization
-- optional real time iteration
+- optional [real time iteration](http://cse.lab.imtlucca.it/~bemporad/publications/papers/ijc_rtiltv.pdf) or [advanced real time iteration](https://arxiv.org/pdf/2403.07101.pdf)
 - optional zero moment point/center of mass constraints
 
 
 Features sampling-based mpc:
-- less than 10ms computation on an nvidia 4050 mobile gpu 
+- less than 5ms computation on an nvidia 4050 mobile gpu 
 - 10000 parallel rollouts in less than 2ms!
 - optional step frequency adaptation for enhancing robustness
 - implements different strategies: [random sampling](https://arxiv.org/pdf/2212.00541.pdf), [mppi](https://sites.gatech.edu/acds/mppi/), or [cemppi](https://arxiv.org/pdf/2203.16633.pdf) 
@@ -46,7 +46,7 @@ Gradient-based MPC: It uses [CasADI](https://web.casadi.org/) to define the mode
 
 1. install [miniforge](https://github.com/conda-forge/miniforge/releases) (x86_64)
 
-2. create an environment using the file in the folder installation/:
+2. create an environment using the file in the folder [installation/](https://github.com/iit-DLSLab/Quadruped-PyMPC/tree/main/installation):
 
     `conda env create -f mamba_environment.yml`
 
@@ -59,9 +59,10 @@ Gradient-based MPC: It uses [CasADI](https://web.casadi.org/) to define the mode
 
     `conda activate quadruped_pympc_env`
 
-5. go inside acados and create a build folder (mkdir build). Then press:
+5. go inside the folder acados and compile it pressing:
     
     ```
+    mkdir build
     cd build
     cmake -DACADOS_WITH_QPOASES=ON  -DACADOS_WITH_OSQP=ON ..
     make install -j4
@@ -75,7 +76,26 @@ Gradient-based MPC: It uses [CasADI](https://web.casadi.org/) to define the mode
     export ACADOS_SOURCE_DIR="/path_to_acados"
     ```
 
-    
+The first time you run the simulation with acados, in the terminal you will ask you to install tera_render. You should accept to proceed.
+
+## How to run
+
+1. activate the conda environment
+   
+   ```
+   conda env create -f mamba_environment.yml
+   ```
+
+2. go in the folder [simulation](https://github.com/iit-DLSLab/Quadruped-PyMPC/tree/main/simulation) and press
+   
+   ```
+   python3 simulation_mujoco.py
+   ```
+
+In the file [config.py](https://github.com/iit-DLSLab/Quadruped-PyMPC/blob/main/config.py), you can set up the robot, the mpc type, its proprierties, and other simulation params. 
+
+
+
 ## Citing this work
 
 If you find the work useful, please consider citing:
