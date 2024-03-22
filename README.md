@@ -91,7 +91,7 @@ The first time you run the simulation with acados, in the terminal you will be a
    python3 simulation_mujoco.py
    ```
 
-In the file [config.py](https://github.com/iit-DLSLab/Quadruped-PyMPC/blob/main/config.py), you can set up the robot, the mpc type, its proprierties, and other simulation params. 
+In the file [config.py](https://github.com/iit-DLSLab/Quadruped-PyMPC/blob/main/config.py), you can set up the robot, the mpc type (gradient, sampling..), its proprierties (real time iteration, sampling type, foothold optimization..), and other simulation params (reference, gait type..). 
 
 
 
