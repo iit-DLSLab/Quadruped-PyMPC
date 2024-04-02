@@ -69,9 +69,9 @@ mpc_params = {
     # works with all the mpc types except 'sampling'. In sim does not do much for now,
     # but in real it minizimes the delay between the mpc control and the state
     'use_RTI': False,
-    # If RTI is used, we can set the advance RTI-step! 
+    # If RTI is used, we can set the advance RTI-step! (Standard is the simpler RTI)
     # See https://arxiv.org/pdf/2403.07101.pdf
-    'as_rti_type': "AS-RTI-B",  # "AS-RTI-A", "AS-RTI-B", "AS-RTI-C", "AS-RTI-D"
+    'as_rti_type': "AS-RTI-A",  # "AS-RTI-A", "AS-RTI-B", "AS-RTI-C", "AS-RTI-D", "Standard"
     'as_rti_iter': 1, # > 0, the higher the better, but slower computation!
 
     # this is used only in the case 'use_RTI' is false in a single mpc feedback loop. 
