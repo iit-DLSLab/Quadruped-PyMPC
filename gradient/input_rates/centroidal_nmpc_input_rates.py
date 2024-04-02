@@ -256,7 +256,7 @@ class Acados_NMPC_InputRates:
 
         # Nonuniform discretization
         if(config.mpc_params['use_nonuniform_discretization']):
-            time_steps_fine_grained = np.tile(config.mpc_params['fine_grained_dt'], config.mpc_params['horizon_fine_grained'])
+            time_steps_fine_grained = np.tile(config.mpc_params['dt_fine_grained'], config.mpc_params['horizon_fine_grained'])
             time_steps = np.concatenate((time_steps_fine_grained, np.tile(self.dt, self.horizon-config.mpc_params['horizon_fine_grained'])))
             shooting_nodes = np.zeros((self.horizon+1,))
             for i in range(len(time_steps)):

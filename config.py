@@ -89,7 +89,7 @@ mpc_params = {
     # this is used to have a smaller dt near the start of the horizon 
     'use_nonuniform_discretization': False,
     'horizon_fine_grained': 2,
-    'fine_grained_dt': 0.01,
+    'dt_fine_grained': 0.01,
 
 
     # these is used only for the case 'input_rates'
