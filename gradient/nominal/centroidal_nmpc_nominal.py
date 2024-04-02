@@ -236,6 +236,15 @@ class Acados_NMPC_Nominal:
         ocp.solver_options.tf = self.T_horizon
 
 
+        # Nonuniform discretization
+        if(config.mpc_params['use_nonuniform_discretization']):
+            time_steps_fine_grained = np.tile(config.mpc_params['fine_grained_dt'], config.mpc_params['horizon_fine_grained'])
+            time_steps = np.concatenate((time_steps_fine_grained, np.tile(self.dt, self.horizon-config.mpc_params['horizon_fine_grained'])))
+            shooting_nodes = np.zeros((self.horizon+1,))
+            for i in range(len(time_steps)):
+                shooting_nodes[i+1] = shooting_nodes[i] + time_steps[i]
+            ocp.solver_options.shooting_nodes = shooting_nodes
+
         
         return ocp
     

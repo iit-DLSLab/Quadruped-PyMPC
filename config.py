@@ -49,10 +49,13 @@ mpc_params = {
     "grf_min": 0,
     'mu': 0.5,
     
-    # this is used if you want to manually warm start the mpc (gradient-based only)
+
+    # ----- START properties only for the gradient-based mpc -----
+    
+    # this is used if you want to manually warm start the mpc 
     'use_warm_start': False, 
 
-    # this enables integrators for height, linear velocities, roll and pitch (gradient-based only)
+    # this enables integrators for height, linear velocities, roll and pitch 
     'use_integrators': False,
     'alpha_integrator': 0.1,
     'integrator_cap': [0.5, 0.2, 0.2, 0.0, 0.0, 1.0],
@@ -79,8 +82,14 @@ mpc_params = {
     'num_qp_iterations': 1,
 
     # this is used to limit the number of interior point iterations and choose
-    # "speed" in hpipm. This gives a more costant solution time.
+    # "speed" in hpipm. This gives a more costant solution time. 
     'prioritize_speed': True,
+
+
+    # this is used to have a smaller dt near the start of the horizon 
+    'use_nonuniform_discretization': False,
+    'horizon_fine_grained': 2,
+    'fine_grained_dt': 0.01,
 
 
     # these is used only for the case 'input_rates'
@@ -88,7 +97,7 @@ mpc_params = {
     # while simulation works only with this disabled.....
     'use_input_prediction': False,
 
-    # ONLY ONE CAN BE TRUE AT A TIME - TO FIX choice with string
+    # ONLY ONE CAN BE TRUE AT A TIME (only gradient)
     'use_static_stability': False,
     'use_zmp_stability': False,
     'trot_stability_margin': 0.04,
@@ -97,15 +106,19 @@ mpc_params = {
     
     
     # this is used to compensate for the external wrenches
-    # you should provide explicitly this value in compute_control
+    # you should provide explicitly this value in compute_control 
     'external_wrenches_compensation': True,
     'external_wrenches_compensation_num_step': 15,
 
     # this is used only in the case of collaborative mpc, to 
-    # compensate for the external wrench in the prediction
+    # compensate for the external wrench in the prediction (only collaborative)
     'passive_arm_compensation': True,
 
+    # ----- END properties for the gradient-based mpc -----
 
+
+
+    # ----- START properties only for the sampling-based mpc -----
 
     # this is used only in the case 'sampling'. 
     'sampling_method': 'random_sampling', #'random_sampling', 'mppi', 'cem_mppi'
@@ -122,6 +135,8 @@ mpc_params = {
     'optimize_step_freq': True,
     #'step_freq_delta': [0.0, 0.7, 1.0]
     'step_freq_delta': [1.3, 2.0, 2.4]
+
+    # ----- END properties for the sampling-based mpc -----
     
 }
 #-----------------------------------------------------------------------
