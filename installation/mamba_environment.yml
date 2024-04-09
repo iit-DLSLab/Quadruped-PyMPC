@@ -4,7 +4,7 @@ channels:
 - nvidia
 - robostack-staging
 dependencies:
-- python=3.11.8
+- python
 - casadi
 - numpy
 - matplotlib
