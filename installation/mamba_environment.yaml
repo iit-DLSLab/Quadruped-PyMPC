@@ -1,4 +1,4 @@
-name: quadruped_pympc_env
+name: quadruped_pympc_env_prova
 channels:
 - conda-forge
 - nvidia
