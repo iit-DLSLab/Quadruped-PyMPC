@@ -82,7 +82,7 @@ The first time you run the simulation with acados, in the terminal you will be a
 1. activate the conda environment
    
    ```
-   conda env create -f mamba_environment.yml
+   conda activate quadruped_pympc_env
    ```
 
 2. go in the folder [simulation](https://github.com/iit-DLSLab/Quadruped-PyMPC/tree/main/simulation) and press
