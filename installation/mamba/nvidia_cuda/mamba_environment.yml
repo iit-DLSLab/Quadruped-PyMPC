@@ -10,13 +10,18 @@ dependencies:
 - matplotlib
 - jaxlib=*=*cuda*
 - jax
-- cuda-nvcc
-- hpp-fcl 
-- example-robot-data 
-- pinocchio
-- jupyterlab 
-- meshcat-python 
+- cuda-nvcc 
+- pinocchio  
 - scipy 
-- ipywidgets
+- ros-noetic-desktop
+- compilers 
+- cmake 
+- pkg-config 
+- make 
+- ninja 
+- colcon-common-extensions 
+- catkin_tools 
+- rosdep
 - pip:
   - mujoco
+

@@ -1,0 +1,58 @@
+FROM osrf/ros:noetic-desktop-focal
+
+# install ros packages
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    ros-noetic-desktop-full=1.5.0-1* \
+    && rm -rf /var/lib/apt/lists/*
+
+ENV DEBIAN_FRONTEND=noninteractive
+
+# Install additional ROS packages
+RUN apt-get update && apt-get install -y ros-noetic-plotjuggler-ros
+
+
+# Install tkinter, pip, and gedit
+RUN apt-get update && apt-get install -y python3-tk
+RUN apt-get update && apt-get install -y python3-pip
+RUN apt-get update && apt-get install -y gedit
+
+
+# Install additional packages
+RUN pip install casadi numpy matplotlib pinocchio scipy
+RUN pip install mujoco
+
+# Install git
+RUN apt-get update && apt-get install -y git
+
+#ACADOS
+RUN git clone https://github.com/acados/acados.git
+RUN cd acados && git submodule update --recursive --init
+RUN cd acados && mkdir -p build
+RUN cd acados/build && cmake -DACADOS_WITH_QPOASES=ON  -DACADOS_WITH_OSQP=ON ..
+RUN cd acados/build && make install -j4
+RUN pip install -e /acados/interfaces/acados_template
+RUN echo 'export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:"/acados/lib"' >> /root/.bashrc
+RUN echo 'export ACADOS_SOURCE_DIR="/acados"' >> /root/.bashrc
+
+
+
+RUN apt-get update 
+RUN apt upgrade -y
+
+#JAX
+RUN apt-get update 
+RUN pip install --upgrade "jax[cpu]"
+RUN pip install jaxlib
+
+
+# Set the shell to bash and configure the shell prompt and aliases
+SHELL ["/bin/bash", "-c"]
+RUN echo 'export PS1="\[\e]0;\u@\h: \w\a\]${debian_chroot:+($debian_chroot)}\[\033[01;37m\]\u\[\033[00m\]@\[\033[01;32m\]\h\[\033[00m\]:\[\033[01;34m\]\w\[\033[00m\] "'  >> /root/.bashrc
+
+RUN echo 'alias run_rviz="rosrun rviz rviz"' >> /root/.bashrc
+RUN echo 'alias run_plotjuggler="rosrun plotjuggler plotjuggler"' >> /root/.bashrc
+
+
+# Set the working directory and source the bashrc file
+WORKDIR /home
+RUN source /root/.bashrc
