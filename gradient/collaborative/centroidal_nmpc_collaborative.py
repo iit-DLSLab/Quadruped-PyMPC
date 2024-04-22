@@ -51,6 +51,10 @@ class Acados_NMPC_Collaborative:
 
         self.integral_errors = np.zeros((6,))
 
+
+        # For centering the variable around 0, 0, 0 (World frame)
+        self.initial_base_position = np.array([0, 0, 0])
+
         
         # Create the class of the centroidal model and instantiate the acados model
         self.centroidal_model = Centroidal_Model_Collaborative()
@@ -1123,6 +1127,29 @@ class Acados_NMPC_Collaborative:
     
 
 
+    # Method to perform the centering of the states and the reference around (0, 0, 0)
+    def perform_scaling(self, state, reference, constraint = None):
+
+
+        self.initial_base_position = copy.deepcopy(state["position"])
+        reference = copy.deepcopy(reference)
+        state = copy.deepcopy(state)
+        
+        reference["ref_position"] = reference["ref_position"] - state["position"]
+        reference["ref_foot_FL"] = reference["ref_foot_FL"] - state["position"]
+        reference["ref_foot_FR"] = reference["ref_foot_FR"] - state["position"]
+        reference["ref_foot_RL"] = reference["ref_foot_RL"] - state["position"]
+        reference["ref_foot_RR"] = reference["ref_foot_RR"] - state["position"]
+
+        
+        state["foot_FL"] = state["foot_FL"] - state["position"]
+        state["foot_FR"] = state["foot_FR"] - state["position"]
+        state["foot_RL"] = state["foot_RL"] - state["position"]
+        state["foot_RR"] = state["foot_RR"] - state["position"]
+        state["position"] = np.array([0, 0, 0])
+
+        return state, reference, constraint
+
 
     # Main loop for computing the control
     def compute_control(self, state, reference, contact_sequence, constraint = None, external_wrenches = np.zeros((6,)),
@@ -1143,7 +1170,13 @@ class Acados_NMPC_Collaborative:
         RL_previous_contact_sequence = self.previous_contact_sequence[2]
         RR_previous_contact_sequence = self.previous_contact_sequence[3]
 
-        #print("contact seq:", contact_sequence)
+
+        # Perform the scaling of the states and the reference
+        state, \
+        reference, \
+        constraint = self.perform_scaling(state, reference, constraint)
+
+        
         desired_force = np.array([0, 0]) #x, y, to be put in the reference
 
         # Fill reference (self.states_dim+self.inputs_dim)
@@ -1617,6 +1650,20 @@ class Acados_NMPC_Collaborative:
         self.previous_status = status
         self.previous_contact_sequence = contact_sequence
 
+
+
+
+        # Decenter the optimal foothold and the next state (they were centered around zero at the beginning)
+        optimal_foothold[0] = optimal_foothold[0] + self.initial_base_position
+        optimal_foothold[1] = optimal_foothold[1] + self.initial_base_position
+        optimal_foothold[2] = optimal_foothold[2] + self.initial_base_position
+        optimal_foothold[3] = optimal_foothold[3] + self.initial_base_position
+
+        optimal_next_state[0:3] = optimal_next_state[0:3] + self.initial_base_position
+        optimal_next_state[12:15] = optimal_foothold[0]
+        optimal_next_state[15:18] = optimal_foothold[1]
+        optimal_next_state[18:21] = optimal_foothold[2]
+        optimal_next_state[21:24] = optimal_foothold[3]
 
 
         # Return the optimal GRF, the optimal foothold, the next state and the status of the optimization
