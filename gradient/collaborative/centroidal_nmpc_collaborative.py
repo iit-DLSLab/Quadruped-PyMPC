@@ -1605,7 +1605,12 @@ class Acados_NMPC_Collaborative:
             optimal_foothold[3] = reference["ref_foot_RR"][0]
         
 
-        optimal_next_state = self.acados_ocp_solver.get(1, "x")[0:24]
+        if(config.mpc_params['dt'] <= 0.02 or (config.mpc_params['use_nonuniform_discretization'] and config.mpc_params['dt_fine_grained'] <= 0.02)):
+            optimal_next_state_index = 2
+        else:
+            optimal_next_state_index = 1
+
+        optimal_next_state = self.acados_ocp_solver.get(optimal_next_state_index, "x")[0:24]
         self.optimal_next_state = optimal_next_state
         self.acados_ocp_solver.print_statistics()
 

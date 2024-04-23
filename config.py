@@ -92,9 +92,9 @@ mpc_params = {
     'dt_fine_grained': 0.01,
 
 
-    # these is used only for the case 'input_rates'
-    # for some reason, real-exp works only with this enabled
-    # while simulation works only with this disabled.....
+    # these is used only for the case 'input_rates', using as GRF not the actual state
+    # of the robot of the predicted one. Can be activated to compensate
+    # for the delay in the control loop on the real robot
     'use_input_prediction': False,
 
     # ONLY ONE CAN BE TRUE AT A TIME (only gradient)
