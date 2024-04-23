@@ -215,7 +215,13 @@ class Acados_NMPC_InputRates:
         init_base = np.array([0, 0, 0])
         init_base_yaw = np.array([0])
         init_external_wrench = np.array([0, 0, 0, 0, 0, 0])
-        ocp.parameter_values = np.concatenate((init_contact_status, init_mu, init_stance_proximity, init_base, init_base_yaw, init_external_wrench))
+        init_inertia = config.inertia.reshape((9,))
+        init_mass = np.array([config.mass])
+        
+        ocp.parameter_values = np.concatenate((init_contact_status, init_mu, init_stance_proximity, 
+                                               init_base, init_base_yaw, init_external_wrench, 
+                                               init_inertia, init_mass))
+
 
         # Set options
         ocp.solver_options.qp_solver = "PARTIAL_CONDENSING_HPIPM"  # FULL_CONDENSING_QPOASES PARTIAL_CONDENSING_OSQP PARTIAL_CONDENSING_HPIPM
@@ -1165,21 +1171,8 @@ class Acados_NMPC_InputRates:
     
 
     # Main loop for computing the control
-    def compute_control(self, state, reference, contact_sequence, constraint = None, external_wrenches = np.zeros((6,))):
-        """
-        Compute the control action based on the current state, reference trajectory, contact sequence, and other parameters.
-
-        Args:
-            state (dict): Dictionary containing the current state of the system.
-            reference (dict): Dictionary containing the reference trajectory.
-            contact_sequence (list): List of contact sequences for each leg.
-            constraint (optional): Additional constraint for the control action. Defaults to None.
-            use_filtered_footholds (bool): Flag indicating whether to use filtered footholds. Defaults to False.
-
-        Returns:
-            control_action (ndarray): Array containing the computed control action.
-
-        """
+    def compute_control(self, state, reference, contact_sequence, constraint = None, external_wrenches = np.zeros((6,)), 
+                        inertia = config.inertia.reshape((9,)), mass = config.mass):
 
             
         # Take the array of the contact sequence and split it in 4 arrays, 
@@ -1238,7 +1231,7 @@ class Acados_NMPC_InputRates:
             # Force x and y are always 0
             number_of_legs_in_stance = np.array([FL_contact_sequence[j], FR_contact_sequence[j], 
                                                  RL_contact_sequence [j], RR_contact_sequence[j]]).sum()
-            reference_force_stance_legs = (self.centroidal_model.mass * 9.81) / number_of_legs_in_stance
+            reference_force_stance_legs = (mass * 9.81) / number_of_legs_in_stance
             
             reference_force_fl_z = reference_force_stance_legs * FL_contact_sequence[j]
             reference_force_fr_z = reference_force_stance_legs * FR_contact_sequence[j]
@@ -1327,10 +1320,14 @@ class Acados_NMPC_InputRates:
 
             # If we have estimated an external wrench, we can compensate it for all steps
             # or less (maybe the disturbance is not costant along the horizon!)
-            if(j < config.mpc_params['external_wrenches_compensation_num_step']):
+            if(config.mpc_params['external_wrenches_compensation'] and
+               config.mpc_params['external_wrenches_compensation_num_step'] and 
+               j < config.mpc_params['external_wrenches_compensation_num_step']):
                 external_wrenches_estimated_param = copy.deepcopy(external_wrenches)
+                external_wrenches_estimated_param = external_wrenches_estimated_param.reshape((6, ))
             else:
                 external_wrenches_estimated_param = np.zeros((6,))
+
 
             param = np.array([FL_contact_sequence[j], FR_contact_sequence[j], 
                             RL_contact_sequence[j], RR_contact_sequence[j], mu, 
@@ -1338,11 +1335,13 @@ class Acados_NMPC_InputRates:
                             stance_proximity_FR[j], 
                             stance_proximity_RL[j],
                             stance_proximity_RR[j],
-                            state["position"][0], state["position"][1], state["position"][2],
-                            state["orientation"][2],
+                            state["position"][0], state["position"][1], 
+                            state["position"][2], state["orientation"][2],
                             external_wrenches_estimated_param[0], external_wrenches_estimated_param[1],
                             external_wrenches_estimated_param[2], external_wrenches_estimated_param[3],
-                            external_wrenches_estimated_param[4], external_wrenches_estimated_param[5]])
+                            external_wrenches_estimated_param[4], external_wrenches_estimated_param[5],
+                            inertia[0], inertia[1], inertia[2], inertia[3], inertia[4], inertia[5],
+                            inertia[6], inertia[7], inertia[8], mass])
             self.acados_ocp_solver.set(j, "p", copy.deepcopy(param))
 
         
@@ -1609,7 +1608,7 @@ class Acados_NMPC_InputRates:
             
             number_of_legs_in_stance = np.array([FL_contact_sequence[0], FR_contact_sequence[0], 
                                                  RL_contact_sequence [0], RR_contact_sequence[0]]).sum()
-            reference_force_stance_legs = (self.centroidal_model.mass * 9.81) / number_of_legs_in_stance
+            reference_force_stance_legs = (mass * 9.81) / number_of_legs_in_stance
             
             reference_force_fl_z = reference_force_stance_legs * FL_contact_sequence[0]
             reference_force_fr_z = reference_force_stance_legs * FR_contact_sequence[0]

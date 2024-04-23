@@ -195,9 +195,12 @@ class Acados_NMPC_Nominal:
         init_base_position = np.array([0, 0, 0])
         init_base_yaw = np.array([0])
         init_external_wrench = np.array([0, 0, 0, 0, 0, 0])
+        init_inertia = config.inertia.reshape((9,))
+        init_mass = np.array([config.mass])
+        
         ocp.parameter_values = np.concatenate((init_contact_status, init_mu, init_stance_proximity, 
-                                               init_base_position, init_base_yaw, init_external_wrench))
-
+                                               init_base_position, init_base_yaw, init_external_wrench, 
+                                               init_inertia, init_mass))
 
 
 
@@ -1132,7 +1135,8 @@ class Acados_NMPC_Nominal:
     
 
     # Main loop for computing the control
-    def compute_control(self, state, reference, contact_sequence, constraint = None, external_wrenches = np.zeros((6,))):
+    def compute_control(self, state, reference, contact_sequence, constraint = None, external_wrenches = np.zeros((6,)), 
+                        inertia = config.inertia.reshape((9,)), mass = config.mass):
 
             
         # Take the array of the contact sequence and split it in 4 arrays, 
@@ -1191,7 +1195,7 @@ class Acados_NMPC_Nominal:
             # Force x and y are always 0
             number_of_legs_in_stance = np.array([FL_contact_sequence[j], FR_contact_sequence[j], 
                                                  RL_contact_sequence [j], RR_contact_sequence[j]]).sum()
-            reference_force_stance_legs = (self.centroidal_model.mass * 9.81) / number_of_legs_in_stance
+            reference_force_stance_legs = (mass * 9.81) / number_of_legs_in_stance
             
             reference_force_fl_z = reference_force_stance_legs * FL_contact_sequence[j]
             reference_force_fr_z = reference_force_stance_legs * FR_contact_sequence[j]
@@ -1201,6 +1205,8 @@ class Acados_NMPC_Nominal:
             yref[47] = reference_force_fr_z
             yref[50] = reference_force_rl_z
             yref[53] = reference_force_rr_z
+
+
             
             # Setting the reference to acados
             self.acados_ocp_solver.set(j, "yref", yref)
@@ -1282,7 +1288,7 @@ class Acados_NMPC_Nominal:
             else:
                 external_wrenches_estimated_param = np.zeros((6,))
             
-            
+
             param = np.array([FL_contact_sequence[j], FR_contact_sequence[j], 
                             RL_contact_sequence[j], RR_contact_sequence[j], mu, 
                             stance_proximity_FL[j],
@@ -1293,7 +1299,9 @@ class Acados_NMPC_Nominal:
                             state["position"][2], state["orientation"][2],
                             external_wrenches_estimated_param[0], external_wrenches_estimated_param[1],
                             external_wrenches_estimated_param[2], external_wrenches_estimated_param[3],
-                            external_wrenches_estimated_param[4], external_wrenches_estimated_param[5]])
+                            external_wrenches_estimated_param[4], external_wrenches_estimated_param[5],
+                            inertia[0], inertia[1], inertia[2], inertia[3], inertia[4], inertia[5],
+                            inertia[6], inertia[7], inertia[8], mass])
             self.acados_ocp_solver.set(j, "p", copy.deepcopy(param))
 
         
@@ -1538,7 +1546,7 @@ class Acados_NMPC_Nominal:
             
             number_of_legs_in_stance = np.array([FL_contact_sequence[0], FR_contact_sequence[0], 
                                                  RL_contact_sequence [0], RR_contact_sequence[0]]).sum()
-            reference_force_stance_legs = (self.centroidal_model.mass * 9.81) / number_of_legs_in_stance
+            reference_force_stance_legs = (mass * 9.81) / number_of_legs_in_stance
             
             reference_force_fl_z = reference_force_stance_legs * FL_contact_sequence[0]
             reference_force_fr_z = reference_force_stance_legs * FR_contact_sequence[0]

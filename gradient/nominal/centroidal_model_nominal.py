@@ -28,11 +28,6 @@ class Centroidal_Model_Nominal:
         """
 
 
-        # Set mass and inertia from config file
-        self.mass = config.mass
-        self.inertia = config.inertia
-
-
 
 
         # Define state and its casadi variables
@@ -150,10 +145,13 @@ class Centroidal_Model_Nominal:
 
         self.external_wrench = cs.SX.sym("external_wrench", 6, 1)
 
+        self.inertia = cs.SX.sym("inertia", 9, 1)
+        self.mass = cs.SX.sym("mass", 1, 1)
+
 
         # Not so useful, i can instantiate a casadi function for the fd
         param = cs.vertcat(self.stance_param, self.mu_friction, self.stance_proximity,
-                           self.base_position, self.base_yaw, self.external_wrench)
+                           self.base_position, self.base_yaw, self.external_wrench, self.inertia, self.mass)
         fd = self.forward_dynamics(self.states, self.inputs, param)
         self.fun_forward_dynamics = cs.Function('fun_forward_dynamics', [self.states, self.inputs, param], [fd])
 
@@ -204,6 +202,12 @@ class Centroidal_Model_Nominal:
         external_wrench_linear = param[13:16]
         external_wrench_angular = param[16:19]
 
+        inertia = param[19:28]
+        inertia = inertia.reshape((3, 3))
+        mass = param[28]
+
+        
+
 
         # FINAL linear_com_vel STATE (1)
         linear_com_vel = states[3:6]
@@ -216,7 +220,7 @@ class Centroidal_Model_Nominal:
         temp += foot_force_rr@stanceRR
         temp += external_wrench_linear
         gravity = np.array([0, 0, -9.81])
-        linear_com_acc = (1/self.mass)@temp + gravity
+        linear_com_acc = (1/mass)@temp + gravity
         
         
         # Start to write the component of euler_rates_base and angular_acc_base STATES
@@ -282,7 +286,7 @@ class Centroidal_Model_Nominal:
         b_R_w = Rx@Ry@Rz
 
         temp2 = temp2 + external_wrench_angular
-        angular_acc_base = cs.inv(self.inertia)@(b_R_w@temp2 - cs.skew(w)@self.inertia@w)
+        angular_acc_base = cs.inv(inertia)@(b_R_w@temp2 - cs.skew(w)@inertia@w)
         
         #angular_acc_base = -cs.inv(self.inertia)@cs.skew(w)@self.inertia@w + cs.inv(self.inertia)@b_R_w@temp2
         #angular_acc_base = -cs.inv(self.inertia)@cs.skew(w)@self.inertia@w + cs.inv(self.inertia)@b_R_w@temp2 + external_wrench_angular
@@ -325,7 +329,7 @@ class Centroidal_Model_Nominal:
  
         # dynamics
         self.param = cs.vertcat(self.stance_param, self.mu_friction, self.stance_proximity, self.base_position, 
-                           self.base_yaw, self.external_wrench)
+                           self.base_yaw, self.external_wrench, self.inertia, self.mass)
         f_expl = self.forward_dynamics(self.states, self.inputs, self.param)
         f_impl = self.states_dot - f_expl
 
