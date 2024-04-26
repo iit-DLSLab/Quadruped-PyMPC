@@ -14,6 +14,9 @@ np.set_printoptions(precision=3, suppress = True)
 
 import os 
 dir_path = os.path.dirname(os.path.realpath(__file__))
+os.environ['XLA_FLAGS'] = (
+        '--xla_gpu_triton_gemm_any=True '
+    )
 
 import sys
 sys.path.append(dir_path + '/../')

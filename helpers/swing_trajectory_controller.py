@@ -83,10 +83,9 @@ class SwingTrajectoryController:
         accelleration = accelleration.reshape((3,))
         
         # Compute inertia matrix in task space.
-        M_inv = np.linalg.inv(mass_matrix)
-        Mx_inv = J @ M_inv @ J.T
         # Mass Matrix and centrifugal missing
-        tau_swing = J.T @ (accelleration - J_dot @ q_dot) + h
+        #tau_swing = J.T @ (accelleration - J_dot @ q_dot) + h
+        tau_swing = mass_matrix@ np.linalg.pinv(J) @ (accelleration - J_dot @ q_dot) + h
         
         
 

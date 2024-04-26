@@ -124,7 +124,7 @@ mpc_params = {
     'sampling_method': 'random_sampling', #'random_sampling', 'mppi', 'cem_mppi'
     'control_parametrization': 'cubic_spline', #'cubic_spline', 'linear_spline_1', 'linear_spline_2', 'zero_order'
     'num_parallel_computations': 10000, # More is better, but slower computation!
-    'num_sampling_iterations': 3, # More is better, but slower computation!
+    'num_sampling_iterations': 1, # More is better, but slower computation!
     # convariances for the sampling methods
     'sigma_cem_mppi': 3, 
     'sigma_mppi': 3,
@@ -133,7 +133,6 @@ mpc_params = {
     
     # if this is true, sampling will be done for the step frequency as well
     'optimize_step_freq': True,
-    #'step_freq_delta': [0.0, 0.7, 1.0]
     'step_freq_delta': [1.3, 2.0, 2.4]
 
     # ----- END properties for the sampling-based mpc -----
