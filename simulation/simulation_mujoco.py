@@ -32,6 +32,7 @@ sys.path.append(dir_path + '/../sampling/')
 from foothold_reference_generator import FootholdReferenceGenerator
 from swing_trajectory_controller import SwingTrajectoryController
 from periodic_gait_generator import PeriodicGaitGenerator, Gait
+from srb_inertia_computation import SrbInertiaComputation
 from other import euler_from_quaternion, plot_swing_mujoco, plot_state_matplotlib
 
 # Parameters for both MPC and simulation
@@ -267,6 +268,11 @@ position_foot_RR = d.geom_xpos[RR_id]
 lift_off_positions[3] = copy.deepcopy(position_foot_RR)
 
 
+# Online computation of the inertia parameter
+srb_inertia_computation = SrbInertiaComputation()
+inertia = config.inertia
+
+
 
 # Starting contact sequence
 previous_contact = np.array([1, 1, 1, 1])
@@ -330,7 +336,6 @@ with mujoco.viewer.launch_passive(m, d, show_left_ui=False, show_right_ui=False)
             contact_sequence = np.ones((4, horizon)) 
         else:
             contact_sequence = pgg.compute_contact_sequence(mpc_dt=mpc_dt, simulation_dt=simulation_dt)
-            #print("contact_sequence: \n", contact_sequence)
             
             
 
@@ -379,18 +384,23 @@ with mujoco.viewer.launch_passive(m, d, show_left_ui=False, show_right_ui=False)
         if(use_print_debug): 
             print("reference_state: ")
             pprint.pprint(reference_state)
+        # -------------------------------------------------------------------------------------------------
 
         
         if(config.mpc_params['type'] == 'sampling'):
             if(config.mpc_params['shift_solution']):
                 index_shift += 0.05
                 best_control_parameters = controller.shift_solution(best_control_parameters, index_shift)
-                #nmpc_GRFs = np.array(nmpc_GRFs) #TODO, convert to GRF
 
             
 
         # Solve OCP ---------------------------------------------------------------------------------------
         if(i % round(1/(mpc_frequency*simulation_dt)) == 0): 
+            
+            # We can recompute the inertia of the single rigid body model
+            # or use the fixed one in config.py
+            if(config.simulation_params['use_inertia_recomputation']):
+                inertia = srb_inertia_computation.compute_inertia(d.qpos[3:])
             
             # If we use sampling
             if(config.mpc_params['type'] == 'sampling'):
@@ -440,7 +450,6 @@ with mujoco.viewer.launch_passive(m, d, show_left_ui=False, show_right_ui=False)
                     
 
                     controller = controller.with_newkey()
-
                 
 
                 if((config.mpc_params['optimize_step_freq']) and (optimize_swing == 1)):
@@ -451,7 +460,8 @@ with mujoco.viewer.launch_passive(m, d, show_left_ui=False, show_right_ui=False)
                     
                     swing_period = (1 - duty_factor) * (1 / pgg.step_freq) + 0.07
                     stc.regenerate_swing_trajectory_generator(step_height=step_height, swing_period=swing_period)
-                        
+
+
                 nmpc_footholds = np.zeros((4,3))
                 nmpc_footholds[0] = reference_state["ref_foot_FL"]
                 nmpc_footholds[1] = reference_state["ref_foot_FR"]
@@ -467,11 +477,12 @@ with mujoco.viewer.launch_passive(m, d, show_left_ui=False, show_right_ui=False)
 
             # If we use Gradient-Based MPC
             else:
+
                 time_start = time.time()
                 nmpc_GRFs, \
                 nmpc_footholds, \
                 nmpc_predicted_state, \
-                status = controller.compute_control(state_current, reference_state, contact_sequence)
+                status = controller.compute_control(state_current, reference_state, contact_sequence, inertia=inertia.flatten())
 
                 optimizer_cost = controller.acados_ocp_solver.get_cost()
                     
@@ -527,7 +538,6 @@ with mujoco.viewer.launch_passive(m, d, show_left_ui=False, show_right_ui=False)
         
             
 
-        
 
         if(use_print_debug): 
             print("nmpc_GRFs: \n", nmpc_GRFs)
