@@ -244,7 +244,7 @@ class Acados_NMPC_InputRates:
         if(self.use_DDP):
             ocp.solver_options.nlp_solver_type = 'DDP'
             ocp.solver_options.nlp_solver_max_iter = config.mpc_params['num_qp_iterations']
-            ocp.solver_options.globalization = 'MERIT_BACKTRACKING'
+            #ocp.solver_options.globalization = 'MERIT_BACKTRACKING'
             ocp.solver_options.with_adaptive_levenberg_marquardt = True
 
             ocp.cost.cost_type = 'NONLINEAR_LS'
@@ -253,7 +253,6 @@ class Acados_NMPC_InputRates:
             ocp.model.cost_y_expr_e = ocp.model.x
     
             ocp.translate_to_feasibility_problem(keep_x0=True, keep_cost=True)
-            ocp.model.con_h_expr_0 = None
 
         elif(self.use_RTI):
             ocp.solver_options.nlp_solver_type = "SQP_RTI"  
