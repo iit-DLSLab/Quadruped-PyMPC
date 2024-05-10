@@ -51,6 +51,8 @@ class Acados_NMPC_InputRates:
         self.use_input_prediction = config.mpc_params['use_input_prediction']
 
 
+        self.use_DDP = config.mpc_params['use_DDP']
+
         
         self.previous_status = -1
         self.previous_contact_sequence = np.zeros((4, self.horizon))
@@ -181,7 +183,20 @@ class Acados_NMPC_InputRates:
         # WORKAROUND: The slack variables should not be used for the GRF, but we need to set them to avoid a bug
         # The bug is that we cannot easily for now put a minimum force for the GRF now, since
         # we have a 1 step delay and the constraints are not always respected..
-        nsh_state_constraint_start = 0
+        """nsh_state_constraint_start = 0
+        num_state_cstr = nsh_state_constraint_end - nsh_state_constraint_start
+        if(num_state_cstr > 0):
+            ocp.constraints.lsh = np.zeros(num_state_cstr)             # Lower bounds on slacks corresponding to soft lower bounds for nonlinear constraints
+            ocp.constraints.ush = np.zeros(num_state_cstr)             # Lower bounds on slacks corresponding to soft upper bounds for nonlinear constraints
+            ocp.constraints.idxsh = np.array(range(nsh_state_constraint_start, nsh_state_constraint_end))    # Jsh
+            ns = num_state_cstr
+            ocp.cost.zl = 1000 * np.ones((ns,)) # gradient wrt lower slack at intermediate shooting nodes (1 to N-1)
+            ocp.cost.Zl = 1 * np.ones((ns,))    # diagonal of Hessian wrt lower slack at intermediate shooting nodes (1 to N-1)
+            ocp.cost.zu = 1000 * np.ones((ns,))    
+            ocp.cost.Zu = 1 * np.ones((ns,))  """
+
+
+        # Set slack variable configuration:
         num_state_cstr = nsh_state_constraint_end - nsh_state_constraint_start
         if(num_state_cstr > 0):
             ocp.constraints.lsh = np.zeros(num_state_cstr)             # Lower bounds on slacks corresponding to soft lower bounds for nonlinear constraints
@@ -192,7 +207,6 @@ class Acados_NMPC_InputRates:
             ocp.cost.Zl = 1 * np.ones((ns,))    # diagonal of Hessian wrt lower slack at intermediate shooting nodes (1 to N-1)
             ocp.cost.zu = 1000 * np.ones((ns,))    
             ocp.cost.Zu = 1 * np.ones((ns,))  
-
 
         # Variables to save the upper and lower bound of the constraints applied
         list_upper_bound = []
@@ -227,7 +241,21 @@ class Acados_NMPC_InputRates:
         ocp.solver_options.qp_solver = "PARTIAL_CONDENSING_HPIPM"  # FULL_CONDENSING_QPOASES PARTIAL_CONDENSING_OSQP PARTIAL_CONDENSING_HPIPM
         ocp.solver_options.hessian_approx = "GAUSS_NEWTON"  # 'GAUSS_NEWTON', 'EXACT'
         ocp.solver_options.integrator_type = "ERK" #ERK IRK GNSF DISCRETE
-        if(self.use_RTI):
+        if(self.use_DDP):
+            ocp.solver_options.nlp_solver_type = 'DDP'
+            ocp.solver_options.nlp_solver_max_iter = config.mpc_params['num_qp_iterations']
+            ocp.solver_options.globalization = 'MERIT_BACKTRACKING'
+            ocp.solver_options.with_adaptive_levenberg_marquardt = True
+
+            ocp.cost.cost_type = 'NONLINEAR_LS'
+            ocp.cost.cost_type_e = 'NONLINEAR_LS'
+            ocp.model.cost_y_expr = cs.vertcat(ocp.model.x, ocp.model.u)
+            ocp.model.cost_y_expr_e = ocp.model.x
+    
+            ocp.translate_to_feasibility_problem(keep_x0=True, keep_cost=True)
+            ocp.model.con_h_expr_0 = None
+
+        elif(self.use_RTI):
             ocp.solver_options.nlp_solver_type = "SQP_RTI"  
             ocp.solver_options.nlp_solver_max_iter = 1
             # Set the RTI type for the advanced RTI method 
@@ -244,6 +272,7 @@ class Acados_NMPC_InputRates:
             elif(config.mpc_params['as_rti_type'] == "AS-RTI-D"):
                 ocp.solver_options.as_rti_iter = 1
                 ocp.solver_options.as_rti_level = 3
+                
         else:
             ocp.solver_options.nlp_solver_type = "SQP"  
             ocp.solver_options.nlp_solver_max_iter = config.mpc_params['num_qp_iterations']
@@ -1243,7 +1272,16 @@ class Acados_NMPC_InputRates:
             yref[41] = reference_force_rr_z
             
             # Setting the reference to acados
-            self.acados_ocp_solver.set(j, "yref", yref)
+            if(self.use_DDP):
+                if(j == 0):
+                    num_l2_penalties = self.ocp.model.cost_y_expr_0.shape[0] - (self.states_dim + self.inputs_dim)
+                else:
+                    num_l2_penalties = self.ocp.model.cost_y_expr.shape[0] - (self.states_dim + self.inputs_dim)
+                
+                yref_tot = np.concatenate((yref, np.zeros(num_l2_penalties,) ))
+                self.acados_ocp_solver.set(j, "yref", yref_tot)
+            else:
+                self.acados_ocp_solver.set(j, "yref", yref)
 
         
         # Fill last step horizon reference (self.states_dim - no control action!!)

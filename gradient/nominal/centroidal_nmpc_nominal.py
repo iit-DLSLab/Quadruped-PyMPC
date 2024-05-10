@@ -39,7 +39,7 @@ class Acados_NMPC_Nominal:
         self.use_zmp_stability = config.mpc_params['use_zmp_stability']
         self.use_stability_constraints = self.use_static_stability or self.use_zmp_stability
 
-        
+        self.use_DDP = config.mpc_params['use_DDP']
 
         
         self.previous_status = -1
@@ -208,7 +208,21 @@ class Acados_NMPC_Nominal:
         ocp.solver_options.qp_solver = "PARTIAL_CONDENSING_HPIPM"  # FULL_CONDENSING_QPOASES PARTIAL_CONDENSING_OSQP PARTIAL_CONDENSING_HPIPM
         ocp.solver_options.hessian_approx = "GAUSS_NEWTON"  # 'GAUSS_NEWTON', 'EXACT'
         ocp.solver_options.integrator_type = "ERK" #ERK IRK GNSF DISCRETE
-        if(self.use_RTI):
+        if(self.use_DDP):
+            ocp.solver_options.nlp_solver_type = 'DDP'
+            ocp.solver_options.nlp_solver_max_iter = config.mpc_params['num_qp_iterations']
+            ocp.solver_options.globalization = 'MERIT_BACKTRACKING'
+            ocp.solver_options.with_adaptive_levenberg_marquardt = True
+
+            ocp.cost.cost_type = 'NONLINEAR_LS'
+            ocp.cost.cost_type_e = 'NONLINEAR_LS'
+            ocp.model.cost_y_expr = cs.vertcat(ocp.model.x, ocp.model.u)
+            ocp.model.cost_y_expr_e = ocp.model.x
+    
+            ocp.translate_to_feasibility_problem(keep_x0=True, keep_cost=True)
+            ocp.model.con_h_expr_0 = None
+
+        elif(self.use_RTI):
             ocp.solver_options.nlp_solver_type = "SQP_RTI"  
             ocp.solver_options.nlp_solver_max_iter = 1
             # Set the RTI type for the advanced RTI method 
@@ -225,6 +239,7 @@ class Acados_NMPC_Nominal:
             elif(config.mpc_params['as_rti_type'] == "AS-RTI-D"):
                 ocp.solver_options.as_rti_iter = 1
                 ocp.solver_options.as_rti_level = 3
+
         else:
             ocp.solver_options.nlp_solver_type = "SQP"  
             ocp.solver_options.nlp_solver_max_iter = config.mpc_params['num_qp_iterations']
@@ -251,6 +266,8 @@ class Acados_NMPC_Nominal:
             for i in range(len(time_steps)):
                 shooting_nodes[i+1] = shooting_nodes[i] + time_steps[i]
             ocp.solver_options.shooting_nodes = shooting_nodes
+
+
 
         
         return ocp
@@ -1206,10 +1223,20 @@ class Acados_NMPC_Nominal:
             yref[50] = reference_force_rl_z
             yref[53] = reference_force_rr_z
 
-
             
             # Setting the reference to acados
-            self.acados_ocp_solver.set(j, "yref", yref)
+            if(self.use_DDP):
+                if(j == 0):
+                    num_l2_penalties = self.ocp.model.cost_y_expr_0.shape[0] - (self.states_dim + self.inputs_dim)
+                else:
+                    num_l2_penalties = self.ocp.model.cost_y_expr.shape[0] - (self.states_dim + self.inputs_dim)
+                
+                yref_tot = np.concatenate((yref, np.zeros(num_l2_penalties,) ))
+                self.acados_ocp_solver.set(j, "yref", yref_tot)
+            else:
+                self.acados_ocp_solver.set(j, "yref", yref)
+            
+            
 
         
         # Fill last step horizon reference (self.states_dim - no control action!!)

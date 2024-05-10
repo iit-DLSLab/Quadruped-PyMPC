@@ -77,6 +77,9 @@ mpc_params = {
     'as_rti_type': "AS-RTI-A",  # "AS-RTI-A", "AS-RTI-B", "AS-RTI-C", "AS-RTI-D", "Standard"
     'as_rti_iter': 1, # > 0, the higher the better, but slower computation!
 
+    # This will force to use DDP instead of SQP. Note that RTI is not compatible with DDP
+    'use_DDP': True,
+
     # this is used only in the case 'use_RTI' is false in a single mpc feedback loop. 
     # More is better, but slower computation!
     'num_qp_iterations': 1,
