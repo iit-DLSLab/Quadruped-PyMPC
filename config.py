@@ -87,7 +87,7 @@ mpc_params = {
 
     # this is used to limit the number of interior point iterations and choose
     # "speed" in hpipm. This gives a more costant solution time. 
-    'prioritize_speed': True,
+    'prioritize_speed': False,
 
 
     # this is used to have a smaller dt near the start of the horizon 
