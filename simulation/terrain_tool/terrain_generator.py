@@ -3,9 +3,10 @@ import numpy as np
 import cv2
 import noise
 
+SCENE = "perlin" #rough, stairs, suspend_stairs, slope, perlin, image
 ROBOT = "aliengo" #aliengo #go2 #hyqreal
-INPUT_SCENE_PATH = "./scene_" + ROBOT + ".xml"
-OUTPUT_SCENE_PATH = "../robot_model/" + ROBOT + "/scene_rough.xml"
+INPUT_SCENE_PATH = "../robot_model/" + ROBOT + "/scene_flat" + ".xml"
+OUTPUT_SCENE_PATH = "../robot_model/" + ROBOT + "/scene_" + SCENE + ".xml"
 
 
 # zyx euler angle to quaternion
@@ -200,7 +201,7 @@ class TerrainGenerator:
                                             lacunarity=perlin_lacunarity)
                 terrain_image[y, x] = int((noise_value + 1) / 2 * 255)
 
-        cv2.imwrite("../unitree_robots/" + ROBOT + "/" + output_hfield_image,
+        cv2.imwrite("../robot_model/" + ROBOT + "/" + output_hfield_image,
                     terrain_image)
 
         hfield = xml_et.SubElement(self.asset, "hfield")
@@ -279,14 +280,16 @@ if __name__ == "__main__":
     tg.AddSuspendStairs(init_pos=[1.0, 6.0, 0.0], yaw=0.0)"""
 
     # Rough ground
-    tg.AddRoughGround(init_pos=[0.5, -5, 0.0],
+    if(SCENE == "rough"):
+        tg.AddRoughGround(init_pos=[0.5, -5, 0.0],
                       euler=[0, 0, 0.0],
                       nums=[50, 50])
 
-    """# Perlin heigh field
-    tg.AddPerlinHeighField(position=[-0.5, 4.0, 0.0], size=[2.0, 1.5])
+    # Perlin heigh field
+    if(SCENE == "perlin"):
+        tg.AddPerlinHeighField(position=[-0.5, 4.0, 0.0], size=[2.0, 1.5])
 
-    # Heigh field from image
+    """# Heigh field from image
     tg.AddHeighFieldFromImage(position=[-0.5, 2.0, 0.0],
                               euler=[0, 0, -1.57],
                               size=[2.0,2.0],
