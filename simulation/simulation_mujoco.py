@@ -41,10 +41,11 @@ import config
 
 # Mujoco model and data
 if(config.robot == 'go2'):
-    #m = mujoco.MjModel.from_xml_path(dir_path + '/robot_model/go2/scene.xml')
-    m = mujoco.MjModel.from_xml_path(dir_path + '/robot_model/go2/scene_rough.xml')
+    m = mujoco.MjModel.from_xml_path(dir_path + '/robot_model/go2/scene.xml')
+    #m = mujoco.MjModel.from_xml_path(dir_path + '/robot_model/go2/scene_rough.xml')
 elif(config.robot == 'aliengo'):
     m = mujoco.MjModel.from_xml_path(dir_path + '/robot_model/aliengo/scene.xml')
+    #m = mujoco.MjModel.from_xml_path(dir_path + '/robot_model/aliengo/scene_rough.xml')
 elif(config.robot == 'hyqreal'):
     m = mujoco.MjModel.from_xml_path(dir_path + '/robot_model/hyqreal/scene.xml')
 else:

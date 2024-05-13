@@ -3,8 +3,8 @@ import numpy as np
 import cv2
 import noise
 
-ROBOT = "go2"
-INPUT_SCENE_PATH = "./scene.xml"
+ROBOT = "aliengo" #aliengo #go2 #hyqreal
+INPUT_SCENE_PATH = "./scene_" + ROBOT + ".xml"
 OUTPUT_SCENE_PATH = "../robot_model/" + ROBOT + "/scene_rough.xml"
 
 
