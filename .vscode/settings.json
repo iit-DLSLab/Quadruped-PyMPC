@@ -1,0 +1,15 @@
+{
+    "python.autoComplete.extraPaths": [
+        "/home/iit.local/gturrisi/dls_ws_home/dls1_noetic/devel/lib/python3.11/site-packages",
+        "/home/iit.local/gturrisi/mambaforge/envs/quadruped_pympc_env/lib/python3.11/site-packages",
+        "",
+        "/home/iit.local/gturrisi/dls_ws_home/raisim/raisim/linux/lib"
+    ],
+    "python.analysis.extraPaths": [
+        "/home/iit.local/gturrisi/dls_ws_home/dls1_noetic/devel/lib/python3.11/site-packages",
+        "/home/iit.local/gturrisi/mambaforge/envs/quadruped_pympc_env/lib/python3.11/site-packages",
+        "",
+        "/home/iit.local/gturrisi/dls_ws_home/raisim/raisim/linux/lib"
+    ],
+    "ros.distro": "humble"
+}
