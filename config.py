@@ -91,9 +91,8 @@ mpc_params = {
     # More is better, but slower computation!
     'num_qp_iterations': 1,
 
-    # this is used to limit the number of interior point iterations and choose
-    # "speed" in hpipm. This gives a more costant solution time. 
-    'solver_quality': 'balance', #balance, robust, speed, crazy_speed
+    # this is used to speeding up or robustify acados' solver (hpipm). 
+    'solver_mode': 'balance', #balance, robust, speed, crazy_speed
 
 
     # this is used to have a smaller dt near the start of the horizon 

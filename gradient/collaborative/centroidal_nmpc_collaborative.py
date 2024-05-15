@@ -235,14 +235,14 @@ class Acados_NMPC_Collaborative:
         #ocp.solver_options.globalization = "MERIT_BACKTRACKING"  # FIXED_STEP, MERIT_BACKTRACKING
         
 
-        if(config.mpc_params['solver_quality'] == "balance"):
+        if(config.mpc_params['solver_mode'] == "balance"):
             ocp.solver_options.hpipm_mode = "BALANCE"
-        elif(config.mpc_params['solver_quality'] == "robust"):
+        elif(config.mpc_params['solver_mode'] == "robust"):
             ocp.solver_options.hpipm_mode = "ROBUST"
-        elif(config.mpc_params['solver_quality'] == "fast"):
+        elif(config.mpc_params['solver_mode'] == "fast"):
             ocp.solver_options.qp_solver_iter_max = 10
             ocp.solver_options.hpipm_mode = "SPEED"
-        elif(config.mpc_params['solver_quality'] == "crazy_speed"):
+        elif(config.mpc_params['solver_mode'] == "crazy_speed"):
             ocp.solver_options.qp_solver_iter_max = 5
             ocp.solver_options.hpipm_mode = "SPEED_ABS"
 
