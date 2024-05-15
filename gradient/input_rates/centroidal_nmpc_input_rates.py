@@ -277,9 +277,17 @@ class Acados_NMPC_InputRates:
             ocp.solver_options.nlp_solver_max_iter = config.mpc_params['num_qp_iterations']
         #ocp.solver_options.globalization = "MERIT_BACKTRACKING"  # FIXED_STEP, MERIT_BACKTRACKING
         
-        if(config.mpc_params['prioritize_speed']):
+        if(config.mpc_params['solver_quality'] == "balance"):
+            ocp.solver_options.hpipm_mode = "BALANCE"
+        elif(config.mpc_params['solver_quality'] == "robust"):
+            ocp.solver_options.hpipm_mode = "ROBUST"
+        elif(config.mpc_params['solver_quality'] == "fast"):
             ocp.solver_options.qp_solver_iter_max = 10
             ocp.solver_options.hpipm_mode = "SPEED"
+        elif(config.mpc_params['solver_quality'] == "crazy_speed"):
+            ocp.solver_options.qp_solver_iter_max = 5
+            ocp.solver_options.hpipm_mode = "SPEED_ABS"
+            
         #ocp.solver_options.globalization = "MERIT_BACKTRACKING"  # FIXED_STEP, MERIT_BACKTRACKING
         #ocp.solver_options.qp_solver_iter_max = 40
         #ocp.solver_options.line_search_use_sufficient_descent = 1

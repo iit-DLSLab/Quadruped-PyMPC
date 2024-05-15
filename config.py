@@ -6,7 +6,7 @@ import numpy as np
 
 
 # These are used both for a real experiment and a simulation -----------
-robot = 'aliengo' #'go2', 'aliengo', 'hyqreal'
+robot = 'aliengo' #'go2', 'aliengo', 'hyqreal', 'mini_cheetah'
 
 if(robot == 'go2'):
     mass = 15.019
@@ -30,6 +30,12 @@ elif(robot == 'hyqreal'):
                         [-5.11957307e-01, -7.38560592e-04,  2.14269772e+01]])
     urdf_filename = "hyqreal.urdf"
     
+elif(robot == 'mini_cheetah'):
+    mass = 12.5
+    inertia = np.array([[ 1.58460467e-01,  1.21660000e-04, -1.55444692e-02],
+                        [ 1.21660000e-04,  4.68645637e-01, -3.12000000e-05],
+                        [-1.55444692e-02, -3.12000000e-05,  5.24474661e-01]])
+    urdf_filename = "mini_cheetah.urdf"
 
 
 mpc_params = {
@@ -87,7 +93,7 @@ mpc_params = {
 
     # this is used to limit the number of interior point iterations and choose
     # "speed" in hpipm. This gives a more costant solution time. 
-    'prioritize_speed': False,
+    'solver_quality': 'balance', #balanced, robust, speed, crazy_speed
 
 
     # this is used to have a smaller dt near the start of the horizon 
@@ -152,6 +158,8 @@ elif(robot == 'aliengo'):
     ref_z = 0.35
 elif(robot == 'hyqreal'):
     ref_z = 0.5
+elif(robot == 'mini_cheetah'):
+    ref_z = 0.25
 
 simulation_params = {
     'swing_generator': 'explicit', #'scipy', 'explicit', 'ndcurves'
@@ -179,6 +187,7 @@ simulation_params = {
 
 
     'use_external_disturbances': True,
+    
     'external_disturbances_bound': [18, 18, 0, 18, 18, 18], #fx, fy, fz, mx, my, mz
 
     'use_inertia_recomputation': False,
