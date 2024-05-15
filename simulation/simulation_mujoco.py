@@ -47,6 +47,8 @@ elif(config.robot == 'aliengo'):
     m = mujoco.MjModel.from_xml_path(dir_path + '/robot_model/aliengo/scene_' + scene  + '.xml')
 elif(config.robot == 'hyqreal'):
     m = mujoco.MjModel.from_xml_path(dir_path + '/robot_model/hyqreal/scene_' + scene  + '.xml')
+elif(config.robot == 'mini_cheetah'):
+    m = mujoco.MjModel.from_xml_path(dir_path + '/robot_model/mini_cheetah/scene_' + scene  + '.xml')
 else:
     print("robot not found")
     exit()

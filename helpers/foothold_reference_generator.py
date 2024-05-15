@@ -9,7 +9,14 @@ import mujoco
 import pinocchio as pin
 #from pinocchio import casadi as cpin
 
+import os 
+dir_path = os.path.dirname(os.path.realpath(__file__))
 
+import sys
+sys.path.append(dir_path + '/../')
+
+# Parameters for both MPC and simulation
+import config 
 
 # Class for the generation of the reference footholds
 class FootholdReferenceGenerator:
@@ -61,11 +68,17 @@ class FootholdReferenceGenerator:
         hip_pos_RL[0:2] = h_R_w@(hip_pos_RL[0:2] - com_position[0:2])
         hip_pos_RR[0:2] = h_R_w@(hip_pos_RR[0:2] - com_position[0:2]) 
 
-        # standard hip position for go2..to be removed the hardcoding
-        hip_pos_FL[1] += 0.1
-        hip_pos_FR[1] -= 0.1
-        hip_pos_RL[1] += 0.1
-        hip_pos_RR[1] -= 0.1
+        # enlarging the posture depending on the robot
+        if(config.robot == 'mini_cheetah'):
+            hip_pos_FL[1] += 0.07
+            hip_pos_FR[1] -= 0.07
+            hip_pos_RL[1] += 0.07
+            hip_pos_RR[1] -= 0.07
+        else:
+            hip_pos_FL[1] += 0.1
+            hip_pos_FR[1] -= 0.1
+            hip_pos_RL[1] += 0.1
+            hip_pos_RR[1] -= 0.1
 
         # we want to compensate for the error in the velocity
         linear_com_velocity_horizontal_frame = h_R_w@linear_com_velocity
