@@ -515,7 +515,7 @@ class Sampling_MPC:
         carry = (cost, state, reference, n_)
         cost, state, reference, n_ = jax.lax.fori_loop(0, self.horizon, iterate_fun, carry)
         
-        cost += (step_frequency - 1.3)*100*(step_frequency - 1.3)
+        cost += (step_frequency - 1.3)*200*(step_frequency - 1.3)
         return cost
 
 

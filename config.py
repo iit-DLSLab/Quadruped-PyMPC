@@ -6,7 +6,7 @@ import numpy as np
 
 
 # These are used both for a real experiment and a simulation -----------
-robot = 'aliengo' #'go2', 'aliengo', 'hyqreal', 'mini_cheetah'
+robot = 'mini_cheetah' #'go2', 'aliengo', 'hyqreal', 'mini_cheetah'
 
 if(robot == 'go2'):
     mass = 15.019
@@ -43,7 +43,7 @@ mpc_params = {
     # 'input_rates' optimizes the delta GRF
     # 'sampling' is a gpu-based mpc that samples the GRF
     # 'collaborative' optimized directly the GRF and has a passive arm model inside 
-    'type': 'nominal',
+    'type': 'sampling',
     
     # horizon is the number of timesteps in the future that the mpc will optimize
     # dt is the discretization time used in the mpc
@@ -133,7 +133,7 @@ mpc_params = {
     'sampling_method': 'random_sampling', #'random_sampling', 'mppi', 'cem_mppi'
     'control_parametrization': 'cubic_spline', #'cubic_spline', 'linear_spline_1', 'linear_spline_2', 'zero_order'
     'num_parallel_computations': 10000, # More is better, but slower computation!
-    'num_sampling_iterations': 1, # More is better, but slower computation!
+    'num_sampling_iterations': 3, # More is better, but slower computation!
     # convariances for the sampling methods
     'sigma_cem_mppi': 3, 
     'sigma_mppi': 3,
@@ -165,7 +165,7 @@ simulation_params = {
     'swing_position_gain_fb': 5000,
     'swing_velocity_gain_fb': 100,
     'swing_integral_gain_fb': 0,
-    'step_height': 0.05, #0.05 go2
+    'step_height': 0.02, #0.05 go2
 
     # this is the integration time used in the simulator
     'dt': 0.002,
@@ -173,7 +173,7 @@ simulation_params = {
     'gait': 'trot', #'trot', 'pace', 'crawl', 'bound', 'full_stance'
     
     # ref_x_dot, ref_y_dot, ref_yaw_dot are in the horizontal frame
-    'ref_x_dot': .3,
+    'ref_x_dot': .1,
     'ref_y_dot': 0.,
     'ref_yaw_dot': 0.0,
     'ref_z': ref_z, 
@@ -185,7 +185,7 @@ simulation_params = {
     'mpc_frequency': 200, 
 
 
-    'use_external_disturbances': True,
+    'use_external_disturbances': False,
     
     'external_disturbances_bound': [18, 18, 0, 18, 18, 18], #fx, fy, fz, mx, my, mz
 
