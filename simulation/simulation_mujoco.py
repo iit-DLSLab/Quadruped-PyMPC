@@ -226,7 +226,8 @@ reference_foot_RR = frg.compute_footholds_reference(ref_pose,
                                                     ref_orientation,
                                                     ref_linear_velocity[0:2], 
                                                     ref_linear_velocity[0:2], 
-                                                    hip_pos, config.simulation_params['ref_z'])
+                                                    hip_pos, config.simulation_params['ref_z'],
+                                                    [np.zeros((3, )) for _ in range(4)])
 
 
 # SET REFERENCE AS DICTIONARY
@@ -368,7 +369,8 @@ with mujoco.viewer.launch_passive(m, d, show_left_ui=False, show_right_ui=False)
         reference_foot_FL, \
         reference_foot_FR, \
         reference_foot_RL, \
-        reference_foot_RR = frg.compute_footholds_reference(com_pos, rpy_angles, linear_vel[0:2], ref_linear_velocity[0:2], hip_pos, state_current["position"][2])
+        reference_foot_RR = frg.compute_footholds_reference(com_pos, rpy_angles, linear_vel[0:2], ref_linear_velocity[0:2], hip_pos, 
+                                                            state_current["position"][2], lift_off_positions)
 
         # Update state reference
         reference_state["ref_foot_FL"] = reference_foot_FL.reshape((1,3))

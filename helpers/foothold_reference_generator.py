@@ -33,7 +33,7 @@ class FootholdReferenceGenerator:
 
 
     def compute_footholds_reference(self, com_position, rpy_angles, linear_com_velocity: np.float64, desired_linear_com_velocity: np.float64, 
-                                    hips_position: np.ndarray, com_height: np.float64) -> np.ndarray:
+                                    hips_position: np.ndarray, com_height: np.float64, lift_off_positions) -> np.ndarray:
         """
         Starting from the robot hips position, com actual and desired velocities, this method 
         computes the reference footholds for the nonlinear MPC.
@@ -104,10 +104,10 @@ class FootholdReferenceGenerator:
         # we should rotate them considering the terrain estimator maybe
         # or we can just do exteroceptive height adjustement...
         # for now just zero height
-        reference_foot_FL = np.array([footholds_reference_FL[0], footholds_reference_FL[1], 0.1*0])
-        reference_foot_FR = np.array([footholds_reference_FR[0], footholds_reference_FR[1], 0.1*0])
-        reference_foot_RL = np.array([footholds_reference_RL[0], footholds_reference_RL[1], 0.1*0])
-        reference_foot_RR = np.array([footholds_reference_RR[0], footholds_reference_RR[1], 0.1*0])
+        reference_foot_FL = np.array([footholds_reference_FL[0], footholds_reference_FL[1], lift_off_positions[0][2]])
+        reference_foot_FR = np.array([footholds_reference_FR[0], footholds_reference_FR[1], lift_off_positions[1][2]])
+        reference_foot_RL = np.array([footholds_reference_RL[0], footholds_reference_RL[1], lift_off_positions[2][2]])
+        reference_foot_RR = np.array([footholds_reference_RR[0], footholds_reference_RR[1], lift_off_positions[3][2]])
         
         return reference_foot_FL, reference_foot_FR, reference_foot_RL, reference_foot_RR
 
