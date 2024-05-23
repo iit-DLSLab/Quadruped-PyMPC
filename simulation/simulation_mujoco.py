@@ -244,7 +244,7 @@ reference_state = {'ref_position': ref_pose,
 
 # Create swing trajectory generator
 step_height = config.simulation_params['step_height'] 
-swing_period = (1 - duty_factor) * (1 / step_frequency) + 0.07
+swing_period = (1 - duty_factor) * (1 / step_frequency)# + 0.07
 position_gain_fb = config.simulation_params['swing_position_gain_fb']
 velocity_gain_fb = config.simulation_params['swing_velocity_gain_fb']
 swing_generator = config.simulation_params['swing_generator']
@@ -462,7 +462,7 @@ with mujoco.viewer.launch_passive(m, d, show_left_ui=False, show_right_ui=False)
                     stance_time = (1/pgg.step_freq) * duty_factor
                     frg.stance_time = stance_time
                     
-                    swing_period = (1 - duty_factor) * (1 / pgg.step_freq) + 0.07
+                    swing_period = (1 - duty_factor) * (1 / pgg.step_freq)# + 0.07
                     stc.regenerate_swing_trajectory_generator(step_height=step_height, swing_period=swing_period)
 
 

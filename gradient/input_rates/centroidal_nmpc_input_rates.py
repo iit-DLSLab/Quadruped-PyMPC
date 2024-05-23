@@ -1267,7 +1267,10 @@ class Acados_NMPC_InputRates:
             # Force x and y are always 0
             number_of_legs_in_stance = np.array([FL_contact_sequence[j], FR_contact_sequence[j], 
                                                  RL_contact_sequence [j], RR_contact_sequence[j]]).sum()
-            reference_force_stance_legs = (mass * 9.81) / number_of_legs_in_stance
+            if(number_of_legs_in_stance == 0):
+                reference_force_stance_legs = 0
+            else:
+                reference_force_stance_legs = (mass * 9.81) / number_of_legs_in_stance
             
             reference_force_fl_z = reference_force_stance_legs * FL_contact_sequence[j]
             reference_force_fr_z = reference_force_stance_legs * FR_contact_sequence[j]
@@ -1659,7 +1662,10 @@ class Acados_NMPC_InputRates:
             
             number_of_legs_in_stance = np.array([FL_contact_sequence[0], FR_contact_sequence[0], 
                                                  RL_contact_sequence [0], RR_contact_sequence[0]]).sum()
-            reference_force_stance_legs = (mass * 9.81) / number_of_legs_in_stance
+            if(number_of_legs_in_stance == 0):
+                reference_force_stance_legs = 0
+            else:
+                reference_force_stance_legs = (mass * 9.81) / number_of_legs_in_stance
             
             reference_force_fl_z = reference_force_stance_legs * FL_contact_sequence[0]
             reference_force_fr_z = reference_force_stance_legs * FR_contact_sequence[0]
