@@ -103,11 +103,11 @@ class FootholdReferenceGenerator:
 
         # we should rotate them considering the terrain estimator maybe
         # or we can just do exteroceptive height adjustement...
-        # for now just zero height
-        reference_foot_FL = np.array([footholds_reference_FL[0], footholds_reference_FL[1], lift_off_positions[0][2]])
-        reference_foot_FR = np.array([footholds_reference_FR[0], footholds_reference_FR[1], lift_off_positions[1][2]])
-        reference_foot_RL = np.array([footholds_reference_RL[0], footholds_reference_RL[1], lift_off_positions[2][2]])
-        reference_foot_RR = np.array([footholds_reference_RR[0], footholds_reference_RR[1], lift_off_positions[3][2]])
+        # for now we substract 0.02cm to have a clear touch down
+        reference_foot_FL = np.array([footholds_reference_FL[0], footholds_reference_FL[1], lift_off_positions[0][2] - 0.02])
+        reference_foot_FR = np.array([footholds_reference_FR[0], footholds_reference_FR[1], lift_off_positions[1][2] - 0.02])
+        reference_foot_RL = np.array([footholds_reference_RL[0], footholds_reference_RL[1], lift_off_positions[2][2] - 0.02])
+        reference_foot_RR = np.array([footholds_reference_RR[0], footholds_reference_RR[1], lift_off_positions[3][2] - 0.02])
         
         return reference_foot_FL, reference_foot_FR, reference_foot_RL, reference_foot_RR
 
