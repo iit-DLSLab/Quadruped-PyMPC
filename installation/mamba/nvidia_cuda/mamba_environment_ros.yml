@@ -15,10 +15,15 @@ dependencies:
 - scipy 
 - pinocchio
 - adam-robotics[all]
+- ros-noetic-desktop
 - compilers 
 - cmake 
 - pkg-config 
 - make 
+- ninja 
+- colcon-common-extensions 
+- catkin_tools 
+- rosdep
 - pip:
   - mujoco
 
