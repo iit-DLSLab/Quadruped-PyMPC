@@ -397,7 +397,7 @@ with mujoco.viewer.launch_passive(m, d, show_left_ui=False, show_right_ui=False)
 
 
         # Compute the terrain estimation and reference height ---------------------------------------------
-        roll, pitch = terrain_computation.compute_terrain_estimation(state_current["position"], lift_off_positions)
+        roll, pitch = terrain_computation.compute_terrain_estimation(state_current["position"], state_current["orientation"][2], lift_off_positions)
         reference_state["ref_orientation"] = np.array([roll, pitch, 0])
         
         # Update the reference height given the foot in contact 

@@ -17,13 +17,12 @@ class TerrainEstimator:
 
 
 
-    def compute_terrain_estimation(self, base_position, lift_foot_position) -> np.ndarray:
+    def compute_terrain_estimation(self, base_position, yaw, lift_foot_position) -> np.ndarray:
 
         
         # Compute roll and pitch for each foot position
         roll = 0
         pitch = 0
-        yaw = 0
         
         # Rotation matrix R_yaw
         h_R_w = np.array([
