@@ -12,7 +12,6 @@ import pinocchio as pin
 class TerrainEstimator:
     def __init__(self, ) -> None:
         
-
         self.terrain_roll = 0
         self.terrain_pitch = 0
 
