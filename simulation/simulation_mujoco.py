@@ -59,8 +59,12 @@ mass = np.sum(m.body_mass)
 
 
 
-# MPC Magic
-mpc_dt = config.mpc_params['dt']
+# MPC Magic - i took the minimum value of the dt 
+# used along the horizon of the MPC
+if(config.mpc_params['use_nonuniform_discretization']):
+    mpc_dt = config.mpc_params['dt_fine_grained']
+else:
+    mpc_dt = config.mpc_params['dt']
 horizon = config.mpc_params['horizon']
 
 # input_rates optimize the delta_GRF (smoooth!)
@@ -191,7 +195,9 @@ else:
     duty_factor = 0.65
     p_gait = Gait.FULL_STANCE
     print("FULL STANCE")
-pgg = PeriodicGaitGenerator(duty_factor=duty_factor, step_freq=step_frequency, p_gait=p_gait, horizon=horizon)
+# Given the possibility to use nonuniform discretization, 
+# we generate a contact sequence two times longer
+pgg = PeriodicGaitGenerator(duty_factor=duty_factor, step_freq=step_frequency, p_gait=p_gait, horizon=horizon*2)
 contact_sequence = pgg.compute_contact_sequence(mpc_dt=mpc_dt, simulation_dt=simulation_dt)
 nominal_sample_freq = step_frequency
 
@@ -341,11 +347,25 @@ with mujoco.viewer.launch_passive(m, d, show_left_ui=False, show_right_ui=False)
 
         # Update the contact sequence ---------------------------
         if(gait == "full_stance"):
-            contact_sequence = np.ones((4, horizon)) 
+            contact_sequence = np.ones((4, horizon*2)) 
         else:
             contact_sequence = pgg.compute_contact_sequence(mpc_dt=mpc_dt, simulation_dt=simulation_dt)
             
+        # in the case of nonuniform discretization, we need
+        # to subsample the contact sequence
+        if(config.mpc_params['use_nonuniform_discretization']):
+            subsample_step_contact_sequence = int(config.mpc_params['dt_fine_grained']/mpc_dt)
+            if(subsample_step_contact_sequence > 1):
+                contact_sequence_fine_grained = contact_sequence[:, ::subsample_step_contact_sequence][:, 0:config.mpc_params['horizon_fine_grained']]
+            else:
+                contact_sequence_fine_grained = contact_sequence[:, 0:config.mpc_params['horizon_fine_grained']]
             
+            subsample_step_contact_sequence = int(config.mpc_params['dt']/mpc_dt)
+            if(subsample_step_contact_sequence > 1):
+                contact_sequence = contact_sequence[:, ::subsample_step_contact_sequence]
+            contact_sequence = contact_sequence[:, 0:horizon]
+            contact_sequence[:, 0:config.mpc_params['horizon_fine_grained']] = contact_sequence_fine_grained
+        
 
         previous_contact = copy.deepcopy(current_contact)
         current_contact = np.array([contact_sequence[0][0], contact_sequence[1][0],
