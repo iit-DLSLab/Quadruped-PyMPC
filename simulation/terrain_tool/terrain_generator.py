@@ -3,7 +3,7 @@ import numpy as np
 import cv2
 import noise
 
-SCENE = "perlin" #rough, stairs, suspend_stairs, slope, perlin, image
+SCENE = "stairs" #rough, stairs, suspend_stairs, slope, perlin, image
 ROBOT = "aliengo" #aliengo #go2 #hyqreal
 INPUT_SCENE_PATH = "../robot_model/" + ROBOT + "/scene_flat" + ".xml"
 OUTPUT_SCENE_PATH = "../robot_model/" + ROBOT + "/scene_" + SCENE + ".xml"
@@ -114,10 +114,10 @@ class TerrainGenerator:
     def AddStairs(self,
                   init_pos=[1.0, 0.0, 0.0],
                   yaw=0.0,
-                  width=0.2,
-                  height=0.15,
-                  length=1.5,
-                  stair_nums=10):
+                  width=0.1,
+                  height=0.05,
+                  length=2.5,
+                  stair_nums=50):
 
         local_pos = [0.0, 0.0, -0.5 * height]
         for i in range(stair_nums):
@@ -273,11 +273,14 @@ if __name__ == "__main__":
               euler=[0.0, -0.5, 0.0],
               size=[3, 1.5, 0.1])
 
-    # Stairs
-    tg.AddStairs(init_pos=[1.0, 4.0, 0.0], yaw=0.0)
-
     # Suspend stairs
     tg.AddSuspendStairs(init_pos=[1.0, 6.0, 0.0], yaw=0.0)"""
+              
+    # Stairs
+    if(SCENE == "stairs"):
+        tg.AddStairs(init_pos=[1.0, 0.0, 0.0], yaw=0.0)
+
+
 
     # Rough ground
     if(SCENE == "rough"):
