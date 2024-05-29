@@ -43,7 +43,11 @@ class SrbInertiaComputation:
 
 
     def compute_inertia(self, q) -> None:
-        robot_reduced = pin.buildReducedModel(self.robot_full, self.jointsToLockIDs, q)
+        if(config.robot == 'aliengo'):
+            robot_reduced = pin.buildReducedModel(self.robot_full, self.jointsToLockIDs, q[3:])
+        else:
+            robot_reduced = pin.buildReducedModel(self.robot_full, self.jointsToLockIDs, q[7:])
+        
         #mass = robot_reduced.inertias[0].mass
         return robot_reduced.inertias[0].inertia
     

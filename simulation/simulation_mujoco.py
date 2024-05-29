@@ -404,7 +404,7 @@ with mujoco.viewer.launch_passive(m, d, show_left_ui=False, show_right_ui=False)
             # We can recompute the inertia of the single rigid body model
             # or use the fixed one in config.py
             if(config.simulation_params['use_inertia_recomputation']):
-                inertia = srb_inertia_computation.compute_inertia(d.qpos[3:])
+                inertia = srb_inertia_computation.compute_inertia(d.qpos)
             
             # If we use sampling
             if(config.mpc_params['type'] == 'sampling'):

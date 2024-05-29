@@ -610,8 +610,13 @@ class Acados_NMPC_InputRates:
         Q_com_velocity_z_integral = np.array([10]) #integral of z_com_vel
         Q_roll_integral_integral = np.array([10]) #integral of roll
         Q_pitch_integral_integral = np.array([10]) #integral of pitch
-        Q_foot_force = np.array([0.0001, 0.0001, 0.0001]) #f_x, f_y, f_z (should be 4 times this, once per foot)
         
+
+        if(config.robot == "hyqreal"):
+            Q_foot_force = np.array([0.00001, 0.00001, 0.00001]) #f_x, f_y, f_z (should be 4 times this, once per foot)
+        else:
+            Q_foot_force = np.array([0.0001, 0.0001, 0.0001]) #f_x, f_y, f_z (should be 4 times this, once per foot)
+
         R_foot_vel = np.array([0.0001, 0.0001, 0.00001]) #v_x, v_y, v_z (should be 4 times this, once per foot)
         R_foot_rate_force = np.array([0.001, 0.001, 0.001]) #delta_f_x, delta_f_y, deltaf_z (should be 4 times this, once per foot)
 

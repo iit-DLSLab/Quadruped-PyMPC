@@ -571,7 +571,10 @@ class Acados_NMPC_Collaborative:
         Q_passive_arm_force = np.array([0, 0, 0, 0, 0, 0]) #end_effector_position_z
 
         R_foot_vel = np.array([0.0001, 0.0001, 0.00001]) #v_x, v_y, v_z (should be 4 times this, once per foot)
-        R_foot_force = np.array([0.001, 0.001, 0.001])#f_x, f_y, f_z (should be 4 times this, once per foot)
+        if(config.robot == "hyqreal"):
+            R_foot_force = np.array([0.00001, 0.00001, 0.00001])#f_x, f_y, f_z (should be 4 times this, once per foot)
+        else:
+            R_foot_force = np.array([0.001, 0.001, 0.001])
 
         Q_mat = np.diag(np.concatenate((Q_position, Q_velocity, 
                                         Q_base_angle, Q_base_angle_rates, 
