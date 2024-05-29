@@ -33,6 +33,7 @@ from foothold_reference_generator import FootholdReferenceGenerator
 from swing_trajectory_controller import SwingTrajectoryController
 from periodic_gait_generator import PeriodicGaitGenerator, Gait
 from srb_inertia_computation import SrbInertiaComputation
+from terrain_estimator import TerrainEstimator
 from other import euler_from_quaternion, plot_swing_mujoco, plot_state_matplotlib
 
 # Parameters for both MPC and simulation
@@ -275,6 +276,10 @@ lift_off_positions[3] = copy.deepcopy(position_foot_RR)
 srb_inertia_computation = SrbInertiaComputation()
 inertia = config.inertia
 
+# Terrain estimator
+z_foot_mean = 0.0
+terrain_computation = TerrainEstimator()
+
 
 
 # Starting contact sequence
@@ -389,6 +394,31 @@ with mujoco.viewer.launch_passive(m, d, show_left_ui=False, show_right_ui=False)
             print("reference_state: ")
             pprint.pprint(reference_state)
         # -------------------------------------------------------------------------------------------------
+
+
+        # Compute the terrain estimation and reference height ---------------------------------------------
+        roll, pitch = terrain_computation.compute_terrain_estimation(state_current["position"], lift_off_positions)
+        reference_state["ref_orientation"] = np.array([roll, pitch, 0])
+        
+        # Update the reference height given the foot in contact 
+        z_foot_FL = state_current["foot_FL"][2]
+        z_foot_FR = state_current["foot_FR"][2]
+        z_foot_RL = state_current["foot_RL"][2]
+        z_foot_RR = state_current["foot_RR"][2]
+        number_foot_in_contact = current_contact[0] + \
+                                current_contact[1] + \
+                                current_contact[2] + \
+                                current_contact[3]
+        if(number_foot_in_contact != 0):
+            z_foot_mean_temp = (z_foot_FL*current_contact[0] + \
+                        z_foot_FR*current_contact[1] + \
+                        z_foot_RL*current_contact[2] + \
+                        z_foot_RR*current_contact[3])/number_foot_in_contact
+            z_foot_mean = z_foot_mean_temp*0.4 + z_foot_mean*0.6
+        
+        reference_state["ref_position"][2] = config.simulation_params['ref_z'] + z_foot_mean
+        # -------------------------------------------------------------------------------------------------
+        
 
         
         if(config.mpc_params['type'] == 'sampling'):

@@ -18,36 +18,57 @@ class TerrainEstimator:
 
 
 
-    def compute_terrain_estimion(self, legs_stance_status, foot_height) -> np.ndarray:
-        
+    def compute_terrain_estimation(self, base_position, lift_foot_position) -> np.ndarray:
 
+        
+        # Compute roll and pitch for each foot position
+        roll = 0
+        pitch = 0
+        yaw = 0
+        
+        # Rotation matrix R_yaw
+        h_R_w = np.array([
+            [np.cos(yaw), np.sin(yaw), 0],
+            [-np.sin(yaw), np.cos(yaw), 0],
+            [0, 0, 1]
+        ])
+
+        # Extracting 3-element segments from liftoff_position_z_ and x_op_
+        seg0 = lift_foot_position[0]
+        seg3 = lift_foot_position[1]
+        seg6 = lift_foot_position[2]
+        seg9 = lift_foot_position[3]
+        
+        
+        # Calculating differences
+        front_difference = h_R_w @ (seg0 - base_position) - h_R_w @ (seg3 - base_position)
+        back_difference = h_R_w @ (seg6 - base_position) - h_R_w @ (seg9 - base_position)
+        left_difference = h_R_w @ (seg0 - base_position) - h_R_w @ (seg6 - base_position)
+        right_difference = h_R_w @ (seg3 - base_position) - h_R_w @ (seg9 - base_position)
+
+
+
+        # Calculating pitch and roll
+        pitch = (np.arctan(np.abs(left_difference[2]) / np.abs(left_difference[0] + 0.001)) + 
+                np.arctan(np.abs(right_difference[2]) / np.abs(right_difference[0] + 0.001))) * 0.5
+
+        roll = (np.arctan(np.abs(front_difference[2]) / np.abs(front_difference[1] + 0.001)) + 
+                np.arctan(np.abs(back_difference[2]) / np.abs(back_difference[1] + 0.001 ))) * 0.5
+
+
+        # Adjusting signs of pitch and roll
+        if (front_difference[2] * 0.5 + back_difference[2] * 0.5) < 0:
+            roll = -roll
+        if (left_difference[2] * 0.5 + right_difference[2] * 0.5) > 0:
+            pitch = -pitch
+
+
+        self.terrain_roll = roll
+        self.terrain_pitch = pitch
+        return self.terrain_roll, self.terrain_pitch
  
 
 
 
-if __name__ == "__main__":
-    m = mujoco.MjModel.from_xml_path('./../simulation/unitree_go1/scene.xml')
-    d = mujoco.MjData(m)
-    mujoco.mj_step(m, d)
 
-    FL_hip_id = mujoco.mj_name2id(m, mujoco.mjtObj.mjOBJ_BODY, 'FL_hip')
-    FR_hip_id = mujoco.mj_name2id(m, mujoco.mjtObj.mjOBJ_BODY, 'FR_hip')
-    RL_hip_id = mujoco.mj_name2id(m, mujoco.mjtObj.mjOBJ_BODY, 'RL_hip')
-    RR_hip_id = mujoco.mj_name2id(m, mujoco.mjtObj.mjOBJ_BODY, 'RR_hip')
-
-    hip_pos = np.array(([d.body(FL_hip_id).xpos,
-                        d.body(FR_hip_id).xpos,
-                        d.body(RL_hip_id).xpos,
-                        d.body(RR_hip_id).xpos]))
-
-    stance_time = 0.5
-    linear_com_velocity = np.array([0.1, 0.0, 0.0])
-    desired_linear_com_velocity = np.array([0.1, 0.0, 0.0])
-    com_height = d.qpos[2]
-
-    foothold_generator = FootHoldReferenceGenerator(stance_time)
-    footholds_reference = foothold_generator.compute_footholds_reference(linear_com_velocity, desired_linear_com_velocity, 
-                                                                         hip_pos, com_height)
-    print("iniztial hip_pos: ", hip_pos)
-    print("footholds_reference: ", footholds_reference)
   
