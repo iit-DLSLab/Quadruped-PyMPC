@@ -21,4 +21,5 @@ dependencies:
 - make 
 - pip:
   - mujoco
+  - readchar
 

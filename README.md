@@ -93,7 +93,15 @@ The first time you run the simulation with acados, in the terminal you will be a
 
 In the file [config.py](https://github.com/iit-DLSLab/Quadruped-PyMPC/blob/main/config.py), you can set up the robot, the mpc type (gradient, sampling..), its proprierties (real time iteration, sampling type, foothold optimization..), and other simulation params (reference, gait type..). 
 
-
+3. you can interact with the simulation with your mouse to add disturbances, or with the keyboard by pressing
+```
+w, s -> add positive or negative forward velocity
+a, d -> add positive or negative lateral velocity
+q, e -> add positive or negative yaw velocity
+0 -> set zero velocities
++, - -> increase or decrease step height
+```
+Be aware that this only works if the terminal is in focus, otherwise mujoco will catch the keyboard event.
 
 ## Citing this work
 

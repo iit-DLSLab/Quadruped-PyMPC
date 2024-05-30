@@ -24,3 +24,4 @@ dependencies:
 - rosdep
 - pip:
   - mujoco
+  - readchar

@@ -26,7 +26,8 @@ sys.path.append(dir_path + '/../gradient/nominal/')
 sys.path.append(dir_path + '/../gradient/collaborative/')
 sys.path.append(dir_path + '/../sampling/')
 
-
+import threading
+import readchar 
 
 # General magic
 from foothold_reference_generator import FootholdReferenceGenerator
@@ -304,6 +305,41 @@ use_print_debug = config.simulation_params['use_print_debug']
 use_visualization_debug = config.simulation_params['use_visualization_debug']
 
 
+
+# Keyboard control
+def interactive_command_line():
+    global ref_linear_velocity, ref_angular_velocity, step_height
+    while True:
+        #command = input()
+        command = readchar.readkey()
+        if(command == "w"):
+            ref_linear_velocity[0] += 0.1
+        elif(command == "s"):
+            ref_linear_velocity[0] -= 0.1
+        elif(command == "a"):
+            ref_linear_velocity[1] += 0.1
+        elif(command == "d"):
+            ref_linear_velocity[1] -= 0.1
+        elif(command == "q"):
+            ref_angular_velocity[2] += 0.1
+        elif(command == "e"):
+            ref_angular_velocity[2] -= 0.1
+        elif(command == "0"):
+            ref_linear_velocity[0] = 0
+            ref_linear_velocity[1] = 0
+            ref_angular_velocity[2] = 0 
+        elif(command == "+"):
+            step_height += 0.01
+            stc.step_height = step_height
+            stc.regenerate_swing_trajectory_generator(step_height=step_height, swing_period=swing_period)
+        elif(command == "-"):
+            step_height -= 0.01
+            stc.step_height = step_height
+            stc.regenerate_swing_trajectory_generator(step_height=step_height, swing_period=swing_period)
+            
+t1 = threading.Thread(target=interactive_command_line)
+t1.daemon = True
+t1.start()
 
 
 
