@@ -241,6 +241,22 @@ lift_off_positions[2] = copy.deepcopy(position_foot_RL)
 position_foot_RR = d.geom_xpos[RR_id]
 lift_off_positions[3] = copy.deepcopy(position_foot_RR)
 
+desired_joints_pos_FL = d.qpos[6:9]
+desired_joints_pos_FR = d.qpos[9:12]
+desired_joints_pos_RL = d.qpos[12:15]
+desired_joints_pos_RR = d.qpos[15:18]
+
+desired_joints_vel_FL = d.qvel[6:9]
+desired_joints_vel_FR = d.qvel[9:12]
+desired_joints_vel_RL = d.qvel[12:15]
+desired_joints_vel_RR = d.qvel[15:18]
+
+desired_joints_acc_FL = np.zeros((3, ))
+desired_joints_acc_FR = np.zeros((3, ))
+desired_joints_acc_RL = np.zeros((3, ))
+desired_joints_acc_RR = np.zeros((3, ))
+
+
 
 # Online computation of the inertia parameter
 srb_inertia_computation = SrbInertiaComputation()
@@ -454,10 +470,27 @@ with mujoco.viewer.launch_passive(m, d, show_left_ui=False, show_right_ui=False)
             time_start = time.time()
             nmpc_GRFs, \
             nmpc_footholds, \
+            nmpc_joints_vel, \
+            nmpc_joints_acc, \
             nmpc_predicted_state, \
             status = controller.compute_control(state_current, reference_state, contact_sequence, inertia=inertia.flatten())
 
             optimizer_cost = controller.acados_ocp_solver.get_cost()
+
+            desired_joints_pos_FL = nmpc_predicted_state[6:9]
+            desired_joints_pos_FR = nmpc_predicted_state[9:12]
+            desired_joints_pos_RL = nmpc_predicted_state[12:15]
+            desired_joints_pos_RR = nmpc_predicted_state[15:18]
+
+            desired_joints_vel_FL = nmpc_joints_vel[0:3]
+            desired_joints_vel_FR = nmpc_joints_vel[3:6]
+            desired_joints_vel_RL = nmpc_joints_vel[6:9]
+            desired_joints_vel_RR = nmpc_joints_vel[9:12]
+
+            desired_joints_acc_FL = nmpc_joints_acc[0:3]
+            desired_joints_acc_FR = nmpc_joints_acc[3:6]
+            desired_joints_acc_RL = nmpc_joints_acc[6:9]
+            desired_joints_acc_RR = nmpc_joints_acc[9:12]
                 
             # If the controller is using RTI, we need to linearize the mpc after its computation
             # this helps to minize the delay between new state->control, but only in a real case. 
@@ -554,7 +587,7 @@ with mujoco.viewer.launch_passive(m, d, show_left_ui=False, show_right_ui=False)
         position_foot_RL_prev = copy.deepcopy(position_foot_RL)
         position_foot_RR_prev = copy.deepcopy(position_foot_RR)
 
-            
+
 
 
         # Compute the reference for the swing trajectory 
@@ -610,22 +643,19 @@ with mujoco.viewer.launch_passive(m, d, show_left_ui=False, show_right_ui=False)
         mass_matrix_RL = mass_matrix[12:15, 12:15]
         mass_matrix_RR = mass_matrix[15:18, 15:18]
 
+
         
         
         # If the foot is not in stance, we can calculate the swing controller
         if (current_contact[0] == 0):
             tau_FL, \
             desired_swing_foot_position_FL, \
-            desired_swing_foot_velocity_FL = stc.compute_swing_control(m, 
+            desired_swing_foot_velocity_FL = stc.compute_swing_control_joint_space( 
                                                joints_pos_FL, 
                                                joints_vel_FL,
-                                               jac_foot_FL[0:3,6:9], 
-                                               jac_foot_FL_dot[0:3,6:9],
-                                               lift_off_positions[0], 
-                                               nmpc_footholds[0],
-                                               swing_time[0],
-                                               position_foot_FL, 
-                                               velocity_foot_FL,
+                                               desired_joints_pos_FL, 
+                                               desired_joints_vel_FL,
+                                               desired_joints_acc_FL,
                                                h_FL,
                                                mass_matrix_FL)
 
@@ -633,16 +663,12 @@ with mujoco.viewer.launch_passive(m, d, show_left_ui=False, show_right_ui=False)
         if (current_contact[1] == 0):
             tau_FR, \
             desired_swing_foot_position_FR, \
-            desired_swing_foot_velocity_FR = stc.compute_swing_control(m,
+            desired_swing_foot_velocity_FR = stc.compute_swing_control_joint_space(
                                                joints_pos_FR, 
                                                joints_vel_FR,
-                                               jac_foot_FR[0:3,9:12],
-                                               jac_foot_FR_dot[0:3,9:12],
-                                               lift_off_positions[1],
-                                               nmpc_footholds[1],
-                                               swing_time[1],
-                                               position_foot_FR,
-                                               velocity_foot_FR,
+                                               desired_joints_pos_FR,
+                                               desired_joints_vel_FR,
+                                               desired_joints_acc_FR,
                                                h_FR,
                                                mass_matrix_FR)
 
@@ -650,16 +676,12 @@ with mujoco.viewer.launch_passive(m, d, show_left_ui=False, show_right_ui=False)
         if (current_contact[2] == 0):
             tau_RL, \
             desired_swing_foot_position_RL, \
-            desired_swing_foot_velocity_RL = stc.compute_swing_control(m,
+            desired_swing_foot_velocity_RL = stc.compute_swing_control_joint_space(
                                                joints_pos_RL, 
                                                joints_vel_RL,
-                                               jac_foot_RL[0:3,12:15],
-                                               jac_foot_RL_dot[0:3,12:15],
-                                               lift_off_positions[2],
-                                               nmpc_footholds[2],
-                                               swing_time[2],
-                                               position_foot_RL,
-                                               velocity_foot_RL,
+                                               desired_joints_pos_RL,
+                                               desired_joints_vel_RL,
+                                               desired_joints_acc_RL,
                                                h_RL,
                                                mass_matrix_RL)
 
@@ -667,16 +689,12 @@ with mujoco.viewer.launch_passive(m, d, show_left_ui=False, show_right_ui=False)
         if (current_contact[3] == 0):
             tau_RR, \
             desired_swing_foot_position_RR, \
-            desired_swing_foot_velocity_RR = stc.compute_swing_control(m,
+            desired_swing_foot_velocity_RR = stc.compute_swing_control_joint_space(
                                                joints_pos_RR, 
                                                joints_vel_RR,
-                                               jac_foot_RR[0:3,15:18],
-                                               jac_foot_RR_dot[0:3,15:18],
-                                               lift_off_positions[3],
-                                               nmpc_footholds[3],
-                                               swing_time[3],
-                                               position_foot_RR,
-                                               velocity_foot_RR,
+                                               desired_joints_pos_RR,
+                                               desired_joints_vel_RR,
+                                               desired_joints_acc_RR,
                                                h_RR,
                                                mass_matrix_RR)
 

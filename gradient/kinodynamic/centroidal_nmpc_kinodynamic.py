@@ -1341,7 +1341,14 @@ class Acados_NMPC_KinoDynamic:
         # Take the solution        
         control = self.acados_ocp_solver.get(0, "u")
         optimal_joint_velocities = control[0:12]
+        
+        if(config.mpc_params['use_nonuniform_discretization']):
+            optimal_joint_acceleration = (optimal_joint_velocities - self.acados_ocp_solver.get(1, "u")[0:12])/config.mpc_params['dt_fine_grained']
+        else:
+            optimal_joint_acceleration = (optimal_joint_velocities - self.acados_ocp_solver.get(1, "u")[0:12])/config.mpc_params['dt']
+        
         optimal_GRF = control[12:]
+        
         optimal_foothold = np.zeros((4, 3))
         optimal_footholds_assigned = np.zeros((4, ), dtype='bool')
 
@@ -1539,5 +1546,6 @@ class Acados_NMPC_KinoDynamic:
         optimal_next_state[21:24] = optimal_foothold[3]
 
 
-        # Return the optimal GRF, the optimal foothold, the next state and the status of the optimization
-        return optimal_GRF, optimal_foothold, optimal_next_state, status
+
+        # Return the optimal GRF, the optimal foothold, optimal_joint_velocities, the next state and the status of the optimization
+        return optimal_GRF, optimal_foothold, optimal_joint_velocities, optimal_joint_acceleration, optimal_next_state, status

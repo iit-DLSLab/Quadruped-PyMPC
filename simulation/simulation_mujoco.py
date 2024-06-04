@@ -748,7 +748,7 @@ with mujoco.viewer.launch_passive(m, d, show_left_ui=False, show_right_ui=False)
         if (current_contact[0] == 0):
             tau_FL, \
             desired_swing_foot_position_FL, \
-            desired_swing_foot_velocity_FL = stc.compute_swing_control(m, 
+            desired_swing_foot_velocity_FL = stc.compute_swing_control_cartesian_space(m, 
                                                joints_pos_FL, 
                                                joints_vel_FL,
                                                jac_foot_FL[0:3,6:9], 
@@ -765,7 +765,7 @@ with mujoco.viewer.launch_passive(m, d, show_left_ui=False, show_right_ui=False)
         if (current_contact[1] == 0):
             tau_FR, \
             desired_swing_foot_position_FR, \
-            desired_swing_foot_velocity_FR = stc.compute_swing_control(m,
+            desired_swing_foot_velocity_FR = stc.compute_swing_control_cartesian_space(m,
                                                joints_pos_FR, 
                                                joints_vel_FR,
                                                jac_foot_FR[0:3,9:12],
@@ -782,7 +782,7 @@ with mujoco.viewer.launch_passive(m, d, show_left_ui=False, show_right_ui=False)
         if (current_contact[2] == 0):
             tau_RL, \
             desired_swing_foot_position_RL, \
-            desired_swing_foot_velocity_RL = stc.compute_swing_control(m,
+            desired_swing_foot_velocity_RL = stc.compute_swing_control_cartesian_space(m,
                                                joints_pos_RL, 
                                                joints_vel_RL,
                                                jac_foot_RL[0:3,12:15],
@@ -799,7 +799,7 @@ with mujoco.viewer.launch_passive(m, d, show_left_ui=False, show_right_ui=False)
         if (current_contact[3] == 0):
             tau_RR, \
             desired_swing_foot_position_RR, \
-            desired_swing_foot_velocity_RR = stc.compute_swing_control(m,
+            desired_swing_foot_velocity_RR = stc.compute_swing_control_cartesian_space(m,
                                                joints_pos_RR, 
                                                joints_vel_RR,
                                                jac_foot_RR[0:3,15:18],
