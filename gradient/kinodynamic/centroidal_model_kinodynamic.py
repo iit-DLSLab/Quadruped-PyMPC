@@ -42,15 +42,30 @@ class Centroidal_Model_KinoDynamic:
             urdf_filename = dir_path + '/../../simulation/robot_model/mini_cheetah/mini_cheetah.urdf'
         
 
-        self.kindyn = KinDynComputations(urdfstring=urdf_filename)
+        joint_list = ['FL_hip_joint', 'FL_thigh_joint', 'FL_calf_joint',
+                       'FR_hip_joint', 'FR_thigh_joint', 'FR_calf_joint', 
+                       'RL_hip_joint', 'RL_thigh_joint', 'RL_calf_joint',
+                       'RR_hip_joint', 'RR_thigh_joint', 'RR_calf_joint']
+
+
+        self.kindyn = KinDynComputations(urdfstring=urdf_filename, joints_name_list=joint_list)
         self.kindyn.set_frame_velocity_representation(representation=Representations.BODY_FIXED_REPRESENTATION)
         self.mass_mass_fun = self.kindyn.mass_matrix_fun()
         self.com_position_fun = self.kindyn.CoM_position_fun()
+        self.bias_force_fun = self.kindyn.bias_force_fun()
+        self.gravity_fun = self.kindyn.gravity_term_fun()
+        self.coriolis_fun = self.kindyn.coriolis_term_fun()
+        
 
         self.forward_kinematics_FL_fun = self.kindyn.forward_kinematics_fun("FL_foot")
         self.forward_kinematics_FR_fun = self.kindyn.forward_kinematics_fun("FR_foot")
         self.forward_kinematics_RR_fun = self.kindyn.forward_kinematics_fun("RL_foot")
         self.forward_kinematics_RL_fun = self.kindyn.forward_kinematics_fun("RR_foot")
+
+        self.jacobian_FL_fun = self.kindyn.jacobian_fun("FL_foot")
+        self.jacobian_FR_fun = self.kindyn.jacobian_fun("FR_foot")
+        self.jacobian_RL_fun = self.kindyn.jacobian_fun("RL_foot")
+        self.jacobian_RR_fun = self.kindyn.jacobian_fun("RR_foot")
 
 
 
@@ -180,7 +195,7 @@ class Centroidal_Model_KinoDynamic:
         self.fun_forward_dynamics = cs.Function('fun_forward_dynamics', [self.states, self.inputs, param], [fd])
 
 
-    def compute_w_R_b(self, roll: float, pitch: float, yaw: float) -> np.ndarray:
+    def compute_b_R_w(self, roll: float, pitch: float, yaw: float) -> np.ndarray:
         #Z Y X rotations!
         Rx = cs.SX.eye(3)
         Rx[0,0] = 1   
@@ -302,7 +317,7 @@ class Centroidal_Model_KinoDynamic:
         
 
         # FINAL angular_acc_base STATE (4)
-        b_R_w = self.compute_w_R_b(roll, pitch, yaw)
+        b_R_w = self.compute_b_R_w(roll, pitch, yaw)
 
 
 
@@ -313,14 +328,13 @@ class Centroidal_Model_KinoDynamic:
 
         # Compute com pos, feet pos and inertia via ADAM
         joint_position = cs.vertcat(joint_position_fl, joint_position_fr, joint_position_rl, joint_position_rr)
+        joints_velocities = cs.vertcat(joint_velocity_fl, joint_velocity_fr, joint_velocity_rl, joint_velocity_rr)
         self.foot_position_fl = self.forward_kinematics_FL_fun(H, joint_position)[0:3, 3]
         self.foot_position_fr = self.forward_kinematics_FR_fun(H, joint_position)[0:3, 3]
         self.foot_position_rl = self.forward_kinematics_RL_fun(H, joint_position)[0:3, 3]
         self.foot_position_rr = self.forward_kinematics_RR_fun(H, joint_position)[0:3, 3]
 
-        #inertia = self.mass_mass_fun(H, joint_position)[3:6, 3:6]
-
-
+        
         # Compute the angular wrench
         temp2 =  cs.skew(self.foot_position_fl - com_position)@foot_force_fl@stanceFL 
         temp2 += cs.skew(self.foot_position_fr - com_position)@foot_force_fr@stanceFR
@@ -330,6 +344,19 @@ class Centroidal_Model_KinoDynamic:
 
         temp2 = temp2 + external_wrench_angular
         angular_acc_base = cs.inv(inertia)@(b_R_w@temp2 - cs.skew(w)@inertia@w)
+
+
+        """inertia = self.mass_mass_fun(H, joint_position)[3:6, 3:6]
+        eta = self.bias_force_fun(H, joint_position, linear_com_vel, joints_velocities)
+        eta += self.gravity_fun(H, joint_position, linear_com_vel, joints_velocities)
+        eta += self.coriolis_fun(H, joint_position, linear_com_vel, joints_velocities)
+        acc = cs.inv(inertia)@(-eta + 
+                               self.jacobian_FL_fun(H, joint_position).T@foot_force_fl@stanceFL + 
+                               self.jacobian_FR_fun(H, joint_position).T@foot_force_fr@stanceFR + 
+                               self.jacobian_RL_fun(H, joint_position).T@foot_force_rl@stanceRL + 
+                               self.jacobian_RR_fun(H, joint_position).T@foot_force_rr@stanceRR)
+        linear_com_acc = acc[0:3]
+        angular_acc_base = acc[3:6]"""
         
 
 

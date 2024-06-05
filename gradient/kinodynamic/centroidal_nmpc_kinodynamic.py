@@ -20,7 +20,7 @@ sys.path.append(dir_path + '/../../')
 
 
 import config 
-
+from liecasadi import SO3
 
 # Class for the Acados NMPC, the model is in another file!
 class Acados_NMPC_KinoDynamic:
@@ -1357,24 +1357,38 @@ class Acados_NMPC_KinoDynamic:
         # We need to provide the next touchdown foothold position.
         # We first take the foothold in stance now (they are not optimized!)
         # and flag them as True (aka "assigned") 
-        roll_predicted = self.acados_ocp_solver.get(0, "x")[6]
-        pitch_predicted = self.acados_ocp_solver.get(0, "x")[7]
-        yaw_predicted = self.acados_ocp_solver.get(0, "x")[8]
-        base_predicted = self.acados_ocp_solver.get(0, "x")[0:3]
-        b_R_w_predicted = self.centroidal_model.compute_w_R_b(roll_predicted, pitch_predicted, yaw_predicted)
+        roll, pitch, yaw = state["orientation"][0], state["orientation"][1], state["orientation"][2]
+        base_pos = state["position"]
+
+        b_R_w = self.centroidal_model.compute_b_R_w(roll, pitch, yaw)
+
+        R = SO3.from_euler(np.array([roll, pitch, yaw])).as_matrix()
+        # R2 = SO3.from_euler(np.array([yaw, pitch, roll])).as_matrix()
+
+        quaternion = state["quaternion"]
+        # flip quaternion from wxyz to xyzw
+        quaternion = np.array([quaternion[1], quaternion[2], quaternion[3], quaternion[0]])
+        R = SO3.from_quat(quaternion).as_matrix()
+
+        print("R: ", R)
+        #print("R2: ", R2)
+        print("b_R_w: ", b_R_w)
+        #print(cacca)
+
         H = cs.SX.eye(4)
-        H[0:3, 0:3] = b_R_w_predicted
-        H[0:3, 3] = base_predicted
-        actual_joint_position = self.acados_ocp_solver.get(0, "x")[12:24]
-        print("roll_predicted: ", roll_predicted)
-        print("pitch_predicted: ", pitch_predicted)
-        print("yaw_predicted: ", yaw_predicted)
-        print("base_predicted: ", base_predicted)
+        H[0:3, 0:3] = R
+        H[0:3, 3] = base_pos 
+        actual_joint_position = cs.vertcat(state["joint_FL"], state["joint_FR"], state["joint_RL"], state["joint_RR"])
+        print("roll: ", roll)
+        print("pitch: ", pitch)
+        print("yaw: ", yaw)
+        print("base_pos: ", base_pos)
         print("H: ", H)
         print("actual_joint_position: ", actual_joint_position)
         print("joint_FL: ", state["joint_FL"])
         print("FL: ", state["foot_FL"])
-        print("FORWARD KINEMATICS FL: ", self.centroidal_model.forward_kinematics_FL_fun(H, actual_joint_position))
+        print("FORWARD KINEMATICS FL: ", self.centroidal_model.forward_kinematics_FL_fun(H, actual_joint_position)[:3, 3])
+        
         if FL_contact_sequence[0] == 1:
             optimal_foothold[0] = state["foot_FL"]
             optimal_footholds_assigned[0] = True

@@ -284,45 +284,10 @@ use_visualization_debug = config.simulation_params['use_visualization_debug']
 
 
 
-# Keyboard control
-def interactive_command_line():
-    global ref_linear_velocity, ref_angular_velocity, step_height
-    while True:
-        #command = input()
-        command = readchar.readkey()
-        if(command == "w"):
-            ref_linear_velocity[0] += 0.1
-        elif(command == "s"):
-            ref_linear_velocity[0] -= 0.1
-        elif(command == "a"):
-            ref_linear_velocity[1] += 0.1
-        elif(command == "d"):
-            ref_linear_velocity[1] -= 0.1
-        elif(command == "q"):
-            ref_angular_velocity[2] += 0.1
-        elif(command == "e"):
-            ref_angular_velocity[2] -= 0.1
-        elif(command == "0"):
-            ref_linear_velocity[0] = 0
-            ref_linear_velocity[1] = 0
-            ref_angular_velocity[2] = 0 
-        elif(command == "+"):
-            step_height += 0.01
-            stc.step_height = step_height
-            stc.regenerate_swing_trajectory_generator(step_height=step_height, swing_period=swing_period)
-        elif(command == "-"):
-            step_height -= 0.01
-            stc.step_height = step_height
-            stc.regenerate_swing_trajectory_generator(step_height=step_height, swing_period=swing_period)
-            
-t1 = threading.Thread(target=interactive_command_line)
-t1.daemon = True
-t1.start()
-
 
 
 # Main simulation loop ------------------------------------------------------------------
-with mujoco.viewer.launch_passive(m, d, show_left_ui=False, show_right_ui=False) as viewer:
+with mujoco.viewer.launch_passive(m, d, show_left_ui=False, show_right_ui=True) as viewer:
     mujoco.mjv_defaultFreeCamera(m, viewer.cam)
     viewer.user_scn.flags[mujoco.mjtRndFlag.mjRND_SHADOW] = 0
     viewer.user_scn.flags[mujoco.mjtRndFlag.mjRND_REFLECTION] = 0
@@ -332,12 +297,22 @@ with mujoco.viewer.launch_passive(m, d, show_left_ui=False, show_right_ui=False)
         if(use_print_debug): 
             print("###############")
 
-
+        
         # Update the robot state --------------------------------
+        # d.qpos[0:3] = d.qpos[0:3]*0.0
+        # d.qpos[7:10] = d.qpos[7:10]*0.0
+        # d.qpos[10:13] = d.qpos[10:13]*0.0
+        # d.qpos[13:16] = d.qpos[13:16]*0.0
+        # d.qpos[16:19] = d.qpos[16:19]*0.0
+        # d.qpos[3:7] = np.array([1, 0, 0, 0])
+
         com_pos = d.qpos[0:3]
         rpy_angles = np.array(euler_from_quaternion(d.qpos[3:7]))
         linear_vel = d.qvel[0:3]
         angular_vel = copy.deepcopy(d.qvel[3:6])
+
+
+
 
 
         state_current = {
@@ -349,14 +324,16 @@ with mujoco.viewer.launch_passive(m, d, show_left_ui=False, show_right_ui=False)
             'foot_FR': d.geom_xpos[FR_id],
             'foot_RL': d.geom_xpos[RL_id],
             'foot_RR': d.geom_xpos[RR_id],
-            'joint_FL': d.qpos[6:9],
-            'joint_FR': d.qpos[9:12],
-            'joint_RL': d.qpos[12:15],
-            'joint_RR': d.qpos[15:18]
+            'joint_FL': d.qpos[7:10],
+            'joint_FR': d.qpos[10:13],
+            'joint_RL': d.qpos[13:16],
+            'joint_RR': d.qpos[16:19],
+            'quaternion': d.qpos[3:7]
         }
 
 
 
+        
         if(use_print_debug): 
             print("state_current: ")
             pprint.pprint(state_current)
