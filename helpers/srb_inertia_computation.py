@@ -54,10 +54,6 @@ class SrbInertiaComputation:
             self.kindyn.set_frame_velocity_representation(representation=Representations.BODY_FIXED_REPRESENTATION)
             self.mass_mass_fun = self.kindyn.mass_matrix_fun()
 
-            #self.forward_kinematics_FL_fun = self.kindyn.forward_kinematics_fun("FL_foot")
-            #self.forward_kinematics_FR_fun = self.kindyn.forward_kinematics_fun("FR_foot")
-            #self.forward_kinematics_RR_fun = self.kindyn.forward_kinematics_fun("RL_foot")
-            #self.forward_kinematics_RL_fun = self.kindyn.forward_kinematics_fun("RR_foot")
  
 
 
@@ -73,9 +69,10 @@ class SrbInertiaComputation:
         else:
             base_pose = q[0:3]
             base_quaternion = q[3:7]
+            base_quaternion_xyzw = [base_quaternion[1], base_quaternion[2], base_quaternion[3], base_quaternion[0]]
             joint_position = q[7:]
 
-            H = SE3.from_position_quaternion(base_pose, base_quaternion).as_matrix() 
+            H = SE3.from_position_quaternion(base_pose, base_quaternion_xyzw).as_matrix() 
             inertia = self.mass_mass_fun(H, joint_position)[3:6, 3:6]
 
         return np.array(inertia)
