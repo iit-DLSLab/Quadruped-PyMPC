@@ -253,7 +253,7 @@ class Acados_NMPC_KinoDynamic:
             ocp.solver_options.hpipm_mode = "BALANCE"
         elif(config.mpc_params['solver_mode'] == "robust"):
             ocp.solver_options.hpipm_mode = "ROBUST"
-        elif(config.mpc_params['solver_mode'] == "fast"):
+        elif(config.mpc_params['solver_mode'] == "speed"):
             ocp.solver_options.qp_solver_iter_max = 10
             ocp.solver_options.hpipm_mode = "SPEED"
         elif(config.mpc_params['solver_mode'] == "crazy_speed"):
@@ -1414,7 +1414,7 @@ class Acados_NMPC_KinoDynamic:
                 pitch_predicted = self.acados_ocp_solver.get(j, "x")[7]
                 yaw_predicted = self.acados_ocp_solver.get(j, "x")[8]
                 base_predicted = self.acados_ocp_solver.get(j, "x")[0:3]
-                b_R_w_predicted = self.centroidal_model.compute_w_R_b(roll_predicted, pitch_predicted, yaw_predicted)
+                b_R_w_predicted = self.centroidal_model.compute_b_R_w(roll_predicted, pitch_predicted, yaw_predicted)
                 H = cs.SX.eye(4)
                 H[0:3, 0:3] = b_R_w_predicted.T
                 H[0:3, 3] = base_predicted
@@ -1432,7 +1432,7 @@ class Acados_NMPC_KinoDynamic:
                 pitch_predicted = self.acados_ocp_solver.get(j, "x")[7]
                 yaw_predicted = self.acados_ocp_solver.get(j, "x")[8]
                 base_predicted = self.acados_ocp_solver.get(j, "x")[0:3]
-                b_R_w_predicted = self.centroidal_model.compute_w_R_b(roll_predicted, pitch_predicted, yaw_predicted)
+                b_R_w_predicted = self.centroidal_model.compute_b_R_w(roll_predicted, pitch_predicted, yaw_predicted)
                 H = cs.SX.eye(4)
                 H[0:3, 0:3] = b_R_w_predicted.T
                 H[0:3, 3] = base_predicted
@@ -1449,7 +1449,7 @@ class Acados_NMPC_KinoDynamic:
                 pitch_predicted = self.acados_ocp_solver.get(j, "x")[7]
                 yaw_predicted = self.acados_ocp_solver.get(j, "x")[8]
                 base_predicted = self.acados_ocp_solver.get(j, "x")[0:3]
-                b_R_w_predicted = self.centroidal_model.compute_w_R_b(roll_predicted, pitch_predicted, yaw_predicted)
+                b_R_w_predicted = self.centroidal_model.compute_b_R_w(roll_predicted, pitch_predicted, yaw_predicted)
                 H = cs.SX.eye(4)
                 H[0:3, 0:3] = b_R_w_predicted.T
                 H[0:3, 3] = base_predicted
@@ -1466,7 +1466,7 @@ class Acados_NMPC_KinoDynamic:
                 pitch_predicted = self.acados_ocp_solver.get(j, "x")[7]
                 yaw_predicted = self.acados_ocp_solver.get(j, "x")[8]
                 base_predicted = self.acados_ocp_solver.get(j, "x")[0:3]
-                b_R_w_predicted = self.centroidal_model.compute_w_R_b(roll_predicted, pitch_predicted, yaw_predicted)
+                b_R_w_predicted = self.centroidal_model.compute_b_R_w(roll_predicted, pitch_predicted, yaw_predicted)
                 H = cs.SX.eye(4)
                 H[0:3, 0:3] = b_R_w_predicted.T
                 H[0:3, 3] = base_predicted

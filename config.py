@@ -43,6 +43,7 @@ mpc_params = {
     # 'input_rates' optimizes the delta GRF
     # 'sampling' is a gpu-based mpc that samples the GRF
     # 'collaborative' optimized directly the GRF and has a passive arm model inside 
+    # 'kinodynamic' similar to nominal, but considers the kinematics of the robot
     'type': 'nominal',
     
     # horizon is the number of timesteps in the future that the mpc will optimize
@@ -122,6 +123,13 @@ mpc_params = {
     # this is used only in the case of collaborative mpc, to 
     # compensate for the external wrench in the prediction (only collaborative)
     'passive_arm_compensation': True,
+
+
+    # this is used only for kinodynamic mpc
+    'use_fixed_com': True,
+    'use_fixed_gravity': False,
+    'use_coriolis_and_centrifugal': False,
+    'use_multi_model': False,
 
     # ----- END properties for the gradient-based mpc -----
 
