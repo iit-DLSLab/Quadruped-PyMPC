@@ -299,18 +299,10 @@ with mujoco.viewer.launch_passive(m, d, show_left_ui=False, show_right_ui=True) 
 
         
         # Update the robot state --------------------------------
-        # d.qpos[0:3] = d.qpos[0:3]*0.0
-        # d.qpos[7:10] = d.qpos[7:10]*0.0
-        # d.qpos[10:13] = d.qpos[10:13]*0.0
-        # d.qpos[13:16] = d.qpos[13:16]*0.0
-        # d.qpos[16:19] = d.qpos[16:19]*0.0
-        # d.qpos[3:7] = np.array([1, 0, 0, 0])
-
         com_pos = d.qpos[0:3]
         rpy_angles = np.array(euler_from_quaternion(d.qpos[3:7]))
         linear_vel = d.qvel[0:3]
         angular_vel = copy.deepcopy(d.qvel[3:6])
-
 
 
 
@@ -393,10 +385,10 @@ with mujoco.viewer.launch_passive(m, d, show_left_ui=False, show_right_ui=True) 
                                                             state_current["position"][2], lift_off_positions)
 
         # Update state reference
-        reference_state["ref_foot_FL"] = reference_foot_FL.reshape((1,3))
-        reference_state["ref_foot_FR"] = reference_foot_FR.reshape((1,3))
-        reference_state["ref_foot_RL"] = reference_foot_RL.reshape((1,3))
-        reference_state["ref_foot_RR"] = reference_foot_RR.reshape((1,3))
+        #reference_state["ref_foot_FL"] = reference_foot_FL.reshape((1,3))
+        #reference_state["ref_foot_FR"] = reference_foot_FR.reshape((1,3))
+        #reference_state["ref_foot_RL"] = reference_foot_RL.reshape((1,3))
+        #reference_state["ref_foot_RR"] = reference_foot_RR.reshape((1,3))
         
         # and rotate the reference velocity in the world frame
         h_R_w = np.array([np.cos(rpy_angles[2]), np.sin(rpy_angles[2]), 0,
@@ -405,6 +397,73 @@ with mujoco.viewer.launch_passive(m, d, show_left_ui=False, show_right_ui=True) 
         h_R_w = h_R_w.reshape((3,3))
         reference_state["ref_linear_velocity"] = h_R_w.T@ref_linear_velocity.reshape((3,1)).flatten()
         
+
+        # Compute the reference for the swing trajectory 
+        if(use_print_debug): 
+            print("swing_period: ", swing_period)
+            print("swing_time: ", swing_time)
+
+        for leg in range(4):
+            # Swing time reset
+            if(current_contact[leg] == 0):
+                if swing_time[leg] < swing_period:
+                    swing_time[leg] = swing_time[leg] + simulation_dt
+            else:
+                swing_time[leg] = 0
+            
+
+            # Set lif-offs
+            if previous_contact[leg] == 1 and current_contact[leg] == 0:
+                if(leg == 0):
+                    lift_off_positions[leg] = copy.deepcopy(position_foot_FL)
+                elif(leg == 1):
+                    lift_off_positions[leg] = copy.deepcopy(position_foot_FR)
+                elif(leg == 2):
+                    lift_off_positions[leg] = copy.deepcopy(position_foot_RL)
+                elif(leg == 3):
+                    lift_off_positions[leg] = copy.deepcopy(position_foot_RR)
+        
+        # Iterate over the legs for all the horizon
+        desired_swing_foot_position_FL = np.zeros((horizon, 3))
+        desired_swing_foot_position_FR = np.zeros((horizon, 3))
+        desired_swing_foot_position_RL = np.zeros((horizon, 3))
+        desired_swing_foot_position_RR = np.zeros((horizon, 3))
+        for leg in range(4):
+            for n in range(horizon):
+
+                dt_increment_swing = 0.0
+                if(config.mpc_params['use_nonuniform_discretization'] and n < config.mpc_params['horizon_fine_grained']):
+                    dt_increment_swing = (n)*config.mpc_params['dt_fine_grained']
+                else:
+                    dt_increment_swing = (n)*config.mpc_params['dt']
+                
+                if(leg == 0):
+                    desired_foot_position, \
+                    desired_foot_velocity, \
+                    _ = stc.swing_generator.compute_trajectory_references(swing_time[leg] + dt_increment_swing, lift_off_positions[leg], reference_foot_FL)
+                    desired_swing_foot_position_FL[n] = desired_foot_position
+                elif(leg == 1):
+                    desired_foot_position, \
+                    desired_foot_velocity, \
+                    _ = stc.swing_generator.compute_trajectory_references(swing_time[leg]  + dt_increment_swing, lift_off_positions[leg], reference_foot_FR)
+                    desired_swing_foot_position_FR[n] = desired_foot_position
+                elif(leg == 2):
+                    desired_foot_position, \
+                    desired_foot_velocity, \
+                    _ = stc.swing_generator.compute_trajectory_references(swing_time[leg]  + dt_increment_swing, lift_off_positions[leg], reference_foot_RL)
+                    desired_swing_foot_position_RL[n] = desired_foot_position
+                elif(leg == 3):
+                    desired_foot_position, \
+                    desired_foot_velocity, \
+                    _ = stc.swing_generator.compute_trajectory_references(swing_time[leg]  + dt_increment_swing, lift_off_positions[leg], reference_foot_RR)
+                    desired_swing_foot_position_RR[n] = desired_foot_position
+        
+        reference_state["ref_foot_FL"] = desired_swing_foot_position_FL
+        reference_state["ref_foot_FR"] = desired_swing_foot_position_FR
+        reference_state["ref_foot_RL"] = desired_swing_foot_position_RL
+        reference_state["ref_foot_RR"] = desired_swing_foot_position_RR
+        
+
         if(use_print_debug): 
             print("reference_state: ")
             pprint.pprint(reference_state)
@@ -564,35 +623,6 @@ with mujoco.viewer.launch_passive(m, d, show_left_ui=False, show_right_ui=True) 
         position_foot_RL_prev = copy.deepcopy(position_foot_RL)
         position_foot_RR_prev = copy.deepcopy(position_foot_RR)
 
-
-
-
-        # Compute the reference for the swing trajectory 
-        if(use_print_debug): 
-            print("swing_period: ", swing_period)
-            print("swing_time: ", swing_time)
-
-        for leg in range(4):
-            # Swing time reset
-            if(current_contact[leg] == 0):
-                if swing_time[leg] < swing_period:
-                    swing_time[leg] = swing_time[leg] + simulation_dt
-            else:
-                swing_time[leg] = 0
-            
-
-            # Set lif-offs
-            if previous_contact[leg] == 1 and current_contact[leg] == 0:
-                if(leg == 0):
-                    lift_off_positions[leg] = copy.deepcopy(position_foot_FL)
-                elif(leg == 1):
-                    lift_off_positions[leg] = copy.deepcopy(position_foot_FR)
-                elif(leg == 2):
-                    lift_off_positions[leg] = copy.deepcopy(position_foot_RL)
-                elif(leg == 3):
-                    lift_off_positions[leg] = copy.deepcopy(position_foot_RR)
-
-        
 
         # The swing controller is in the end-effector space. For its computation,
         # we save for simplicity joints position and velocities

@@ -17,12 +17,20 @@ import sys
 sys.path.append(dir_path)
 sys.path.append(dir_path + '/../../')
 
-
-from adam.casadi import KinDynComputations
-from adam import Representations
 from liecasadi import SE3
 
-import config 
+import config
+
+if(config.mpc_params['use_adam']):
+    # ADAM import
+    from adam.casadi import KinDynComputations
+    from adam import Representations
+else:
+    # PINOCCHIO import
+    import pinocchio as pin
+    from pinocchio import casadi as cpin
+
+ 
 
 # Class that defines the prediction model of the NMPC
 class Centroidal_Model_KinoDynamic:
@@ -47,7 +55,7 @@ class Centroidal_Model_KinoDynamic:
                        'RL_hip_joint', 'RL_thigh_joint', 'RL_calf_joint',
                        'RR_hip_joint', 'RR_thigh_joint', 'RR_calf_joint']
 
-
+        
         self.kindyn = KinDynComputations(urdfstring=urdf_filename, joints_name_list=joint_list)
         self.kindyn.set_frame_velocity_representation(representation=Representations.BODY_FIXED_REPRESENTATION)
         self.mass_mass_fun = self.kindyn.mass_matrix_fun()
@@ -56,16 +64,56 @@ class Centroidal_Model_KinoDynamic:
         self.gravity_fun = self.kindyn.gravity_term_fun()
         self.coriolis_fun = self.kindyn.coriolis_term_fun()
         
+        
+        if(config.mpc_params['use_adam']):
+            self.forward_kinematics_FL_fun = self.kindyn.forward_kinematics_fun("FL_foot")
+            self.forward_kinematics_FR_fun = self.kindyn.forward_kinematics_fun("FR_foot")
+            self.forward_kinematics_RR_fun = self.kindyn.forward_kinematics_fun("RL_foot")
+            self.forward_kinematics_RL_fun = self.kindyn.forward_kinematics_fun("RR_foot")
 
-        self.forward_kinematics_FL_fun = self.kindyn.forward_kinematics_fun("FL_foot")
-        self.forward_kinematics_FR_fun = self.kindyn.forward_kinematics_fun("FR_foot")
-        self.forward_kinematics_RR_fun = self.kindyn.forward_kinematics_fun("RL_foot")
-        self.forward_kinematics_RL_fun = self.kindyn.forward_kinematics_fun("RR_foot")
+            self.jacobian_FL_fun = self.kindyn.jacobian_fun("FL_foot")
+            self.jacobian_FR_fun = self.kindyn.jacobian_fun("FR_foot")
+            self.jacobian_RL_fun = self.kindyn.jacobian_fun("RL_foot")
+            self.jacobian_RR_fun = self.kindyn.jacobian_fun("RR_foot")
+        else:
+            model_pin = pin.buildModelFromUrdf(urdf_filename)
+            data_pin = model_pin.createData()
+            # generate the casadi graph
+            cmodel_pin = cpin.Model(model_pin)
+            cdata_pin = cmodel_pin.createData()
+            cq_pin = cs.SX.sym("q", model_pin.nq, 1)
+            
+            # precompute the forward kinematics graph
+            cpin.framesForwardKinematics(cmodel_pin, cdata_pin, cq_pin)
 
-        self.jacobian_FL_fun = self.kindyn.jacobian_fun("FL_foot")
-        self.jacobian_FR_fun = self.kindyn.jacobian_fun("FR_foot")
-        self.jacobian_RL_fun = self.kindyn.jacobian_fun("RL_foot")
-        self.jacobian_RR_fun = self.kindyn.jacobian_fun("RR_foot")
+            # takes the ID of the feet, and generate a casadi function for a generic forward kinematics
+            FL_foot_id = model_pin.getFrameId("FL_foot_fixed")
+            #self.FL_foot_id = self.model.getJointId("FL_foot_fixed")
+            self.forward_kinematics_FL_fun = cs.Function("FL_foot_pos", [cq_pin], [cdata_pin.oMf[FL_foot_id].translation])
+
+            FR_foot_id = model_pin.getFrameId("FR_foot_fixed")
+            #self.FR_foot_id = self.model.getJointId("FR_foot_fixed")
+            self.forward_kinematics_FR_fun= cs.Function("FR_foot_pos", [cq_pin], [cdata_pin.oMf[FR_foot_id].translation])
+
+            RL_foot_id = model_pin.getFrameId("RL_foot_fixed")
+            #self.RL_foot_id = self.model.getJointId("RL_foot_fixed")
+            self.forward_kinematics_RR_fun = cs.Function("RL_foot_pos", [cq_pin], [cdata_pin.oMf[RL_foot_id].translation])
+
+            RR_foot_id = model_pin.getFrameId("RR_foot_fixed")
+            #self.RR_foot_id = self.model.getJointId("RR_foot_fixed")
+            self.forward_kinematics_RL_fun = cs.Function("RR_foot_pos", [cq_pin], [cdata_pin.oMf[RR_foot_id].translation])
+
+            J_FL = pin.getFrameJacobian(model_pin, data_pin, FL_foot_id, pin.ReferenceFrame.LOCAL_WORLD_ALIGNED)  # in joint frame
+            J_FR = pin.getFrameJacobian(model_pin, data_pin, FR_foot_id, pin.ReferenceFrame.LOCAL_WORLD_ALIGNED)  # in joint frame
+            J_RL = pin.getFrameJacobian(model_pin, data_pin, RL_foot_id, pin.ReferenceFrame.LOCAL_WORLD_ALIGNED)  # in joint frame
+            J_RR = pin.getFrameJacobian(model_pin, data_pin, RR_foot_id, pin.ReferenceFrame.LOCAL_WORLD_ALIGNED)  # in joint frame
+
+            self.jacobian_FL_fun = cs.Function("jacobian_FL", [cq_pin], [J_FL])
+            self.jacobian_FR_fun = cs.Function("jacobian_FR", [cq_pin], [J_FR])
+            self.jacobian_RL_fun = cs.Function("jacobian_RL", [cq_pin], [J_RL])
+            self.jacobian_RR_fun = cs.Function("jacobian_RR", [cq_pin], [J_RR])
+
+
 
 
 
@@ -322,7 +370,7 @@ class Centroidal_Model_KinoDynamic:
         self.foot_position_rl = self.forward_kinematics_RL_fun(H, joint_position)[0:3, 3]
         self.foot_position_rr = self.forward_kinematics_RR_fun(H, joint_position)[0:3, 3]
 
-        inertia = self.mass_mass_fun(H, joint_position)[3:6, 3:6]
+        inertia = self.mass_mass_fun(H, joint_position)[0:6, 0:6]
         gravity = np.array([0, 0, -9.81])
 
 
@@ -343,52 +391,53 @@ class Centroidal_Model_KinoDynamic:
 
 
             temp2 = temp2 + external_wrench_angular
-            angular_acc_base = cs.inv(inertia)@(b_R_w@temp2 - cs.skew(w)@inertia@w)
+            angular_acc_base = cs.inv(inertia[3:6, 3:6])@(b_R_w@temp2 - cs.skew(w)@inertia[3:6, 3:6]@w)
         
         else:
-            if(config.mpc_params['use_fixed_gravity'] and config.mpc_params['use_coriolis_and_centrifugal']):
+            if(config.mpc_params['use_fixed_gravity'] and not config.mpc_params['use_coriolis_and_centrifugal']):
                 acc = cs.inv(inertia)@( 
-                               self.jacobian_FL_fun(H, joint_position).T@foot_force_fl@stanceFL + 
-                               self.jacobian_FR_fun(H, joint_position).T@foot_force_fr@stanceFR + 
-                               self.jacobian_RL_fun(H, joint_position).T@foot_force_rl@stanceRL + 
-                               self.jacobian_RR_fun(H, joint_position).T@foot_force_rr@stanceRR)
+                               self.jacobian_FL_fun(H, joint_position)[0:3, 6:9].T@foot_force_fl@stanceFL + 
+                               self.jacobian_FR_fun(H, joint_position)[0:3, 9:12].T@foot_force_fr@stanceFR + 
+                               self.jacobian_RL_fun(H, joint_position)[0:3, 12:15].T@foot_force_rl@stanceRL + 
+                               self.jacobian_RR_fun(H, joint_position)[0:3, 15:18].T@foot_force_rr@stanceRR)
+                breakpoint()
                 acc[0:3] += gravity
 
-            elif(config.mpc_params['use_fixed_gravity'] and not config.mpc_params['use_coriolis_and_centrifugal']):
-                eta = self.gravity_fun(H, joint_position, linear_com_vel, joints_velocities)
-                acc = cs.inv(inertia)@(-eta + 
-                               self.jacobian_FL_fun(H, joint_position).T@foot_force_fl@stanceFL + 
-                               self.jacobian_FR_fun(H, joint_position).T@foot_force_fr@stanceFR + 
-                               self.jacobian_RL_fun(H, joint_position).T@foot_force_rl@stanceRL + 
-                               self.jacobian_RR_fun(H, joint_position).T@foot_force_rr@stanceRR)
-                acc[0:3] += gravity
-
-            elif(not config.mpc_params['use_fixed_gravity'] and config.mpc_params['use_coriolis_and_centrifugal']):
+            elif(config.mpc_params['use_fixed_gravity'] and config.mpc_params['use_coriolis_and_centrifugal']):
                 eta = self.bias_force_fun(H, joint_position, linear_com_vel, joints_velocities)
                 acc = cs.inv(inertia)@(-eta + 
-                               self.jacobian_FL_fun(H, joint_position).T@foot_force_fl@stanceFL + 
-                               self.jacobian_FR_fun(H, joint_position).T@foot_force_fr@stanceFR + 
-                               self.jacobian_RL_fun(H, joint_position).T@foot_force_rl@stanceRL + 
-                               self.jacobian_RR_fun(H, joint_position).T@foot_force_rr@stanceRR)
+                               self.jacobian_FL_fun(H, joint_position)[0:3, 6:9].T@foot_force_fl@stanceFL + 
+                               self.jacobian_FR_fun(H, joint_position)[0:3, 9:12].T@foot_force_fr@stanceFR + 
+                               self.jacobian_RL_fun(H, joint_position)[0:3, 12:15].T@foot_force_rl@stanceRL + 
+                               self.jacobian_RR_fun(H, joint_position)[0:3, 15:18].T@foot_force_rr@stanceRR)
                 acc[0:3] += gravity
 
             elif(not config.mpc_params['use_fixed_gravity'] and not config.mpc_params['use_coriolis_and_centrifugal']):
-                eta = self.bias_force_fun(H, joint_position, linear_com_vel, joints_velocities)
-                eta += self.gravity_fun(H, joint_position, linear_com_vel, joints_velocities)
+                eta = self.gravity_fun(H, joint_position)
                 acc = cs.inv(inertia)@(-eta + 
-                               self.jacobian_FL_fun(H, joint_position).T@foot_force_fl@stanceFL + 
-                               self.jacobian_FR_fun(H, joint_position).T@foot_force_fr@stanceFR + 
-                               self.jacobian_RL_fun(H, joint_position).T@foot_force_rl@stanceRL + 
-                               self.jacobian_RR_fun(H, joint_position).T@foot_force_rr@stanceRR)
+                               self.jacobian_FL_fun(H, joint_position)[0:3, 6:9].T@foot_force_fl@stanceFL + 
+                               self.jacobian_FR_fun(H, joint_position)[0:3, 9:12].T@foot_force_fr@stanceFR + 
+                               self.jacobian_RL_fun(H, joint_position)[0:3, 12:15].T@foot_force_rl@stanceRL + 
+                               self.jacobian_RR_fun(H, joint_position)[0:3, 15:18].T@foot_force_rr@stanceRR)
+                
+
+            elif(not config.mpc_params['use_fixed_gravity'] and not config.mpc_params['use_coriolis_and_centrifugal']):
+                eta = self.bias_force_fun(H, joint_position, linear_com_vel, joints_velocities)
+                eta += self.gravity_fun(H, joint_position)
+                acc = cs.inv(inertia)@(-eta + 
+                               self.jacobian_FL_fun(H, joint_position)[0:3, 6:9].T@foot_force_fl@stanceFL + 
+                               self.jacobian_FR_fun(H, joint_position)[0:3, 9:12].T@foot_force_fr@stanceFR + 
+                               self.jacobian_RL_fun(H, joint_position)[0:3, 12:15].T@foot_force_rl@stanceRL + 
+                               self.jacobian_RR_fun(H, joint_position)[0:3, 15:18].T@foot_force_rr@stanceRR)
                 
             elif(config.mpc_params['use_multi_model']):
                 eta = self.bias_force_fun(H, joint_position, linear_com_vel, joints_velocities)
                 eta += self.gravity_fun(H, joint_position, linear_com_vel, joints_velocities)
                 acc = cs.inv(inertia)@(-eta + 
-                               self.jacobian_FL_fun(H, joint_position).T@foot_force_fl@stanceFL + 
-                               self.jacobian_FR_fun(H, joint_position).T@foot_force_fr@stanceFR + 
-                               self.jacobian_RL_fun(H, joint_position).T@foot_force_rl@stanceRL + 
-                               self.jacobian_RR_fun(H, joint_position).T@foot_force_rr@stanceRR)*0
+                               self.jacobian_FL_fun(H, joint_position)[0:3, 6:9].T@foot_force_fl@stanceFL + 
+                               self.jacobian_FR_fun(H, joint_position)[0:3, 9:12].T@foot_force_fr@stanceFR + 
+                               self.jacobian_RL_fun(H, joint_position)[0:3, 12:15].T@foot_force_rl@stanceRL + 
+                               self.jacobian_RR_fun(H, joint_position)[0:3, 15:18].T@foot_force_rr@stanceRR)*0
                 
                 # Compute the linear wrench
                 temp =  foot_force_fl@stanceFL 
@@ -406,11 +455,10 @@ class Centroidal_Model_KinoDynamic:
 
 
                 temp2 = temp2 + external_wrench_angular
-                angular_acc_base = cs.inv(inertia)@(b_R_w@temp2 - cs.skew(w)@inertia@w)
+                angular_acc_base = cs.inv(inertia[3:6, 3:6])@(b_R_w@temp2 - cs.skew(w)@inertia[3:6, 3:6]@w)
                 acc[0:3] += linear_com_acc*(1-0)
                 acc[3:6] += angular_acc_base*(1-0)
-            else:
-                raise ValueError("You should set at least one of the three flags use_fixed_gravity, use_coriolis_and_centrifugal, use_multi_model to True")
+
             
             linear_com_acc = acc[0:3]
             angular_acc_base = acc[3:6]

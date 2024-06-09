@@ -54,11 +54,6 @@ class SrbInertiaComputation:
             self.kindyn.set_frame_velocity_representation(representation=Representations.BODY_FIXED_REPRESENTATION)
             self.mass_mass_fun = self.kindyn.mass_matrix_fun()
 
-            #self.forward_kinematics_FL_fun = self.kindyn.forward_kinematics_fun("FL_foot")
-            #self.forward_kinematics_FR_fun = self.kindyn.forward_kinematics_fun("FR_foot")
-            #self.forward_kinematics_RR_fun = self.kindyn.forward_kinematics_fun("RL_foot")
-            #self.forward_kinematics_RL_fun = self.kindyn.forward_kinematics_fun("RR_foot")
- 
 
 
     def compute_inertia(self, q):

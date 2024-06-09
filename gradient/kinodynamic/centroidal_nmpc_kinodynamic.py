@@ -1096,11 +1096,13 @@ class Acados_NMPC_KinoDynamic:
         reference["ref_foot_RL"] = reference["ref_foot_RL"] - state["position"]
         reference["ref_foot_RR"] = reference["ref_foot_RR"] - state["position"]
 
+        
         state["foot_FL"] = state["foot_FL"] - state["position"]
         state["foot_FR"] = state["foot_FR"] - state["position"]
         state["foot_RL"] = state["foot_RL"] - state["position"]
         state["foot_RR"] = state["foot_RR"] - state["position"]
         state["position"] = np.array([0, 0, 0])
+
 
         return state, reference, constraint
 
@@ -1139,28 +1141,13 @@ class Acados_NMPC_KinoDynamic:
             yref[3:6] = reference['ref_linear_velocity']
             yref[6:9] = reference['ref_orientation']
             yref[9:12] = reference['ref_angular_velocity']
-            yref[12:15] = reference['ref_foot_FL'][idx_ref_foot_to_assign[0]]
-            yref[15:18] = reference['ref_foot_FR'][idx_ref_foot_to_assign[1]]
-            yref[18:21] = reference['ref_foot_RL'][idx_ref_foot_to_assign[2]]
-            yref[21:24] = reference['ref_foot_RR'][idx_ref_foot_to_assign[3]]
+            yref[12:15] = reference['ref_foot_FL'][j]
+            yref[15:18] = reference['ref_foot_FR'][j]
+            yref[18:21] = reference['ref_foot_RL'][j]
+            yref[21:24] = reference['ref_foot_RR'][j]
 
 
-            # Update the idx_ref_foot_to_assign. Every time there is a change in the contact phase
-            # between 1 and 0, it means that the leg go into swing and a new reference is needed!!!
-            if(j > 1 and j<self.horizon-1):
-                if(FL_contact_sequence[j+1] == 0 and FL_contact_sequence[j] == 1):
-                    if(reference['ref_foot_FL'].shape[0] > idx_ref_foot_to_assign[0]+1):
-                        idx_ref_foot_to_assign[0] += 1
-                if(FR_contact_sequence[j+1] == 0 and FR_contact_sequence[j] == 1):
-                    if(reference['ref_foot_FR'].shape[0] > idx_ref_foot_to_assign[1]+1):
-                        idx_ref_foot_to_assign[1] += 1
-                if(RL_contact_sequence[j+1] == 0 and RL_contact_sequence[j] == 1):
-                    if(reference['ref_foot_RL'].shape[0] > idx_ref_foot_to_assign[2]+1):
-                        idx_ref_foot_to_assign[2] += 1
-                if(RR_contact_sequence[j+1] == 0 and RR_contact_sequence[j] == 1):
-                    if(reference['ref_foot_RR'].shape[0] > idx_ref_foot_to_assign[3]+1):
-                        idx_ref_foot_to_assign[3] += 1 
-
+ 
 
             # Calculate the reference force z for the leg in stance
             # It's simply mass*acc/number_of_legs_in_stance!!
@@ -1376,7 +1363,8 @@ class Acados_NMPC_KinoDynamic:
         #print(cacca)
 
         H = cs.SX.eye(4)
-        H[0:3, 0:3] = R
+        #H[0:3, 0:3] = R
+        H[0:3, 0:3] = b_R_w.T
         H[0:3, 3] = base_pos 
         actual_joint_position = cs.vertcat(state["joint_FL"], state["joint_FR"], state["joint_RL"], state["joint_RR"])
         print("roll: ", roll)
@@ -1388,6 +1376,7 @@ class Acados_NMPC_KinoDynamic:
         print("joint_FL: ", state["joint_FL"])
         print("FL: ", state["foot_FL"])
         print("FORWARD KINEMATICS FL: ", self.centroidal_model.forward_kinematics_FL_fun(H, actual_joint_position)[:3, 3])
+        
         
         if FL_contact_sequence[0] == 1:
             optimal_foothold[0] = state["foot_FL"]
@@ -1410,10 +1399,8 @@ class Acados_NMPC_KinoDynamic:
         for j in range(1, self.horizon):
             if(FL_contact_sequence[j] != FL_contact_sequence[j-1] and not optimal_footholds_assigned[0]):
     
-                roll_predicted = self.acados_ocp_solver.get(j, "x")[6]
-                pitch_predicted = self.acados_ocp_solver.get(j, "x")[7]
-                yaw_predicted = self.acados_ocp_solver.get(j, "x")[8]
                 base_predicted = self.acados_ocp_solver.get(j, "x")[0:3]
+                roll_predicted, pitch_predicted, yaw_predicted = self.acados_ocp_solver.get(j, "x")[6:9]
                 b_R_w_predicted = self.centroidal_model.compute_b_R_w(roll_predicted, pitch_predicted, yaw_predicted)
                 H = cs.SX.eye(4)
                 H[0:3, 0:3] = b_R_w_predicted.T
@@ -1428,16 +1415,14 @@ class Acados_NMPC_KinoDynamic:
                 
             if(FR_contact_sequence[j] != FR_contact_sequence[j-1] and not optimal_footholds_assigned[1]):
                 
-                roll_predicted = self.acados_ocp_solver.get(j, "x")[6]
-                pitch_predicted = self.acados_ocp_solver.get(j, "x")[7]
-                yaw_predicted = self.acados_ocp_solver.get(j, "x")[8]
                 base_predicted = self.acados_ocp_solver.get(j, "x")[0:3]
+                roll_predicted, pitch_predicted, yaw_predicted = self.acados_ocp_solver.get(j, "x")[6:9]
                 b_R_w_predicted = self.centroidal_model.compute_b_R_w(roll_predicted, pitch_predicted, yaw_predicted)
                 H = cs.SX.eye(4)
                 H[0:3, 0:3] = b_R_w_predicted.T
                 H[0:3, 3] = base_predicted
                 
-                predicted_joint_position = self.acados_ocp_solver.get(j, "x")[12:24]
+                #predicted_joint_position = self.acados_ocp_solver.get(j, "x")[12:24]
                 #optimal_foothold[1] = np.array(self.centroidal_model.forward_kinematics_FR_fun(H, predicted_joint_position)[0:3, 3])
                 optimal_foothold[1] = state["foot_FR"]
                 optimal_footholds_assigned[1] = True
@@ -1445,16 +1430,14 @@ class Acados_NMPC_KinoDynamic:
                 
             if(RL_contact_sequence[j] != RL_contact_sequence[j-1] and not optimal_footholds_assigned[2]):
                 
-                roll_predicted = self.acados_ocp_solver.get(j, "x")[6]
-                pitch_predicted = self.acados_ocp_solver.get(j, "x")[7]
-                yaw_predicted = self.acados_ocp_solver.get(j, "x")[8]
                 base_predicted = self.acados_ocp_solver.get(j, "x")[0:3]
+                roll_predicted, pitch_predicted, yaw_predicted = self.acados_ocp_solver.get(j, "x")[6:9]
                 b_R_w_predicted = self.centroidal_model.compute_b_R_w(roll_predicted, pitch_predicted, yaw_predicted)
                 H = cs.SX.eye(4)
                 H[0:3, 0:3] = b_R_w_predicted.T
                 H[0:3, 3] = base_predicted
                 
-                predicted_joint_position = self.acados_ocp_solver.get(j, "x")[12:24]
+                #predicted_joint_position = self.acados_ocp_solver.get(j, "x")[12:24]
                 #optimal_foothold[2] = np.array(self.centroidal_model.forward_kinematics_RL_fun(H, predicted_joint_position)[0:3, 3])
                 optimal_foothold[2] = state["foot_RL"]
                 optimal_footholds_assigned[2] = True
@@ -1462,20 +1445,17 @@ class Acados_NMPC_KinoDynamic:
 
             if(RR_contact_sequence[j] != RR_contact_sequence[j-1] and not optimal_footholds_assigned[3]):
                 
-                roll_predicted = self.acados_ocp_solver.get(j, "x")[6]
-                pitch_predicted = self.acados_ocp_solver.get(j, "x")[7]
-                yaw_predicted = self.acados_ocp_solver.get(j, "x")[8]
                 base_predicted = self.acados_ocp_solver.get(j, "x")[0:3]
+                roll_predicted, pitch_predicted, yaw_predicted = self.acados_ocp_solver.get(j, "x")[6:9]
                 b_R_w_predicted = self.centroidal_model.compute_b_R_w(roll_predicted, pitch_predicted, yaw_predicted)
                 H = cs.SX.eye(4)
                 H[0:3, 0:3] = b_R_w_predicted.T
                 H[0:3, 3] = base_predicted
                 
-                predicted_joint_position = self.acados_ocp_solver.get(j, "x")[12:24]
+                #predicted_joint_position = self.acados_ocp_solver.get(j, "x")[12:24]
                 #optimal_foothold[3] = np.array(self.centroidal_model.forward_kinematics_RR_fun(H, predicted_joint_position)[0:3, 3])
                 optimal_foothold[3] = state["foot_RR"]
                 optimal_footholds_assigned[3] = True
-
 
 
 

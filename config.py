@@ -130,6 +130,7 @@ mpc_params = {
     'use_fixed_gravity': False,
     'use_coriolis_and_centrifugal': False,
     'use_multi_model': False,
+    'use_adam': True,
 
     # ----- END properties for the gradient-based mpc -----
 
@@ -169,7 +170,7 @@ elif(robot == 'mini_cheetah'):
     ref_z = 0.25
 
 simulation_params = {
-    'swing_generator': 'scipy', #'scipy', 'explicit', 'ndcurves'
+    'swing_generator': 'explicit', #'scipy', 'explicit', 'ndcurves'
     'swing_position_gain_fb': 5000,
     'swing_velocity_gain_fb': 100,
     'swing_integral_gain_fb': 0,

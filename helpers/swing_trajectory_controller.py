@@ -63,6 +63,7 @@ class SwingTrajectoryController:
                               foot_velocity,
                               h,
                               mass_matrix):
+        
         # Compute trajectory references
         desired_foot_position, \
         desired_foot_velocity, \
