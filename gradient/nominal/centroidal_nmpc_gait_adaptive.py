@@ -1078,67 +1078,6 @@ class Acados_NMPC_GaitAdaptive():
 
 
 
-    def set_warm_start(self, state_acados, reference, FL_contact_sequence, FR_contact_sequence, RL_contact_sequence, RR_contact_sequence):
-        """
-        Sets the warm start for the optimization problem. This could be useful in the case 
-        some old guess is outside some new constraints.. Maybe we could have some
-        infeasibility problem. Still to investigate..
-
-        Args:
-            state_acados (np.ndarray): The current state of the system.
-            reference (dict): Dictionary containing reference values for the foot positions.
-            FL_contact_sequence (np.ndarray): Contact sequence for the front left leg.
-            FR_contact_sequence (np.ndarray): Contact sequence for the front right leg.
-            RL_contact_sequence (np.ndarray): Contact sequence for the rear left leg.
-            RR_contact_sequence (np.ndarray): Contact sequence for the rear right leg.
-        """
-        idx_ref_foot_to_assign = np.array([0, 0, 0, 0])
-        
-        for j in range(self.horizon):
-            # We only want to modify the warm start of the footholds...
-            # hence i take the current warm start from acados and 
-            # modify onlya subset of it
-            warm_start = copy.deepcopy(self.acados_ocp_solver.get(j, "x"))
-
-
-            # Update the idx_ref_foot_to_assign. Every time there is a change in the contact phase
-            # between 1 and 0, it means that the leg go into swing and a new reference is needed!!!
-            if(j > 1 and j<self.horizon-1):
-                if(FL_contact_sequence[j] == 0 and FL_contact_sequence[j-1] == 1):
-                    if(reference['ref_foot_FL'].shape[0] > idx_ref_foot_to_assign[0]+1):
-                        idx_ref_foot_to_assign[0] += 1
-                if(FR_contact_sequence[j] == 0 and FR_contact_sequence[j-1] == 1):
-                    if(reference['ref_foot_FR'].shape[0] > idx_ref_foot_to_assign[1]+1):
-                        idx_ref_foot_to_assign[1] += 1
-                if(RL_contact_sequence[j] == 0 and RL_contact_sequence[j-1] == 1):
-                    if(reference['ref_foot_RL'].shape[0] > idx_ref_foot_to_assign[2]+1):
-                        idx_ref_foot_to_assign[2] += 1
-                if(RR_contact_sequence[j] == 0 and RR_contact_sequence[j-1] == 1):
-                    if(reference['ref_foot_RR'].shape[0] > idx_ref_foot_to_assign[3]+1):
-                        idx_ref_foot_to_assign[3] += 1 
-            
-            warm_start[8] = state_acados[8]
-            
-            if(idx_ref_foot_to_assign[0] == 0):
-                warm_start[12:15] = state_acados[12:15].reshape((3,))
-            else:
-                warm_start[12:15] = reference["ref_foot_FL"][0]
-            if(idx_ref_foot_to_assign[1] == 0):
-                warm_start[15:18] = state_acados[15:18].reshape((3,))
-            else:
-                warm_start[15:18] = reference["ref_foot_FR"][0]
-            if(idx_ref_foot_to_assign[2] == 0):
-                warm_start[18:21] = state_acados[18:21].reshape((3,))
-            else:
-                warm_start[18:21] = reference["ref_foot_RL"][0]
-            if(idx_ref_foot_to_assign[3] == 0):
-                warm_start[21:24] = state_acados[21:24].reshape((3,))
-            else:
-                warm_start[21:24] = reference["ref_foot_RR"][0]
-
-            
-            self.acados_ocp_solver.set(j, "x", warm_start)
-    
 
     # Method to perform the centering of the states and the reference around (0, 0, 0)
     def perform_scaling(self, state, reference, constraint = None):
