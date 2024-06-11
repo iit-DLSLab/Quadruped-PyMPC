@@ -84,6 +84,10 @@ elif(config.mpc_params['type'] == 'input_rates'):
     from centroidal_nmpc_input_rates import Acados_NMPC_InputRates
     controller = Acados_NMPC_InputRates()
 
+    if(config.mpc_params['optimize_step_freq']):
+        from centroidal_nmpc_gait_adaptive import Acados_NMPC_GaitAdaptive
+        batched_controller = Acados_NMPC_GaitAdaptive()
+
 elif(config.mpc_params['type'] == 'sampling'):
     if(config.mpc_params['optimize_step_freq']):
         from sampling.centroidal_nmpc_jax_gait_adaptive import Sampling_MPC

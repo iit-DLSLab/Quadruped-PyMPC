@@ -43,7 +43,7 @@ mpc_params = {
     # 'input_rates' optimizes the delta GRF
     # 'sampling' is a gpu-based mpc that samples the GRF
     # 'collaborative' optimized directly the GRF and has a passive arm model inside 
-    'type': 'nominal',
+    'type': 'input_rates',
     
     # horizon is the number of timesteps in the future that the mpc will optimize
     # dt is the discretization time used in the mpc
@@ -143,7 +143,9 @@ mpc_params = {
     # ----- END properties for the sampling-based mpc -----
 
     # if this is true, we optimize the step frequency as well
-    'optimize_step_freq': True,
+    # for the sampling controller, this is done in the rollout
+    # for the gradient-based controller, this is done with a batched version of the ocp
+    'optimize_step_freq': False,
     'step_freq_available': [1.3, 2.0, 2.4]
 
     
