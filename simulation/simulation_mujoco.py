@@ -588,10 +588,13 @@ with mujoco.viewer.launch_passive(m, d, show_left_ui=False, show_right_ui=False)
                 
                 if((config.mpc_params['optimize_step_freq']) and (optimize_swing == 1)):
                     contact_sequence_temp = np.zeros((len(config.mpc_params['step_freq_available']), 4, horizon*2))
-                    for j in range(len(config.mpc_params['step_freq_available'])):
-                        pgg.step_freq = config.mpc_params['step_freq_available'][j]
-                        contact_sequence_temp[j] = pgg.compute_contact_sequence(mpc_dt=mpc_dt, simulation_dt=simulation_dt)
                     
+                    for j in range(len(config.mpc_params['step_freq_available'])):
+                        pgg_temp = PeriodicGaitGenerator(duty_factor=duty_factor, step_freq=config.mpc_params['step_freq_available'][j], p_gait=p_gait, horizon=horizon*2)
+                        pgg_temp.t = copy.deepcopy(pgg.t)
+                        pgg_temp.init = copy.deepcopy(pgg.init)
+                        contact_sequence_temp[j] = pgg_temp.compute_contact_sequence(mpc_dt=mpc_dt, simulation_dt=simulation_dt)
+
                     costs, best_sample_freq = batched_controller.compute_batch_control(state_current, reference_state, contact_sequence_temp)
                     
                     pgg.step_freq = best_sample_freq
