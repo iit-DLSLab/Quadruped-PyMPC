@@ -75,6 +75,10 @@ horizon = config.mpc_params['horizon']
 if(config.mpc_params['type'] == 'nominal'):
     from centroidal_nmpc_nominal import Acados_NMPC_Nominal
     controller = Acados_NMPC_Nominal()
+
+    if(config.mpc_params['optimize_step_freq']):
+        from centroidal_nmpc_gait_adaptive import Acados_NMPC_GaitAdaptive
+        batched_controller = Acados_NMPC_GaitAdaptive()
     
 elif(config.mpc_params['type'] == 'input_rates'):
     from centroidal_nmpc_input_rates import Acados_NMPC_InputRates
@@ -491,6 +495,18 @@ with mujoco.viewer.launch_passive(m, d, show_left_ui=False, show_right_ui=False)
             # or use the fixed one in config.py
             if(config.simulation_params['use_inertia_recomputation']):
                 inertia = srb_inertia_computation.compute_inertia(d.qpos)
+
+            if((config.mpc_params['optimize_step_freq'])):
+                # we can always optimize the step freq, or just at the apex of the swing
+                # to avoid possible jittering in the solution
+                optimize_swing = 0 #1 for always, 0 for apex
+                for leg in range(4):
+                # Swing time check 
+                    if(current_contact[leg] == 0):
+                        if ((swing_time[leg] > (swing_period/2.) - 0.02) and \
+                            (swing_time[leg] < (swing_period/2.) + 0.02)):
+                            optimize_swing = 1
+                            nominal_sample_freq = step_frequency
             
             # If we use sampling
             if(config.mpc_params['type'] == 'sampling'):
@@ -502,18 +518,7 @@ with mujoco.viewer.launch_passive(m, d, show_left_ui=False, show_right_ui=False)
                 best_control_parameters = jitted_prepare_state_and_reference(state_current, reference_state, best_control_parameters, current_contact, previous_contact_mpc)
 
 
-                # we can always optimize the step freq, or just at the apex of the swing
-                # to avoid possible jittering in the solution
-                optimize_swing = 0 #1 for always, 0 for apex
-                for leg in range(4):
-                # Swing time check 
-                    if(current_contact[leg] == 0):
-                        if ((swing_time[leg] > (swing_period/2.) - 0.02) and \
-                            (swing_time[leg] < (swing_period/2.) + 0.02)):
-                            optimize_swing = 1
-                            nominal_sample_freq = step_frequency
                             
-
                 for iter_sampling in range(iteration):
                     if(config.mpc_params['sampling_method'] == 'cem_mppi'):
                         if(iter_sampling == 0):
@@ -575,7 +580,23 @@ with mujoco.viewer.launch_passive(m, d, show_left_ui=False, show_right_ui=False)
                 status = controller.compute_control(state_current, reference_state, contact_sequence, inertia=inertia.flatten())
 
                 optimizer_cost = controller.acados_ocp_solver.get_cost()
+                
+                
+                if((config.mpc_params['optimize_step_freq']) and (optimize_swing == 1)):
+                    contact_sequence_temp = np.zeros((len(config.mpc_params['step_freq_available']), 4, horizon*2))
+                    for j in range(len(config.mpc_params['step_freq_available'])):
+                        pgg.step_freq = config.mpc_params['step_freq_available'][j]
+                        contact_sequence_temp[j] = pgg.compute_contact_sequence(mpc_dt=mpc_dt, simulation_dt=simulation_dt)
                     
+                    costs, best_sample_freq = batched_controller.compute_batch_control(state_current, reference_state, contact_sequence_temp)
+                    
+                    pgg.step_freq = best_sample_freq
+                    stance_time = (1/pgg.step_freq) * duty_factor
+                    frg.stance_time = stance_time
+                    swing_period = (1 - duty_factor) * (1 / pgg.step_freq)# + 0.07
+                    stc.regenerate_swing_trajectory_generator(step_height=step_height, swing_period=swing_period)
+
+
                 # If the controller is using RTI, we need to linearize the mpc after its computation
                 # this helps to minize the delay between new state->control, but only in a real case. 
                 # Here we are in simulation and does not make any difference for now
