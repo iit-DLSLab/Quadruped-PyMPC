@@ -43,7 +43,7 @@ mpc_params = {
     # 'input_rates' optimizes the delta GRF
     # 'sampling' is a gpu-based mpc that samples the GRF
     # 'collaborative' optimized directly the GRF and has a passive arm model inside 
-    'type': 'input_rates',
+    'type': 'nominal',
     
     # horizon is the number of timesteps in the future that the mpc will optimize
     # dt is the discretization time used in the mpc
