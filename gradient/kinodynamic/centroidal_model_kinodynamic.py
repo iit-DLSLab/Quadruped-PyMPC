@@ -370,58 +370,13 @@ class Centroidal_Model_KinoDynamic:
         self.foot_position_rl = self.forward_kinematics_RL_fun(H, joint_position)[0:3, 3]
         self.foot_position_rr = self.forward_kinematics_RR_fun(H, joint_position)[0:3, 3]
 
-        inertia = self.mass_mass_fun(H, joint_position)[0:6, 0:6]
-        gravity = np.array([0, 0, -9.81])
-
-
-        if(config.mpc_params['use_fixed_com']):
-            # Compute the linear wrench
-            temp =  foot_force_fl@stanceFL 
-            temp += foot_force_fr@stanceFR
-            temp += foot_force_rl@stanceRL
-            temp += foot_force_rr@stanceRR
-            temp += external_wrench_linear
-            linear_com_acc = (1/mass)@temp + gravity
-
-            # Compute the angular wrench
-            temp2 =  cs.skew(self.foot_position_fl - com_position)@foot_force_fl@stanceFL 
-            temp2 += cs.skew(self.foot_position_fr - com_position)@foot_force_fr@stanceFR
-            temp2 += cs.skew(self.foot_position_rl - com_position)@foot_force_rl@stanceRL
-            temp2 += cs.skew(self.foot_position_rr - com_position)@foot_force_rr@stanceRR
-
-
-            temp2 = temp2 + external_wrench_angular
-            angular_acc_base = cs.inv(inertia[3:6, 3:6])@(b_R_w@temp2 - cs.skew(w)@inertia[3:6, 3:6]@w)
+        if(config.mpc_params['use_fixed_inertia']):
+            inertia = self.mass_mass_fun(H, joint_position)[0:6, 0:6]
         
+
+
         else:
-            if(config.mpc_params['use_fixed_gravity'] and not config.mpc_params['use_coriolis_and_centrifugal']):
-                acc = cs.inv(inertia)@( 
-                               self.jacobian_FL_fun(H, joint_position)[0:3, 6:9].T@foot_force_fl@stanceFL + 
-                               self.jacobian_FR_fun(H, joint_position)[0:3, 9:12].T@foot_force_fr@stanceFR + 
-                               self.jacobian_RL_fun(H, joint_position)[0:3, 12:15].T@foot_force_rl@stanceRL + 
-                               self.jacobian_RR_fun(H, joint_position)[0:3, 15:18].T@foot_force_rr@stanceRR)
-                breakpoint()
-                acc[0:3] += gravity
-
-            elif(config.mpc_params['use_fixed_gravity'] and config.mpc_params['use_coriolis_and_centrifugal']):
-                eta = self.bias_force_fun(H, joint_position, linear_com_vel, joints_velocities)
-                acc = cs.inv(inertia)@(-eta + 
-                               self.jacobian_FL_fun(H, joint_position)[0:3, 6:9].T@foot_force_fl@stanceFL + 
-                               self.jacobian_FR_fun(H, joint_position)[0:3, 9:12].T@foot_force_fr@stanceFR + 
-                               self.jacobian_RL_fun(H, joint_position)[0:3, 12:15].T@foot_force_rl@stanceRL + 
-                               self.jacobian_RR_fun(H, joint_position)[0:3, 15:18].T@foot_force_rr@stanceRR)
-                acc[0:3] += gravity
-
-            elif(not config.mpc_params['use_fixed_gravity'] and not config.mpc_params['use_coriolis_and_centrifugal']):
-                eta = self.gravity_fun(H, joint_position)
-                acc = cs.inv(inertia)@(-eta + 
-                               self.jacobian_FL_fun(H, joint_position)[0:3, 6:9].T@foot_force_fl@stanceFL + 
-                               self.jacobian_FR_fun(H, joint_position)[0:3, 9:12].T@foot_force_fr@stanceFR + 
-                               self.jacobian_RL_fun(H, joint_position)[0:3, 12:15].T@foot_force_rl@stanceRL + 
-                               self.jacobian_RR_fun(H, joint_position)[0:3, 15:18].T@foot_force_rr@stanceRR)
-                
-
-            elif(not config.mpc_params['use_fixed_gravity'] and not config.mpc_params['use_coriolis_and_centrifugal']):
+            if(config.mpc_params['use_coriolis_and_centrifugal']):
                 eta = self.bias_force_fun(H, joint_position, linear_com_vel, joints_velocities)
                 eta += self.gravity_fun(H, joint_position)
                 acc = cs.inv(inertia)@(-eta + 
@@ -429,35 +384,15 @@ class Centroidal_Model_KinoDynamic:
                                self.jacobian_FR_fun(H, joint_position)[0:3, 9:12].T@foot_force_fr@stanceFR + 
                                self.jacobian_RL_fun(H, joint_position)[0:3, 12:15].T@foot_force_rl@stanceRL + 
                                self.jacobian_RR_fun(H, joint_position)[0:3, 15:18].T@foot_force_rr@stanceRR)
-                
-            elif(config.mpc_params['use_multi_model']):
-                eta = self.bias_force_fun(H, joint_position, linear_com_vel, joints_velocities)
-                eta += self.gravity_fun(H, joint_position, linear_com_vel, joints_velocities)
+
+            else:
+                eta = self.gravity_fun(H, joint_position)
                 acc = cs.inv(inertia)@(-eta + 
                                self.jacobian_FL_fun(H, joint_position)[0:3, 6:9].T@foot_force_fl@stanceFL + 
                                self.jacobian_FR_fun(H, joint_position)[0:3, 9:12].T@foot_force_fr@stanceFR + 
                                self.jacobian_RL_fun(H, joint_position)[0:3, 12:15].T@foot_force_rl@stanceRL + 
-                               self.jacobian_RR_fun(H, joint_position)[0:3, 15:18].T@foot_force_rr@stanceRR)*0
-                
-                # Compute the linear wrench
-                temp =  foot_force_fl@stanceFL 
-                temp += foot_force_fr@stanceFR
-                temp += foot_force_rl@stanceRL
-                temp += foot_force_rr@stanceRR
-                temp += external_wrench_linear
-                linear_com_acc = (1/mass)@temp + gravity
+                               self.jacobian_RR_fun(H, joint_position)[0:3, 15:18].T@foot_force_rr@stanceRR)
 
-                # Compute the angular wrench
-                temp2 =  cs.skew(self.foot_position_fl - com_position)@foot_force_fl@stanceFL 
-                temp2 += cs.skew(self.foot_position_fr - com_position)@foot_force_fr@stanceFR
-                temp2 += cs.skew(self.foot_position_rl - com_position)@foot_force_rl@stanceRL
-                temp2 += cs.skew(self.foot_position_rr - com_position)@foot_force_rr@stanceRR
-
-
-                temp2 = temp2 + external_wrench_angular
-                angular_acc_base = cs.inv(inertia[3:6, 3:6])@(b_R_w@temp2 - cs.skew(w)@inertia[3:6, 3:6]@w)
-                acc[0:3] += linear_com_acc*(1-0)
-                acc[3:6] += angular_acc_base*(1-0)
 
             
             linear_com_acc = acc[0:3]

@@ -126,10 +126,8 @@ mpc_params = {
 
 
     # this is used only for kinodynamic mpc
-    'use_fixed_com': True,
-    'use_fixed_gravity': False,
     'use_coriolis_and_centrifugal': False,
-    'use_multi_model': False,
+    'use_fixed_inertia': False,
     'use_adam': True,
 
     # ----- END properties for the gradient-based mpc -----
