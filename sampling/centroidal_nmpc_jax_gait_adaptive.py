@@ -225,7 +225,7 @@ class Sampling_MPC:
                                     temp3)
         
 
-        self.step_freq_delta = jnp.array(config.mpc_params['step_freq_delta'])
+        self.step_freq_delta = jnp.array(config.mpc_params['step_freq_available'])
         
         
         

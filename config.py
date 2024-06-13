@@ -139,12 +139,15 @@ mpc_params = {
     'sigma_mppi': 3,
     'sigma_random_sampling': [0.2, 3, 10],
     'shift_solution': False,
-    
-    # if this is true, sampling will be done for the step frequency as well
-    'optimize_step_freq': True,
-    'step_freq_delta': [1.3, 2.0, 2.4]
 
     # ----- END properties for the sampling-based mpc -----
+
+    # if this is true, we optimize the step frequency as well
+    # for the sampling controller, this is done in the rollout
+    # for the gradient-based controller, this is done with a batched version of the ocp
+    'optimize_step_freq': False,
+    'step_freq_available': [1.3, 2.0, 2.4]
+
     
 }
 #-----------------------------------------------------------------------
