@@ -3,8 +3,8 @@ import numpy as np
 import cv2
 import noise
 
-SCENE = "stairs" #rough, stairs, suspend_stairs, slope, perlin, image
-ROBOT = "aliengo" #aliengo #go2 #hyqreal
+SCENE = "perlin" #rough, stairs, suspend_stairs, slope, perlin, image
+ROBOT = "mini_cheetah" #aliengo #go2 #hyqreal
 INPUT_SCENE_PATH = "../robot_model/" + ROBOT + "/scene_flat" + ".xml"
 OUTPUT_SCENE_PATH = "../robot_model/" + ROBOT + "/scene_" + SCENE + ".xml"
 
@@ -208,7 +208,7 @@ class TerrainGenerator:
         hfield.attrib["name"] = "perlin_hfield"
         hfield.attrib["size"] = list_to_str(
             [size[0] / 2.0, size[1] / 2.0, height_scale, negative_height])
-        hfield.attrib["file"] = "../" + output_hfield_image
+        hfield.attrib["file"] = output_hfield_image
 
         geo = xml_et.SubElement(self.worldbody, "geom")
         geo.attrib["type"] = "hfield"
@@ -290,7 +290,7 @@ if __name__ == "__main__":
 
     # Perlin heigh field
     if(SCENE == "perlin"):
-        tg.AddPerlinHeighField(position=[-0.5, 4.0, 0.0], size=[2.0, 1.5])
+        tg.AddPerlinHeighField(position=[0.0, 0.0, 0.0], size=[10, 10])
 
     """# Heigh field from image
     tg.AddHeighFieldFromImage(position=[-0.5, 2.0, 0.0],

@@ -6,7 +6,7 @@ import numpy as np
 
 
 # These are used both for a real experiment and a simulation -----------
-robot = 'aliengo' #'go2', 'aliengo', 'hyqreal', 'mini_cheetah'
+robot = 'mini_cheetah' #'go2', 'aliengo', 'hyqreal', 'mini_cheetah'
 
 if(robot == 'go2'):
     mass = 15.019
@@ -161,7 +161,9 @@ elif(robot == 'aliengo'):
 elif(robot == 'hyqreal'):
     ref_z = 0.5
 elif(robot == 'mini_cheetah'):
-    ref_z = 0.25
+    ref_z = 0.2
+else:
+    raise NotImplementedError("This robot is not implemented yet")
 
 simulation_params = {
     'swing_generator': 'scipy', #'scipy', 'explicit', 'ndcurves'
@@ -199,7 +201,7 @@ simulation_params = {
 
     'use_kind_of_real_time': True,
 
-    'scene': 'flat', #flat, rough, stairs, suspend_stairs, slope, perlin, image
+    'scene': 'perlin', #flat, rough, stairs, suspend_stairs, slope, perlin, image
 
 }
 #-----------------------------------------------------------------------
