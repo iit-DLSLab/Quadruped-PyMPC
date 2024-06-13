@@ -1141,8 +1141,8 @@ class Acados_NMPC_Nominal:
 
     # Method to perform the centering of the states and the reference around (0, 0, 0)
     def perform_scaling(self, state, reference, constraint = None):
-
-
+        # TODO: Docstring needed. Assuming the dict have specific keys is not very pythonic, if you want make the
+        #  arguments named
         self.initial_base_position = copy.deepcopy(state["position"])
         reference = copy.deepcopy(reference)
         state = copy.deepcopy(state)

@@ -7,6 +7,10 @@ import casadi as cs
 import mujoco
 
 import pinocchio as pin
+
+from quadruped_utils import LegsAttr
+
+
 #from pinocchio import casadi as cpin
 
 class TerrainEstimator:
@@ -17,7 +21,13 @@ class TerrainEstimator:
 
 
 
-    def compute_terrain_estimation(self, base_position, yaw, lift_foot_position) -> np.ndarray:
+    def compute_terrain_estimation(self,
+                                   base_position: np.ndarray,
+                                   yaw: float,
+                                   lift_foot_position: LegsAttr) -> np.ndarray:
+        """
+        TODO: Docstring and documentation of the expected order of the feet positions
+        """
 
         
         # Compute roll and pitch for each foot position
@@ -32,10 +42,10 @@ class TerrainEstimator:
         ])
 
         # Extracting 3-element segments from liftoff_position_z_ and x_op_
-        seg0 = lift_foot_position[0]
-        seg3 = lift_foot_position[1]
-        seg6 = lift_foot_position[2]
-        seg9 = lift_foot_position[3]
+        seg0 = lift_foot_position.FL
+        seg3 = lift_foot_position.FR
+        seg6 = lift_foot_position.RL
+        seg9 = lift_foot_position.RR
         
         
         # Calculating differences

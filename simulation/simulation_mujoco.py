@@ -5,12 +5,14 @@ from pathlib import Path
 
 import mujoco.viewer
 import mujoco
-import matplotlib.pyplot as plt
 import copy
 import time
 import pprint
 import casadi as cs
 import numpy as np
+
+from quadruped_utils import LegsAttr
+from simulation.quadruped_env import QuadrupedEnv
 
 np.set_printoptions(precision=3, suppress=True)
 
@@ -44,27 +46,13 @@ from other import euler_from_quaternion, plot_swing_mujoco, plot_state_matplotli
 # Parameters for both MPC and simulation
 import config as cfg
 
-# Mujoco model and data
-scene = cfg.simulation_params['scene']
-base_path = Path(dir_path) / 'robot_model' / cfg.robot
-model_file_path = base_path / f'scene_{scene}.xml'
-assert model_file_path.exists(), f"Model file not found: {model_file_path.absolute().resolve()}"
+robot_name = cfg.robot
+scene_name = cfg.simulation_params['scene']
 
-mj_model = mujoco.MjModel.from_xml_path(filename=str(model_file_path))
-# if (cfg.robot == 'go2'):
-#     model = mujoco.MjModel.from_xml_path(dir_path + '/robot_model/go2/scene_' + scene + '.xml')
-# # elif (cfg.robot == 'aliengo'):
-# #     model = mujoco.MjModel.from_xml_path(dir_path + '/robot_model/aliengo/scene_' + scene + '.xml')
-# # elif (cfg.robot == 'hyqreal'):
-# #     model = mujoco.MjModel.from_xml_path(dir_path + '/robot_model/hyqreal/scene_' + scene + '.xml')
-# elif (cfg.robot == 'mini_cheetah'):
-#     model = mujoco.MjModel.from_xml_path(dir_path + '/robot_model/mini_cheetah/scene_' + scene + '.xml')
-# else:
-#     print("robot not found")
-#     exit()
-data = mujoco.MjData(mj_model)
-mujoco.mj_resetDataKeyframe(mj_model, data, 0)
-mass = np.sum(mj_model.body_mass)
+env = QuadrupedEnv(robot=robot_name, scene=scene_name)
+env.reset()
+env.render()
+mass = np.sum(env.mjModel.body_mass)
 
 # MPC Magic - i took the minimum value of the dt
 # used along the horizon of the MPC
@@ -83,21 +71,23 @@ if (cfg.mpc_params['type'] == 'nominal'):
 
     controller = Acados_NMPC_Nominal()
 
-    if(cfg.mpc_params['optimize_step_freq']):
+    if (cfg.mpc_params['optimize_step_freq']):
         from centroidal_nmpc_gait_adaptive import Acados_NMPC_GaitAdaptive
+
         batched_controller = Acados_NMPC_GaitAdaptive()
-    
-elif(cfg.mpc_params['type'] == 'input_rates'):
+
+elif (cfg.mpc_params['type'] == 'input_rates'):
     from centroidal_nmpc_input_rates import Acados_NMPC_InputRates
 
     controller = Acados_NMPC_InputRates()
 
-    if(cfg.mpc_params['optimize_step_freq']):
+    if (cfg.mpc_params['optimize_step_freq']):
         from centroidal_nmpc_gait_adaptive import Acados_NMPC_GaitAdaptive
+
         batched_controller = Acados_NMPC_GaitAdaptive()
 
-elif(cfg.mpc_params['type'] == 'sampling'):
-    if(cfg.mpc_params['optimize_step_freq']):
+elif (cfg.mpc_params['type'] == 'sampling'):
+    if (cfg.mpc_params['optimize_step_freq']):
         from sampling.centroidal_nmpc_jax_gait_adaptive import Sampling_MPC
     else:
         from sampling.centroidal_nmpc_jax import Sampling_MPC
@@ -128,56 +118,40 @@ optimizer_cost = 0
 
 # Get the ids of the contact points, useful for computing
 # contact jacobian later
-FL_id = mujoco.mj_name2id(mj_model, mujoco.mjtObj.mjOBJ_GEOM, 'FL')
-FR_id = mujoco.mj_name2id(mj_model, mujoco.mjtObj.mjOBJ_GEOM, 'FR')
-RL_id = mujoco.mj_name2id(mj_model, mujoco.mjtObj.mjOBJ_GEOM, 'RL')
-RR_id = mujoco.mj_name2id(mj_model, mujoco.mjtObj.mjOBJ_GEOM, 'RR')
-FL_geom = mj_model.geom("FL")
-FR_geom = mj_model.geom("FR")
-RL_geom = mj_model.geom("RL")
-RR_geom = mj_model.geom("RR")
-FL_calf_id = mujoco.mj_name2id(mj_model, mujoco.mjtObj.mjOBJ_BODY, 'FL_calf')
-FR_calf_id = mujoco.mj_name2id(mj_model, mujoco.mjtObj.mjOBJ_BODY, 'FR_calf')
-RL_calf_id = mujoco.mj_name2id(mj_model, mujoco.mjtObj.mjOBJ_BODY, 'RL_calf')
-RR_calf_id = mujoco.mj_name2id(mj_model, mujoco.mjtObj.mjOBJ_BODY, 'RR_calf')
+FL_id = mujoco.mj_name2id(env.mjModel, mujoco.mjtObj.mjOBJ_GEOM, 'FL')
+FR_id = mujoco.mj_name2id(env.mjModel, mujoco.mjtObj.mjOBJ_GEOM, 'FR')
+RL_id = mujoco.mj_name2id(env.mjModel, mujoco.mjtObj.mjOBJ_GEOM, 'RL')
+RR_id = mujoco.mj_name2id(env.mjModel, mujoco.mjtObj.mjOBJ_GEOM, 'RR')
+FL_geom = env.mjModel.geom("FL")
+FR_geom = env.mjModel.geom("FR")
+RL_geom = env.mjModel.geom("RL")
+RR_geom = env.mjModel.geom("RR")
+FL_calf_id = mujoco.mj_name2id(env.mjModel, mujoco.mjtObj.mjOBJ_BODY, 'FL_calf')
+FR_calf_id = mujoco.mj_name2id(env.mjModel, mujoco.mjtObj.mjOBJ_BODY, 'FR_calf')
+RL_calf_id = mujoco.mj_name2id(env.mjModel, mujoco.mjtObj.mjOBJ_BODY, 'RL_calf')
+RR_calf_id = mujoco.mj_name2id(env.mjModel, mujoco.mjtObj.mjOBJ_BODY, 'RR_calf')
 
 # Jacobian matrices
-jac_com = np.zeros((3, mj_model.nv))
-jac_foot_FL = np.zeros((3, mj_model.nv))
-jac_foot_FR = np.zeros((3, mj_model.nv))
-jac_foot_RL = np.zeros((3, mj_model.nv))
-jac_foot_RR = np.zeros((3, mj_model.nv))
-
-# Previous jacobian matrices
-jac_foot_FL_prev = np.zeros((3, mj_model.nv))
-jac_foot_FR_prev = np.zeros((3, mj_model.nv))
-jac_foot_RL_prev = np.zeros((3, mj_model.nv))
-jac_foot_RR_prev = np.zeros((3, mj_model.nv))
-
-# Derivative of the jacobian matrices
-jac_foot_FL_dot = np.zeros((3, mj_model.nv))
-jac_foot_FR_dot = np.zeros((3, mj_model.nv))
-jac_foot_RL_dot = np.zeros((3, mj_model.nv))
-jac_foot_RR_dot = np.zeros((3, mj_model.nv))
+jac_com = np.zeros((3, env.mjModel.nv))
+jac_feet = LegsAttr(*[np.zeros((3, env.mjModel.nv)) for _ in range(4)])
+jac_feet_prev = LegsAttr(*[np.zeros((3, env.mjModel.nv)) for _ in range(4)])
+jac_feet_dot = LegsAttr(*[np.zeros((3, env.mjModel.nv)) for _ in range(4)])
 
 # Previous foot positions
-position_foot_FL_prev = np.zeros((3,))
-position_foot_FR_prev = np.zeros((3,))
-position_foot_RL_prev = np.zeros((3,))
-position_foot_RR_prev = np.zeros((3,))
+feet_pos, feet_pos_prev = env.feet_pos(), env.feet_pos()
 
 # Torque vectors
-tau_FL = np.zeros((mj_model.nv, 1))
-tau_FR = np.zeros((mj_model.nv, 1))
-tau_RL = np.zeros((mj_model.nv, 1))
-tau_RR = np.zeros((mj_model.nv, 1))
+tau_FL = np.zeros((env.mjModel.nv, 1))
+tau_FR = np.zeros((env.mjModel.nv, 1))
+tau_RL = np.zeros((env.mjModel.nv, 1))
+tau_RR = np.zeros((env.mjModel.nv, 1))
 
 # State
 state_current = np.zeros(shape=(controller.states_dim,))
 state_old = np.zeros(shape=(controller.states_dim,))
 
 # Simulation dt
-mj_model.opt.timestep = cfg.simulation_params['dt']
+env.mjModel.opt.timestep = cfg.simulation_params['dt']
 simulation_dt = cfg.simulation_params['dt']
 mpc_frequency = cfg.simulation_params['mpc_frequency']
 
@@ -215,40 +189,28 @@ stance_time = (1 / step_frequency) * duty_factor
 frg = FootholdReferenceGenerator(stance_time=stance_time)
 
 # Hip position
-FL_hip_id = mujoco.mj_name2id(mj_model, mujoco.mjtObj.mjOBJ_BODY, 'FL_hip')
-FR_hip_id = mujoco.mj_name2id(mj_model, mujoco.mjtObj.mjOBJ_BODY, 'FR_hip')
-RL_hip_id = mujoco.mj_name2id(mj_model, mujoco.mjtObj.mjOBJ_BODY, 'RL_hip')
-RR_hip_id = mujoco.mj_name2id(mj_model, mujoco.mjtObj.mjOBJ_BODY, 'RR_hip')
-hip_pos = np.array(([data.body(FL_hip_id).xpos,
-                     data.body(FR_hip_id).xpos,
-                     data.body(RL_hip_id).xpos,
-                     data.body(RR_hip_id).xpos]))
+FL_hip_id = mujoco.mj_name2id(env.mjModel, mujoco.mjtObj.mjOBJ_BODY, 'FL_hip')
+FR_hip_id = mujoco.mj_name2id(env.mjModel, mujoco.mjtObj.mjOBJ_BODY, 'FR_hip')
+RL_hip_id = mujoco.mj_name2id(env.mjModel, mujoco.mjtObj.mjOBJ_BODY, 'RL_hip')
+RR_hip_id = mujoco.mj_name2id(env.mjModel, mujoco.mjtObj.mjOBJ_BODY, 'RR_hip')
+hip_pos = np.array(([env.mjData.body(FL_hip_id).xpos,
+                     env.mjData.body(FR_hip_id).xpos,
+                     env.mjData.body(RL_hip_id).xpos,
+                     env.mjData.body(RR_hip_id).xpos]))
 
 # Set the reference for the state
 ref_pose = np.array([0, 0, cfg.simulation_params['ref_z']])
-ref_linear_velocity = np.array([cfg.simulation_params['ref_x_dot'], cfg.simulation_params['ref_y_dot'], 0])
+ref_linear_velocity = env.target_base_vel
 ref_orientation = np.array([cfg.simulation_params['ref_roll'], cfg.simulation_params['ref_pitch'], 0])
 ref_angular_velocity = np.array([0, 0, cfg.simulation_params['ref_yaw_dot']])
-reference_foot_FL, \
-    reference_foot_FR, \
-    reference_foot_RL, \
-    reference_foot_RR = frg.compute_footholds_reference(ref_pose,
-                                                        ref_orientation,
-                                                        ref_linear_velocity[0:2],
-                                                        ref_linear_velocity[0:2],
-                                                        hip_pos, cfg.simulation_params['ref_z'],
-                                                        [np.zeros((3,)) for _ in range(4)])
 
-# SET REFERENCE AS DICTIONARY
-reference_state = {'ref_position':         ref_pose,
-                   'ref_linear_velocity':  ref_linear_velocity,
-                   'ref_orientation':      ref_orientation,
-                   'ref_angular_velocity': ref_angular_velocity,
-                   'ref_foot_FL':          reference_foot_FL,
-                   'ref_foot_FR':          reference_foot_FR,
-                   'ref_foot_RL':          reference_foot_RL,
-                   'ref_foot_RR':          reference_foot_RR}
-
+# # SET REFERENCE AS DICTIONARY
+# TODO: I would suggest to create a DataClass for "BaseConfig"
+ref_state = {'ref_position':         ref_pose,
+             'ref_linear_velocity':  ref_linear_velocity,
+             'ref_orientation':      ref_orientation,
+             'ref_angular_velocity': ref_angular_velocity,
+             }
 # Create swing trajectory generator
 step_height = cfg.simulation_params['step_height']
 swing_period = (1 - duty_factor) * (1 / step_frequency)  # + 0.07
@@ -261,19 +223,7 @@ stc = SwingTrajectoryController(step_height=step_height, swing_period=swing_peri
 
 # Swing controller variables
 swing_time = [0, 0, 0, 0]
-lift_off_positions = [np.zeros((3, 1)) for _ in range(4)]
-
-position_foot_FL = data.geom_xpos[FL_id]
-lift_off_positions[0] = copy.deepcopy(position_foot_FL)
-
-position_foot_FR = data.geom_xpos[FR_id]
-lift_off_positions[1] = copy.deepcopy(position_foot_FR)
-
-position_foot_RL = data.geom_xpos[RL_id]
-lift_off_positions[2] = copy.deepcopy(position_foot_RL)
-
-position_foot_RR = data.geom_xpos[RR_id]
-lift_off_positions[3] = copy.deepcopy(position_foot_RR)
+lift_off_positions = env.feet_pos(frame='world')
 
 # Online computation of the inertia parameter
 srb_inertia_computation = SrbInertiaComputation()
@@ -296,532 +246,464 @@ nmpc_predicted_state = None
 use_print_debug = cfg.simulation_params['use_print_debug']
 use_visualization_debug = cfg.simulation_params['use_visualization_debug']
 
-
 # Keyboard control
-def interactive_command_line():
-    global ref_linear_velocity, ref_angular_velocity, step_height
-    while True:
-        # command = input()
-        command = readchar.readkey()
-        if (command == "w"):
-            ref_linear_velocity[0] += 0.1
-        elif (command == "s"):
-            ref_linear_velocity[0] -= 0.1
-        elif (command == "a"):
-            ref_linear_velocity[1] += 0.1
-        elif (command == "d"):
-            ref_linear_velocity[1] -= 0.1
-        elif (command == "q"):
-            ref_angular_velocity[2] += 0.1
-        elif (command == "e"):
-            ref_angular_velocity[2] -= 0.1
-        elif (command == "0"):
-            ref_linear_velocity[0] = 0
-            ref_linear_velocity[1] = 0
-            ref_angular_velocity[2] = 0
-        elif (command == "+"):
-            step_height += 0.01
-            stc.step_height = step_height
-            stc.regenerate_swing_trajectory_generator(step_height=step_height, swing_period=swing_period)
-        elif (command == "-"):
-            step_height -= 0.01
-            stc.step_height = step_height
-            stc.regenerate_swing_trajectory_generator(step_height=step_height, swing_period=swing_period)
+# def interactive_command_line():
+#     global ref_linear_velocity, ref_angular_velocity, step_height
+#     while True:
+#         # command = input()
+#         command = readchar.readkey()
+#         if (command == "w"):
+#             ref_linear_velocity[0] += 0.1
+#         elif (command == "s"):
+#             ref_linear_velocity[0] -= 0.1
+#         elif (command == "a"):
+#             ref_linear_velocity[1] += 0.1
+#         elif (command == "d"):
+#             ref_linear_velocity[1] -= 0.1
+#         elif (command == "q"):
+#             ref_angular_velocity[2] += 0.1
+#         elif (command == "e"):
+#             ref_angular_velocity[2] -= 0.1
+#         elif (command == "0"):
+#             ref_linear_velocity[0] = 0
+#             ref_linear_velocity[1] = 0
+#             ref_angular_velocity[2] = 0
+#         elif (command == "+"):
+#             step_height += 0.01
+#             stc.step_height = step_height
+#             stc.regenerate_swing_trajectory_generator(step_height=step_height, swing_period=swing_period)
+#         elif (command == "-"):
+#             step_height -= 0.01
+#             stc.step_height = step_height
+#             stc.regenerate_swing_trajectory_generator(step_height=step_height, swing_period=swing_period)
+#
+#
+# t1 = threading.Thread(target=interactive_command_line)
+# t1.daemon = True
+# t1.start()
 
-
-t1 = threading.Thread(target=interactive_command_line)
-t1.daemon = True
-t1.start()
-
+FL_idx, FR_idx, RL_idx, RR_idx = 0, 1, 2, 3
+legs_order = ["FL", "FR", "RL", "RR"]
 # Main simulation loop ------------------------------------------------------------------
-with mujoco.viewer.launch_passive(mj_model, data, show_left_ui=False, show_right_ui=False) as viewer:
-    mujoco.mjv_defaultFreeCamera(mj_model, viewer.cam)
-    viewer.user_scn.flags[mujoco.mjtRndFlag.mjRND_SHADOW] = 0
-    viewer.user_scn.flags[mujoco.mjtRndFlag.mjRND_REFLECTION] = 0
-    step_num = 0
-    while True:
-        step_start = time.time()
-        if (use_print_debug):
-            print("###############")
+while True:
+    step_start = time.time()
+    if (use_print_debug):
+        print("###############")
 
-        # Update the robot state --------------------------------
-        com_pos = data.qpos[0:3]
-        rpy_angles = np.array(euler_from_quaternion(data.qpos[3:7]))
-        linear_vel = data.qvel[0:3]
-        angular_vel = copy.deepcopy(data.qvel[3:6])
+    # Update the robot state --------------------------------
+    feet_pos = env.feet_pos(frame='world')
+    hip_pos = env.hip_positions(frame='world')
 
-        state_current = {
-            'position':         com_pos,
-            'linear_velocity':  linear_vel,
-            'orientation':      rpy_angles,
-            'angular_velocity': angular_vel,
-            'foot_FL':          data.geom_xpos[FL_id],
-            'foot_FR':          data.geom_xpos[FR_id],
-            'foot_RL':          data.geom_xpos[RL_id],
-            'foot_RR':          data.geom_xpos[RR_id]
-            }
+    state_current = dict(
+        position=env.base_pos,
+        linear_velocity=env.base_lin_vel,
+        orientation=env.base_ori_euler_xyz,
+        angular_velocity=env.base_ang_vel,
+        foot_FL=feet_pos.FL,
+        foot_FR=feet_pos.FR,
+        foot_RL=feet_pos.RL,
+        foot_RR=feet_pos.RR
+        )
+    # -------------------------------------------------------
 
-        if (use_print_debug):
-            print("state_current: ")
-            pprint.pprint(state_current)
+    # Update the contact sequence ---------------------------
+    if (gait == "full_stance"):
+        contact_sequence = np.ones((4, horizon * 2))
+    else:
+        contact_sequence = pgg.compute_contact_sequence(mpc_dt=mpc_dt, simulation_dt=simulation_dt)
 
-        # -------------------------------------------------------
-
-        # Update the contact sequence ---------------------------
-        if (gait == "full_stance"):
-            contact_sequence = np.ones((4, horizon * 2))
+    # in the case of nonuniform discretization, we need to subsample the contact sequence
+    if (cfg.mpc_params['use_nonuniform_discretization']):
+        subsample_step_contact_sequence = int(cfg.mpc_params['dt_fine_grained'] / mpc_dt)
+        if (subsample_step_contact_sequence > 1):
+            contact_sequence_fine_grained = contact_sequence[:, ::subsample_step_contact_sequence][:,
+                                            0:cfg.mpc_params['horizon_fine_grained']]
         else:
-            contact_sequence = pgg.compute_contact_sequence(mpc_dt=mpc_dt, simulation_dt=simulation_dt)
+            contact_sequence_fine_grained = contact_sequence[:, 0:cfg.mpc_params['horizon_fine_grained']]
 
-        # in the case of nonuniform discretization, we need
-        # to subsample the contact sequence
-        if (cfg.mpc_params['use_nonuniform_discretization']):
-            subsample_step_contact_sequence = int(cfg.mpc_params['dt_fine_grained'] / mpc_dt)
-            if (subsample_step_contact_sequence > 1):
-                contact_sequence_fine_grained = contact_sequence[:, ::subsample_step_contact_sequence][:,
-                                                0:cfg.mpc_params['horizon_fine_grained']]
-            else:
-                contact_sequence_fine_grained = contact_sequence[:, 0:cfg.mpc_params['horizon_fine_grained']]
+        subsample_step_contact_sequence = int(cfg.mpc_params['dt'] / mpc_dt)
+        if (subsample_step_contact_sequence > 1):
+            contact_sequence = contact_sequence[:, ::subsample_step_contact_sequence]
+        contact_sequence = contact_sequence[:, 0:horizon]
+        contact_sequence[:, 0:cfg.mpc_params['horizon_fine_grained']] = contact_sequence_fine_grained
 
-            subsample_step_contact_sequence = int(cfg.mpc_params['dt'] / mpc_dt)
-            if (subsample_step_contact_sequence > 1):
-                contact_sequence = contact_sequence[:, ::subsample_step_contact_sequence]
-            contact_sequence = contact_sequence[:, 0:horizon]
-            contact_sequence[:, 0:cfg.mpc_params['horizon_fine_grained']] = contact_sequence_fine_grained
+    previous_contact = copy.deepcopy(current_contact)
+    current_contact = np.array([contact_sequence[0][0],
+                                contact_sequence[1][0],
+                                contact_sequence[2][0],
+                                contact_sequence[3][0]])
 
-        previous_contact = copy.deepcopy(current_contact)
-        current_contact = np.array([contact_sequence[0][0], contact_sequence[1][0],
-                                    contact_sequence[2][0], contact_sequence[3][0]])
-        if (use_print_debug):
-            print("contact_sequence: \n", contact_sequence)
-        # -------------------------------------------------------
+    # Compute the reference for the footholds ---------------------------------------------------
+    ref_feet_pos = frg.compute_footholds_reference(
+        com_position=env.base_pos,
+        rpy_angles=env.base_ori_euler_xyz,
+        linear_com_velocity=env.base_lin_vel[0:2],
+        desired_linear_com_velocity=env.target_base_vel[0:2],
+        hips_position=hip_pos,
+        com_height=state_current["position"][2],
+        lift_off_positions=lift_off_positions)
 
-        # Compute the reference for the footholds ---------------------------------------------------
-        FL_hip_id = mujoco.mj_name2id(mj_model, mujoco.mjtObj.mjOBJ_BODY, 'FL_hip')
-        FR_hip_id = mujoco.mj_name2id(mj_model, mujoco.mjtObj.mjOBJ_BODY, 'FR_hip')
-        RL_hip_id = mujoco.mj_name2id(mj_model, mujoco.mjtObj.mjOBJ_BODY, 'RL_hip')
-        RR_hip_id = mujoco.mj_name2id(mj_model, mujoco.mjtObj.mjOBJ_BODY, 'RR_hip')
+    # Update state reference
+    ref_state |= dict(ref_foot_FL=ref_feet_pos.FL.reshape((1, 3)),
+                      ref_foot_FR=ref_feet_pos.FR.reshape((1, 3)),
+                      ref_foot_RL=ref_feet_pos.RL.reshape((1, 3)),
+                      ref_foot_RR=ref_feet_pos.RR.reshape((1, 3)),
+                      # Also update the reference base linear velocity and # TODO: orientation.
+                      ref_linear_velocity=env.target_base_vel)
+    # -------------------------------------------------------------------------------------------------
+    # Compute the terrain estimation and reference height ---------------------------------------------
+    roll, pitch = terrain_computation.compute_terrain_estimation(
+        base_position=env.base_pos,
+        yaw=env.base_ori_euler_xyz[2],
+        lift_foot_position=lift_off_positions)
+    ref_state["ref_orientation"] = np.array([roll, pitch, 0])
 
-        hip_pos = np.array((data.body(FL_hip_id).xpos,
-                            data.body(FR_hip_id).xpos,
-                            data.body(RL_hip_id).xpos,
-                            data.body(RR_hip_id).xpos))
-        hip_pos = hip_pos.reshape((4, 3))
+    # Update the reference height given the foot in contact
+    num_feet_in_contact = np.sum(current_contact)
+    feet_pos_z = np.asarray(feet_pos.to_list(order=legs_order))[:, 2]
+    if num_feet_in_contact != 0:
+        z_foot_mean_temp = np.sum(feet_pos_z * current_contact) / num_feet_in_contact
+        z_foot_mean = z_foot_mean_temp * 0.4 + z_foot_mean * 0.6
+    ref_state["ref_position"][2] = cfg.simulation_params['ref_z'] + z_foot_mean
+    # -------------------------------------------------------------------------------------------------
 
-        reference_foot_FL, \
-            reference_foot_FR, \
-            reference_foot_RL, \
-            reference_foot_RR = frg.compute_footholds_reference(com_pos, rpy_angles, linear_vel[0:2],
-                                                                ref_linear_velocity[0:2], hip_pos,
-                                                                state_current["position"][2], lift_off_positions)
+    # TODO: WTF is this ? Need documentation
+    if cfg.mpc_params['type'] == 'sampling':
+        if cfg.mpc_params['shift_solution']:
+            index_shift += 0.05
+            best_control_parameters = controller.shift_solution(best_control_parameters, index_shift)
 
-        # Update state reference
-        reference_state["ref_foot_FL"] = reference_foot_FL.reshape((1, 3))
-        reference_state["ref_foot_FR"] = reference_foot_FR.reshape((1, 3))
-        reference_state["ref_foot_RL"] = reference_foot_RL.reshape((1, 3))
-        reference_state["ref_foot_RR"] = reference_foot_RR.reshape((1, 3))
+    # Solve OCP ---------------------------------------------------------------------------------------
+    if env.step_num % round(1 / (mpc_frequency * simulation_dt)) == 0:
 
-        # and rotate the reference velocity in the world frame
-        h_R_w = np.array([np.cos(rpy_angles[2]), np.sin(rpy_angles[2]), 0,
-                          -np.sin(rpy_angles[2]), np.cos(rpy_angles[2]), 0,
-                          0, 0, 1])
-        h_R_w = h_R_w.reshape((3, 3))
-        reference_state["ref_linear_velocity"] = h_R_w.T @ ref_linear_velocity.reshape((3, 1)).flatten()
+        # We can recompute the inertia of the single rigid body model
+        # or use the fixed one in cfg.py
+        if (cfg.simulation_params['use_inertia_recomputation']):
+            # TODO: d.qpos is not defined
+            inertia = srb_inertia_computation.compute_inertia(d.qpos)
 
-        if (use_print_debug):
-            print("reference_state: ")
-            pprint.pprint(reference_state)
-        # -------------------------------------------------------------------------------------------------
+        if ((cfg.mpc_params['optimize_step_freq'])):
+            # we can always optimize the step freq, or just at the apex of the swing
+            # to avoid possible jittering in the solution
+            optimize_swing = 0  # 1 for always, 0 for apex
+            for leg_id in range(4):
+                # Swing time check
+                if (current_contact[leg_id] == 0):
+                    if ((swing_time[leg_id] > (swing_period / 2.) - 0.02) and \
+                            (swing_time[leg_id] < (swing_period / 2.) + 0.02)):
+                        optimize_swing = 1
+                        nominal_sample_freq = step_frequency
 
-        # Compute the terrain estimation and reference height ---------------------------------------------
-        roll, pitch = terrain_computation.compute_terrain_estimation(state_current["position"],
-                                                                     state_current["orientation"][2],
-                                                                     lift_off_positions)
-        reference_state["ref_orientation"] = np.array([roll, pitch, 0])
-
-        # Update the reference height given the foot in contact 
-        z_foot_FL = state_current["foot_FL"][2]
-        z_foot_FR = state_current["foot_FR"][2]
-        z_foot_RL = state_current["foot_RL"][2]
-        z_foot_RR = state_current["foot_RR"][2]
-        number_foot_in_contact = current_contact[0] + \
-                                 current_contact[1] + \
-                                 current_contact[2] + \
-                                 current_contact[3]
-        if (number_foot_in_contact != 0):
-            z_foot_mean_temp = (z_foot_FL * current_contact[0] + \
-                                z_foot_FR * current_contact[1] + \
-                                z_foot_RL * current_contact[2] + \
-                                z_foot_RR * current_contact[3]) / number_foot_in_contact
-            z_foot_mean = z_foot_mean_temp * 0.4 + z_foot_mean * 0.6
-
-        reference_state["ref_position"][2] = cfg.simulation_params['ref_z'] + z_foot_mean
-        # -------------------------------------------------------------------------------------------------
-
+        # If we use sampling
         if (cfg.mpc_params['type'] == 'sampling'):
-            if (cfg.mpc_params['shift_solution']):
-                index_shift += 0.05
-                best_control_parameters = controller.shift_solution(best_control_parameters, index_shift)
 
-        # Solve OCP ---------------------------------------------------------------------------------------
-        if (step_num % round(1 / (mpc_frequency * simulation_dt)) == 0):
+            time_start = time.time()
+            # Convert data to jax
+            state_current_jax, \
+                reference_state_jax, \
+                best_control_parameters = jitted_prepare_state_and_reference(state_current, ref_state,
+                                                                             best_control_parameters,
+                                                                             current_contact, previous_contact_mpc)
 
-            # We can recompute the inertia of the single rigid body model
-            # or use the fixed one in cfg.py
-            if(cfg.simulation_params['use_inertia_recomputation']):
-                inertia = srb_inertia_computation.compute_inertia(d.qpos)
+            for iter_sampling in range(iteration):
+                if (cfg.mpc_params['sampling_method'] == 'cem_mppi'):
+                    if (iter_sampling == 0):
+                        controller = controller.with_newsigma(cfg.mpc_params['sigma_cem_mppi'])
+                    nmpc_GRFs, \
+                        nmpc_footholds, \
+                        best_control_parameters, \
+                        best_cost, \
+                        best_sample_freq, \
+                        costs, \
+                        sigma_cem_mppi = jitted_compute_control(state_current_jax, reference_state_jax,
+                                                                contact_sequence, best_control_parameters,
+                                                                controller.master_key, controller.sigma_cem_mppi)
+                    controller = controller.with_newsigma(sigma_cem_mppi)
+                else:
+                    nmpc_GRFs, \
+                        nmpc_footholds, \
+                        best_control_parameters, \
+                        best_cost, \
+                        best_sample_freq, \
+                        costs = jitted_compute_control(state_current_jax, reference_state_jax, contact_sequence,
+                                                       best_control_parameters, controller.master_key, pgg.get_t(),
+                                                       nominal_sample_freq, optimize_swing)
 
-            if((cfg.mpc_params['optimize_step_freq'])):
-                # we can always optimize the step freq, or just at the apex of the swing
-                # to avoid possible jittering in the solution
-                optimize_swing = 0 #1 for always, 0 for apex
-                for leg in range(4):
-                # Swing time check 
-                    if(current_contact[leg] == 0):
-                        if ((swing_time[leg] > (swing_period/2.) - 0.02) and \
-                            (swing_time[leg] < (swing_period/2.) + 0.02)):
-                            optimize_swing = 1
-                            nominal_sample_freq = step_frequency
-            
-            # If we use sampling
-            if (cfg.mpc_params['type'] == 'sampling'):
+                controller = controller.with_newkey()
 
-                time_start = time.time()
-                # Convert data to jax
-                state_current_jax, \
-                    reference_state_jax, \
-                    best_control_parameters = jitted_prepare_state_and_reference(state_current, reference_state,
-                                                                                 best_control_parameters,
-                                                                                 current_contact, previous_contact_mpc)
+            if ((cfg.mpc_params['optimize_step_freq']) and (optimize_swing == 1)):
+                pgg.step_freq = np.array([best_sample_freq])[0]
+                nominal_sample_freq = pgg.step_freq
+                stance_time = (1 / pgg.step_freq) * duty_factor
+                frg.stance_time = stance_time
 
+                swing_period = (1 - duty_factor) * (1 / pgg.step_freq)  # + 0.07
+                stc.regenerate_swing_trajectory_generator(step_height=step_height, swing_period=swing_period)
 
-                            
-                for iter_sampling in range(iteration):
-                    if (cfg.mpc_params['sampling_method'] == 'cem_mppi'):
-                        if (iter_sampling == 0):
-                            controller = controller.with_newsigma(cfg.mpc_params['sigma_cem_mppi'])
-                        nmpc_GRFs, \
-                            nmpc_footholds, \
-                            best_control_parameters, \
-                            best_cost, \
-                            best_sample_freq, \
-                            costs, \
-                            sigma_cem_mppi = jitted_compute_control(state_current_jax, reference_state_jax,
-                                                                    contact_sequence, best_control_parameters,
-                                                                    controller.master_key, controller.sigma_cem_mppi)
-                        controller = controller.with_newsigma(sigma_cem_mppi)
-                    else:
-                        nmpc_GRFs, \
-                            nmpc_footholds, \
-                            best_control_parameters, \
-                            best_cost, \
-                            best_sample_freq, \
-                            costs = jitted_compute_control(state_current_jax, reference_state_jax, contact_sequence,
-                                                           best_control_parameters, controller.master_key, pgg.get_t(),
-                                                           nominal_sample_freq, optimize_swing)
+            nmpc_footholds = np.zeros((4, 3))
+            nmpc_footholds[0] = ref_state["ref_foot_FL"]
+            nmpc_footholds[1] = ref_state["ref_foot_FR"]
+            nmpc_footholds[2] = ref_state["ref_foot_RL"]
+            nmpc_footholds[3] = ref_state["ref_foot_RR"]
 
-                    controller = controller.with_newkey()
+            nmpc_GRFs = np.array(nmpc_GRFs)
 
-                if ((cfg.mpc_params['optimize_step_freq']) and (optimize_swing == 1)):
-                    pgg.step_freq = np.array([best_sample_freq])[0]
-                    nominal_sample_freq = pgg.step_freq
-                    stance_time = (1 / pgg.step_freq) * duty_factor
-                    frg.stance_time = stance_time
-
-                    swing_period = (1 - duty_factor) * (1 / pgg.step_freq)  # + 0.07
-                    stc.regenerate_swing_trajectory_generator(step_height=step_height, swing_period=swing_period)
-
-                nmpc_footholds = np.zeros((4, 3))
-                nmpc_footholds[0] = reference_state["ref_foot_FL"]
-                nmpc_footholds[1] = reference_state["ref_foot_FR"]
-                nmpc_footholds[2] = reference_state["ref_foot_RL"]
-                nmpc_footholds[3] = reference_state["ref_foot_RR"]
-
-                nmpc_GRFs = np.array(nmpc_GRFs)
-
-                previous_contact_mpc = copy.deepcopy(current_contact)
-                index_shift = 0
-                optimizer_cost = best_cost
+            previous_contact_mpc = copy.deepcopy(current_contact)
+            index_shift = 0
+            optimizer_cost = best_cost
 
 
-            # If we use Gradient-Based MPC
-            else:
+        # If we use Gradient-Based MPC
+        else:
 
-                time_start = time.time()
-                nmpc_GRFs, \
-                    nmpc_footholds, \
-                    nmpc_predicted_state, \
-                    status = controller.compute_control(state_current, reference_state, contact_sequence,
-                                                        inertia=inertia.flatten())
+            time_start = time.time()
+            nmpc_GRFs, \
+                nmpc_footholds, \
+                nmpc_predicted_state, \
+                status = controller.compute_control(state_current, ref_state, contact_sequence,
+                                                    inertia=inertia.flatten())
 
-                optimizer_cost = controller.acados_ocp_solver.get_cost()
-                
-                
-                if((cfg.mpc_params['optimize_step_freq']) and (optimize_swing == 1)):
-                    contact_sequence_temp = np.zeros((len(cfg.mpc_params['step_freq_available']), 4, horizon*2))
-                    
-                    for j in range(len(cfg.mpc_params['step_freq_available'])):
-                        pgg_temp = PeriodicGaitGenerator(duty_factor=duty_factor, step_freq=cfg.mpc_params['step_freq_available'][j], p_gait=p_gait, horizon=horizon*2)
-                        pgg_temp.t = copy.deepcopy(pgg.t)
-                        pgg_temp.init = copy.deepcopy(pgg.init)
-                        contact_sequence_temp[j] = pgg_temp.compute_contact_sequence(mpc_dt=mpc_dt, simulation_dt=simulation_dt)
+            optimizer_cost = controller.acados_ocp_solver.get_cost()
 
-                    costs, best_sample_freq = batched_controller.compute_batch_control(state_current, reference_state, contact_sequence_temp)
-                    
-                    pgg.step_freq = best_sample_freq
-                    stance_time = (1/pgg.step_freq) * duty_factor
-                    frg.stance_time = stance_time
-                    swing_period = (1 - duty_factor) * (1 / pgg.step_freq)# + 0.07
-                    stc.regenerate_swing_trajectory_generator(step_height=step_height, swing_period=swing_period)
+            if ((cfg.mpc_params['optimize_step_freq']) and (optimize_swing == 1)):
+                contact_sequence_temp = np.zeros((len(cfg.mpc_params['step_freq_available']), 4, horizon * 2))
 
+                for j in range(len(cfg.mpc_params['step_freq_available'])):
+                    pgg_temp = PeriodicGaitGenerator(duty_factor=duty_factor,
+                                                     step_freq=cfg.mpc_params['step_freq_available'][j], p_gait=p_gait,
+                                                     horizon=horizon * 2)
+                    pgg_temp.t = copy.deepcopy(pgg.t)
+                    pgg_temp.init = copy.deepcopy(pgg.init)
+                    contact_sequence_temp[j] = pgg_temp.compute_contact_sequence(mpc_dt=mpc_dt,
+                                                                                 simulation_dt=simulation_dt)
 
-                # If the controller is using RTI, we need to linearize the mpc after its computation
-                # this helps to minize the delay between new state->control, but only in a real case. 
-                # Here we are in simulation and does not make any difference for now
-                if (controller.use_RTI):
-                    # preparation phase
-                    controller.acados_ocp_solver.options_set('rti_phase', 1)
-                    status = controller.acados_ocp_solver.solve()
-                    print("preparation phase time: ", controller.acados_ocp_solver.get_stats('time_tot'))
+                costs, best_sample_freq = batched_controller.compute_batch_control(state_current, ref_state,
+                                                                                   contact_sequence_temp)
 
-            if (use_print_debug):
-                mean_tracking[0] = mean_tracking[0] + np.abs(
-                    state_current["position"][2] - reference_state["ref_position"][2])
-                mean_tracking[1] = mean_tracking[1] + np.abs(
-                    state_current["linear_velocity"][0] - reference_state["ref_linear_velocity"][0])
-                mean_tracking[2] = mean_tracking[2] + np.abs(
-                    state_current["linear_velocity"][1] - reference_state["ref_linear_velocity"][1])
-                mean_tracking[3] = mean_tracking[3] + np.abs(
-                    state_current["linear_velocity"][2] - reference_state["ref_linear_velocity"][2])
-                mean_tracking[4] = mean_tracking[4] + np.abs(
-                    state_current["orientation"][0] - reference_state["ref_orientation"][0])
-                mean_tracking[5] = mean_tracking[5] + np.abs(
-                    state_current["orientation"][1] - reference_state["ref_orientation"][1])
-                mean_tracking[6] = mean_tracking[6] + np.abs(
-                    state_current["angular_velocity"][0] - reference_state["ref_angular_velocity"][0])
-                mean_tracking[7] = mean_tracking[7] + np.abs(
-                    state_current["angular_velocity"][1] - reference_state["ref_angular_velocity"][1])
-                mean_tracking[8] = mean_tracking[8] + np.abs(
-                    state_current["angular_velocity"][2] - reference_state["ref_angular_velocity"][2])
-                print("mean_tracking: ", mean_tracking / (mean_num_sample))
-                mean_optimizer_cost = mean_optimizer_cost + optimizer_cost
-                print("mean_cost: ", mean_optimizer_cost / (mean_num_sample))
-                mean_num_sample = mean_num_sample + 1
+                pgg.step_freq = best_sample_freq
+                stance_time = (1 / pgg.step_freq) * duty_factor
+                frg.stance_time = stance_time
+                swing_period = (1 - duty_factor) * (1 / pgg.step_freq)  # + 0.07
+                stc.regenerate_swing_trajectory_generator(step_height=step_height, swing_period=swing_period)
 
-            # Put the GRFs to zero if the foot is not in contact
-            nmpc_GRFs[0:3] = nmpc_GRFs[0:3] * current_contact[0]
-            nmpc_GRFs[3:6] = nmpc_GRFs[3:6] * current_contact[1]
-            nmpc_GRFs[6:9] = nmpc_GRFs[6:9] * current_contact[2]
-            nmpc_GRFs[9:12] = nmpc_GRFs[9:12] * current_contact[3]
-
-            # Compute wrench. This goes to the estimator!
-            wrench_linear = nmpc_GRFs[0:3] + \
-                            nmpc_GRFs[3:6] + \
-                            nmpc_GRFs[6:9] + \
-                            nmpc_GRFs[9:12]
-
-            wrench_angular = cs.skew(state_current["foot_FL"] - state_current["position"]) @ nmpc_GRFs[0:3] + \
-                             cs.skew(state_current["foot_FR"] - state_current["position"]) @ nmpc_GRFs[3:6] + \
-                             cs.skew(state_current["foot_RL"] - state_current["position"]) @ nmpc_GRFs[6:9] + \
-                             cs.skew(state_current["foot_RR"] - state_current["position"]) @ nmpc_GRFs[9:12]
-            wrench_angular = np.array(wrench_angular)
-
-            nmpc_wrenches = np.concatenate((wrench_linear, wrench_angular.flatten()), axis=0)
+            # If the controller is using RTI, we need to linearize the mpc after its computation
+            # this helps to minize the delay between new state->control, but only in a real case.
+            # Here we are in simulation and does not make any difference for now
+            if (controller.use_RTI):
+                # preparation phase
+                controller.acados_ocp_solver.options_set('rti_phase', 1)
+                status = controller.acados_ocp_solver.solve()
+                print("preparation phase time: ", controller.acados_ocp_solver.get_stats('time_tot'))
 
         if (use_print_debug):
-            print("nmpc_GRFs: \n", nmpc_GRFs)
-            print("nmpc_footholds: \n", nmpc_footholds)
-        # -------------------------------------------------------------------------------------------------
+            mean_tracking[0] = mean_tracking[0] + np.abs(
+                state_current["position"][2] - ref_state["ref_position"][2])
+            mean_tracking[1] = mean_tracking[1] + np.abs(
+                state_current["linear_velocity"][0] - ref_state["ref_linear_velocity"][0])
+            mean_tracking[2] = mean_tracking[2] + np.abs(
+                state_current["linear_velocity"][1] - ref_state["ref_linear_velocity"][1])
+            mean_tracking[3] = mean_tracking[3] + np.abs(
+                state_current["linear_velocity"][2] - ref_state["ref_linear_velocity"][2])
+            mean_tracking[4] = mean_tracking[4] + np.abs(
+                state_current["orientation"][0] - ref_state["ref_orientation"][0])
+            mean_tracking[5] = mean_tracking[5] + np.abs(
+                state_current["orientation"][1] - ref_state["ref_orientation"][1])
+            mean_tracking[6] = mean_tracking[6] + np.abs(
+                state_current["angular_velocity"][0] - ref_state["ref_angular_velocity"][0])
+            mean_tracking[7] = mean_tracking[7] + np.abs(
+                state_current["angular_velocity"][1] - ref_state["ref_angular_velocity"][1])
+            mean_tracking[8] = mean_tracking[8] + np.abs(
+                state_current["angular_velocity"][2] - ref_state["ref_angular_velocity"][2])
+            print("mean_tracking: ", mean_tracking / (mean_num_sample))
+            mean_optimizer_cost = mean_optimizer_cost + optimizer_cost
+            print("mean_cost: ", mean_optimizer_cost / (mean_num_sample))
+            mean_num_sample = mean_num_sample + 1
 
-        # Compute Stance Torque ---------------------------------------------------------------------------
-        # Compute the jacobian of the contact points
-        mujoco.mj_jac(mj_model, data, jac_foot_FL, None, data.geom_xpos[FL_id], FL_calf_id)
-        mujoco.mj_jac(mj_model, data, jac_foot_FR, None, data.geom_xpos[FR_id], FR_calf_id)
-        mujoco.mj_jac(mj_model, data, jac_foot_RL, None, data.geom_xpos[RL_id], RL_calf_id)
-        mujoco.mj_jac(mj_model, data, jac_foot_RR, None, data.geom_xpos[RR_id], RR_calf_id)
+        # Put the GRFs to zero if the foot is not in contact
+        nmpc_GRFs[0:3] = nmpc_GRFs[0:3] * current_contact[0]
+        nmpc_GRFs[3:6] = nmpc_GRFs[3:6] * current_contact[1]
+        nmpc_GRFs[6:9] = nmpc_GRFs[6:9] * current_contact[2]
+        nmpc_GRFs[9:12] = nmpc_GRFs[9:12] * current_contact[3]
 
-        # Compute jacobian derivatives of the contact points
-        jac_foot_FL_dot = copy.deepcopy((jac_foot_FL - jac_foot_FL_prev) / simulation_dt)
-        jac_foot_FR_dot = copy.deepcopy((jac_foot_FR - jac_foot_FR_prev) / simulation_dt)
-        jac_foot_RL_dot = copy.deepcopy((jac_foot_RL - jac_foot_RL_prev) / simulation_dt)
-        jac_foot_RR_dot = copy.deepcopy((jac_foot_RR - jac_foot_RR_prev) / simulation_dt)
+        # Compute wrench. This goes to the estimator!
+        wrench_linear = nmpc_GRFs[0:3] + \
+                        nmpc_GRFs[3:6] + \
+                        nmpc_GRFs[6:9] + \
+                        nmpc_GRFs[9:12]
 
-        # Update previous jacobians
-        jac_foot_FL_prev = copy.deepcopy(jac_foot_FL)
-        jac_foot_FR_prev = copy.deepcopy(jac_foot_FR)
-        jac_foot_RL_prev = copy.deepcopy(jac_foot_RL)
-        jac_foot_RR_prev = copy.deepcopy(jac_foot_RR)
+        wrench_angular = cs.skew(state_current["foot_FL"] - state_current["position"]) @ nmpc_GRFs[0:3] + \
+                         cs.skew(state_current["foot_FR"] - state_current["position"]) @ nmpc_GRFs[3:6] + \
+                         cs.skew(state_current["foot_RL"] - state_current["position"]) @ nmpc_GRFs[6:9] + \
+                         cs.skew(state_current["foot_RR"] - state_current["position"]) @ nmpc_GRFs[9:12]
+        wrench_angular = np.array(wrench_angular)
 
-        # Compute the torque with the contact jacobian (-J*f)
-        # index 6:9 -> FL, 9:12 -> FR, 12:15 -> RL, 15:18 -> RR
-        tau_FL = -np.matmul(jac_foot_FL[0:3, 6:9].T, nmpc_GRFs[0:3]) * current_contact[0]
-        tau_FR = -np.matmul(jac_foot_FR[0:3, 9:12].T, nmpc_GRFs[3:6]) * current_contact[1]
-        tau_RL = -np.matmul(jac_foot_RL[0:3, 12:15].T, nmpc_GRFs[6:9]) * current_contact[2]
-        tau_RR = -np.matmul(jac_foot_RR[0:3, 15:18].T, nmpc_GRFs[9:12]) * current_contact[3]
-        # ---------------------------------------------------------------------------------------------------
+        nmpc_wrenches = np.concatenate((wrench_linear, wrench_angular.flatten()), axis=0)
 
-        # Compute Swing Torque ------------------------------------------------------------------------------
-        # Compute foot position and velocities
-        position_foot_FL = copy.deepcopy(data.geom_xpos[FL_id])
-        position_foot_FR = copy.deepcopy(data.geom_xpos[FR_id])
-        position_foot_RL = copy.deepcopy(data.geom_xpos[RL_id])
-        position_foot_RR = copy.deepcopy(data.geom_xpos[RR_id])
+    if (use_print_debug):
+        print("nmpc_GRFs: \n", nmpc_GRFs)
+        print("nmpc_footholds: \n", nmpc_footholds)
+    # -------------------------------------------------------------------------------------------------
 
-        velocity_foot_FL = copy.deepcopy((position_foot_FL - position_foot_FL_prev) / simulation_dt)
-        velocity_foot_FR = copy.deepcopy((position_foot_FR - position_foot_FR_prev) / simulation_dt)
-        velocity_foot_RL = copy.deepcopy((position_foot_RL - position_foot_RL_prev) / simulation_dt)
-        velocity_foot_RR = copy.deepcopy((position_foot_RR - position_foot_RR_prev) / simulation_dt)
+    # Compute Stance Torque ---------------------------------------------------------------------------
+    # Compute the jacobian of the contact points
+    # TODO: Comment should explain this Jacobian, is this the Jacobian of the contact points?
+    # mujoco.mj_jac(env.mjModel, env.mjData, jac_foot_FL, None, env.mjData.geom_xpos[FL_id], FL_calf_id)
+    # mujoco.mj_jac(env.mjModel, env.mjData, jac_foot_FR, None, env.mjData.geom_xpos[FR_id], FR_calf_id)
+    # mujoco.mj_jac(env.mjModel, env.mjData, jac_foot_RL, None, env.mjData.geom_xpos[RL_id], RL_calf_id)
+    # mujoco.mj_jac(env.mjModel, env.mjData, jac_foot_RR, None, env.mjData.geom_xpos[RR_id], RR_calf_id)
 
-        # Update previous foot positions
-        position_foot_FL_prev = copy.deepcopy(position_foot_FL)
-        position_foot_FR_prev = copy.deepcopy(position_foot_FR)
-        position_foot_RL_prev = copy.deepcopy(position_foot_RL)
-        position_foot_RR_prev = copy.deepcopy(position_foot_RR)
+    jac_feet = env.feet_jacobians(frame='world', return_rot_jac=False)
 
-        # Compute the reference for the swing trajectory
-        if (use_print_debug):
-            print("swing_period: ", swing_period)
-            print("swing_time: ", swing_time)
+    # Compute jacobian derivatives of the contact points
+    # TODO: Mujoco offers analytical derivatives of the Jacobian, why finite difference?
+    jac_foot_FL_dot = np.array((jac_feet.FL - jac_feet_prev.FL) / simulation_dt)
+    jac_foot_FR_dot = np.array((jac_feet.FR - jac_feet_prev.FR) / simulation_dt)
+    jac_foot_RL_dot = np.array((jac_feet.RL - jac_feet_prev.RL) / simulation_dt)
+    jac_foot_RR_dot = np.array((jac_feet.RR - jac_feet_prev.RR) / simulation_dt)
 
-        for leg in range(4):
-            # Swing time reset
-            if (current_contact[leg] == 0):
-                if swing_time[leg] < swing_period:
-                    swing_time[leg] = swing_time[leg] + simulation_dt
-            else:
-                swing_time[leg] = 0
+    # Update previous jacobians
+    jac_feet_prev = copy.deepcopy(jac_feet)
 
-            # Set lif-offs
-            if previous_contact[leg] == 1 and current_contact[leg] == 0:
-                if (leg == 0):
-                    lift_off_positions[leg] = copy.deepcopy(position_foot_FL)
-                elif (leg == 1):
-                    lift_off_positions[leg] = copy.deepcopy(position_foot_FR)
-                elif (leg == 2):
-                    lift_off_positions[leg] = copy.deepcopy(position_foot_RL)
-                elif (leg == 3):
-                    lift_off_positions[leg] = copy.deepcopy(position_foot_RR)
+    # Compute the torque with the contact jacobian (-J*f)
+    # index 6:9 -> FL, 9:12 -> FR, 12:15 -> RL, 15:18 -> RR  # TODO: This should not be hardcoded.
+    tau_FL = -np.matmul(jac_feet.FL[0:3, 6:9].T, nmpc_GRFs[0:3]) * current_contact[0]
+    tau_FR = -np.matmul(jac_feet.FR[0:3, 9:12].T, nmpc_GRFs[3:6]) * current_contact[1]
+    tau_RL = -np.matmul(jac_feet.RL[0:3, 12:15].T, nmpc_GRFs[6:9]) * current_contact[2]
+    tau_RR = -np.matmul(jac_feet.RR[0:3, 15:18].T, nmpc_GRFs[9:12]) * current_contact[3]
+    # ---------------------------------------------------------------------------------------------------
 
-        # The swing controller is in the end-effector space. For its computation,
-        # we save for simplicity joints position and velocities
-        joints_pos_FL = data.qpos[6:9]
-        joints_pos_FR = data.qpos[9:12]
-        joints_pos_RL = data.qpos[12:15]
-        joints_pos_RR = data.qpos[15:18]
+    # Compute Swing Torque ------------------------------------------------------------------------------
+    # Compute foot position and velocities
+    # TODO: The feet velocity can be computed from qvel and the jacobian, why finite difference?
+    velocity_foot_FL = copy.deepcopy((feet_pos.FL - feet_pos_prev.FL) / simulation_dt)
+    velocity_foot_FR = copy.deepcopy((feet_pos.FR - feet_pos_prev.FR) / simulation_dt)
+    velocity_foot_RL = copy.deepcopy((feet_pos.RL - feet_pos_prev.RL) / simulation_dt)
+    velocity_foot_RR = copy.deepcopy((feet_pos.RR - feet_pos_prev.RR) / simulation_dt)
+    # Update previous foot positions
+    feet_pos_prev = copy.deepcopy(feet_pos)
 
-        joints_vel_FL = data.qvel[6:9]
-        joints_vel_FR = data.qvel[9:12]
-        joints_vel_RL = data.qvel[12:15]
-        joints_vel_RR = data.qvel[15:18]
+    # Compute the reference for the swing trajectory
+    if (use_print_debug):
+        print("swing_period: ", swing_period)
+        print("swing_time: ", swing_time)
 
-        # centrifugal, coriolis, gravity
-        h_FL = data.qfrc_bias[6:9]
-        h_FR = data.qfrc_bias[9:12]
-        h_RL = data.qfrc_bias[12:15]
-        h_RR = data.qfrc_bias[15:18]
+    for leg_id, leg_name in enumerate(legs_order):
+        # Swing time reset
+        if (current_contact[leg_id] == 0):
+            if swing_time[leg_id] < swing_period:
+                swing_time[leg_id] = swing_time[leg_id] + simulation_dt
+        else:
+            swing_time[leg_id] = 0
 
-        # and inertia matrix 
-        mass_matrix = np.zeros((mj_model.nv, mj_model.nv))
-        mujoco.mj_fullM(mj_model, mass_matrix, data.qM)
-        mass_matrix_FL = mass_matrix[6:9, 6:9]
-        mass_matrix_FR = mass_matrix[9:12, 9:12]
-        mass_matrix_RL = mass_matrix[12:15, 12:15]
-        mass_matrix_RR = mass_matrix[15:18, 15:18]
+        # Set lif-offs
+        if previous_contact[leg_id] == 1 and current_contact[leg_id] == 0:
+            lift_off_positions[leg_name] = copy.deepcopy(feet_pos[leg_name])
 
-        # If the foot is not in stance, we can calculate the swing controller
-        if (current_contact[0] == 0):
-            tau_FL, \
-                desired_swing_foot_position_FL, \
-                desired_swing_foot_velocity_FL = stc.compute_swing_control(mj_model,
-                                                                           joints_pos_FL,
-                                                                           joints_vel_FL,
-                                                                           jac_foot_FL[0:3, 6:9],
-                                                                           jac_foot_FL_dot[0:3, 6:9],
-                                                                           lift_off_positions[0],
-                                                                           nmpc_footholds[0],
-                                                                           swing_time[0],
-                                                                           position_foot_FL,
-                                                                           velocity_foot_FL,
-                                                                           h_FL,
-                                                                           mass_matrix_FL)
+    # The swing controller is in the end-effector space. For its computation,
+    # we save for simplicity joints position and velocities
+    # TODO: Indices should not be hardcoded. Env should be provided with the joint names per legs, such that ids are
+    #  automatically queried per robot URDF. We should assume quadruped structure, nothing else (leg names, leg order)
+    joints_pos_FL = env.mjData.qpos[6:9]
+    joints_pos_FR = env.mjData.qpos[9:12]
+    joints_pos_RL = env.mjData.qpos[12:15]
+    joints_pos_RR = env.mjData.qpos[15:18]
 
-        if (current_contact[1] == 0):
-            tau_FR, \
-                desired_swing_foot_position_FR, \
-                desired_swing_foot_velocity_FR = stc.compute_swing_control(mj_model,
-                                                                           joints_pos_FR,
-                                                                           joints_vel_FR,
-                                                                           jac_foot_FR[0:3, 9:12],
-                                                                           jac_foot_FR_dot[0:3, 9:12],
-                                                                           lift_off_positions[1],
-                                                                           nmpc_footholds[1],
-                                                                           swing_time[1],
-                                                                           position_foot_FR,
-                                                                           velocity_foot_FR,
-                                                                           h_FR,
-                                                                           mass_matrix_FR)
+    joints_vel_FL = env.mjData.qvel[6:9]
+    joints_vel_FR = env.mjData.qvel[9:12]
+    joints_vel_RL = env.mjData.qvel[12:15]
+    joints_vel_RR = env.mjData.qvel[15:18]
 
-        if (current_contact[2] == 0):
-            tau_RL, \
-                desired_swing_foot_position_RL, \
-                desired_swing_foot_velocity_RL = stc.compute_swing_control(mj_model,
-                                                                           joints_pos_RL,
-                                                                           joints_vel_RL,
-                                                                           jac_foot_RL[0:3, 12:15],
-                                                                           jac_foot_RL_dot[0:3, 12:15],
-                                                                           lift_off_positions[2],
-                                                                           nmpc_footholds[2],
-                                                                           swing_time[2],
-                                                                           position_foot_RL,
-                                                                           velocity_foot_RL,
-                                                                           h_RL,
-                                                                           mass_matrix_RL)
+    # centrifugal, coriolis, gravity
+    h_FL = env.mjData.qfrc_bias[6:9]
+    h_FR = env.mjData.qfrc_bias[9:12]
+    h_RL = env.mjData.qfrc_bias[12:15]
+    h_RR = env.mjData.qfrc_bias[15:18]
 
-        if (current_contact[3] == 0):
-            tau_RR, \
-                desired_swing_foot_position_RR, \
-                desired_swing_foot_velocity_RR = stc.compute_swing_control(mj_model,
-                                                                           joints_pos_RR,
-                                                                           joints_vel_RR,
-                                                                           jac_foot_RR[0:3, 15:18],
-                                                                           jac_foot_RR_dot[0:3, 15:18],
-                                                                           lift_off_positions[3],
-                                                                           nmpc_footholds[3],
-                                                                           swing_time[3],
-                                                                           position_foot_RR,
-                                                                           velocity_foot_RR,
-                                                                           h_RR,
-                                                                           mass_matrix_RR)
+    # and inertia matrix
+    mass_matrix = np.zeros((env.mjModel.nv, env.mjModel.nv))
+    mujoco.mj_fullM(env.mjModel, mass_matrix, env.mjData.qM)
+    mass_matrix_FL = mass_matrix[6:9, 6:9]
+    mass_matrix_FR = mass_matrix[9:12, 9:12]
+    mass_matrix_RL = mass_matrix[12:15, 12:15]
+    mass_matrix_RR = mass_matrix[15:18, 15:18]
 
-        # ---------------------------------------------------------------------------------------------------
+    # If the foot is not in stance, we can calculate the swing controller
+    if (current_contact[0] == 0):
+        tau_FL, \
+            desired_swing_foot_position_FL, \
+            desired_swing_foot_velocity_FL = stc.compute_swing_control(env.mjModel,
+                                                                       joints_pos_FL,
+                                                                       joints_vel_FL,
+                                                                       jac_feet.FL[0:3, 6:9],
+                                                                       jac_foot_FL_dot[0:3, 6:9],
+                                                                       lift_off_positions.FL,
+                                                                       nmpc_footholds[0],
+                                                                       swing_time[0],
+                                                                       feet_pos.FL,
+                                                                       velocity_foot_FL,
+                                                                       h_FL,
+                                                                       mass_matrix_FL)
 
-        # Set control and mujoco step ----------------------------------------------------------------------
-        tau = np.concatenate((tau_FR, tau_FL, tau_RR, tau_RL))
-        if (use_print_debug):
-            print("tau: \n", tau)
+    if (current_contact[1] == 0):
+        tau_FR, \
+            desired_swing_foot_position_FR, \
+            desired_swing_foot_velocity_FR = stc.compute_swing_control(env.mjModel,
+                                                                       joints_pos_FR,
+                                                                       joints_vel_FR,
+                                                                       jac_feet.FR[0:3, 9:12],
+                                                                       jac_foot_FR_dot[0:3, 9:12],
+                                                                       lift_off_positions.FR,
+                                                                       nmpc_footholds[1],
+                                                                       swing_time[1],
+                                                                       feet_pos.FR,
+                                                                       velocity_foot_FR,
+                                                                       h_FR,
+                                                                       mass_matrix_FR)
 
-        data.ctrl = tau.reshape(mj_model.nu, )
-        mujoco.mj_step(mj_model, data)
+    if (current_contact[2] == 0):
+        tau_RL, \
+            desired_swing_foot_position_RL, \
+            desired_swing_foot_velocity_RL = stc.compute_swing_control(env.mjModel,
+                                                                       joints_pos_RL,
+                                                                       joints_vel_RL,
+                                                                       jac_feet.RL[0:3, 12:15],
+                                                                       jac_foot_RL_dot[0:3, 12:15],
+                                                                       lift_off_positions.RL,
+                                                                       nmpc_footholds[2],
+                                                                       swing_time[2],
+                                                                       feet_pos.RL,
+                                                                       velocity_foot_RL,
+                                                                       h_RL,
+                                                                       mass_matrix_RL)
 
-        # Update the periodic gait generator
-        pgg.run(simulation_dt, pgg.step_freq)
+    if (current_contact[3] == 0):
+        tau_RR, \
+            desired_swing_foot_position_RR, \
+            desired_swing_foot_velocity_RR = stc.compute_swing_control(env.mjModel,
+                                                                       joints_pos_RR,
+                                                                       joints_vel_RR,
+                                                                       jac_feet.RR[0:3, 15:18],
+                                                                       jac_foot_RR_dot[0:3, 15:18],
+                                                                       lift_off_positions.RR,
+                                                                       nmpc_footholds[3],
+                                                                       swing_time[3],
+                                                                       feet_pos.RR,
+                                                                       velocity_foot_RR,
+                                                                       h_RR,
+                                                                       mass_matrix_RR)
 
-        # Plot
-        if (use_visualization_debug and step_num % 100 == 0):
-            plot_swing_mujoco(mujoco, stc, swing_period, lift_off_positions, nmpc_footholds,
-                              reference_foot_FL, reference_foot_FR,
-                              reference_foot_RL, reference_foot_RR, viewer)
+    # ---------------------------------------------------------------------------------------------------
 
-        # Pick up changes to the physics state, apply perturbations, update options from GUI.
-        if (step_num % 5 == 0):
-            viewer.sync()
+    # Set control and mujoco step ----------------------------------------------------------------------
+    tau = np.concatenate((tau_FR, tau_FL, tau_RR, tau_RL))
+    if (use_print_debug):
+        print("tau: \n", tau)
 
-        if (cfg.simulation_params['use_kind_of_real_time']):
-            time_until_next_step = simulation_dt - (time.time() - step_start)
-            if time_until_next_step > 0:
-                time.sleep(time_until_next_step)
+    env.step(action=tau.reshape(env.mjModel.nu))
+    env.render()
 
-        print("loop time: ", time.time() - step_start)
-        # ---------------------------------------------------------------------------------------------------
+    # Update the periodic gait generator
+    pgg.run(simulation_dt, pgg.step_freq)
 
-        step_num = step_num + 1
+    print("loop time: ", time.time() - step_start)
+    # ---------------------------------------------------------------------------------------------------

@@ -1,11 +1,9 @@
 from __future__ import annotations
 
 import time
-from collections import namedtuple
 from typing import Any
 
 import gymnasium as gym
-import scipy.spatial.transform
 from gymnasium import spaces
 import numpy as np
 import mujoco.viewer
@@ -17,8 +15,7 @@ from scipy.spatial.transform import Rotation
 
 from helpers.other import render_vector
 
-#  This will be the order convention for the legs signals.
-LegsSignal = namedtuple('LegSignals', ['FR', 'FL', 'RR', 'RL'])
+from quadruped_utils import LegsAttr
 
 
 class QuadrupedEnv(gym.Env):
@@ -29,7 +26,8 @@ class QuadrupedEnv(gym.Env):
                  scene='flat',
                  sim_dt=0.002,
                  base_vel_command_type: str = 'forward',
-                 base_vel_range: tuple[float, float] = (0.00, 0.8),
+                 base_vel_range: tuple[float, float] = (0.28, 0.3),
+                 feet_geom_name: LegsAttr = LegsAttr("FR", "FL", "RR", "RL"),
                  n_robots=1,
                  ):
         super(QuadrupedEnv, self).__init__()
@@ -65,6 +63,13 @@ class QuadrupedEnv(gym.Env):
         # Get limits from the model
         self.observation_space = spaces.Box(low=-np.inf, high=np.inf, shape=(obs_dim,), dtype=np.float32)
 
+        # Check the provided feet geometry names are within the model
+        self._feet_geom_id = LegsAttr(None, None, None, None)
+        for lef_name in ["FR", "FL", "RR", "RL"]:
+            foot_geom_id = mujoco.mj_name2id(self.mjModel, mujoco.mjtObj.mjOBJ_GEOM, feet_geom_name[lef_name])
+            assert foot_geom_id != -1, f"Foot geometry {feet_geom_name[lef_name]} not found in the model."
+            self._feet_geom_id[lef_name] = foot_geom_id
+
         self.viewer = None
         self.step_num = 0
         self._ref_base_velocity = None
@@ -72,7 +77,7 @@ class QuadrupedEnv(gym.Env):
 
     def step(self, action) -> tuple[np.ndarray, float, bool, bool, dict]:
         # Apply action (torque) to the robot
-        self.mjData.ctrl[:] = action
+        self.mjData.ctrl = action
         mujoco.mj_step(self.mjModel, self.mjData)
 
         # Get observation
@@ -105,8 +110,8 @@ class QuadrupedEnv(gym.Env):
             # Add white noise to the joint-space position and velocity
             q_pos_amp = 20 * np.pi / 180
             q_vel_amp = 0.1
-            self.mjData.qpos[7:] += np.random.uniform(-q_pos_amp, q_pos_amp, self.mjModel.nq - 7)
-            self.mjData.qvel[6:] += np.random.uniform(-q_vel_amp, q_vel_amp, self.mjModel.nv - 6)
+            # self.mjData.qpos[7:] += np.random.uniform(-q_pos_amp, q_pos_amp, self.mjModel.nq - 7)
+            # self.mjData.qvel[6:] += np.random.uniform(-q_vel_amp, q_vel_amp, self.mjModel.nv - 6)
         else:
             self.mjData.qpos = qpos
             self.mjData.qvel = qvel
@@ -129,7 +134,7 @@ class QuadrupedEnv(gym.Env):
         X_B = self.base_configuration
         r_B = X_B[:3, 3]
         dr_B = self.mjData.qvel[0:3]
-        ref_dr_B = self.target_base_velocity
+        ref_dr_B = self.target_base_vel
         R_heading = self.heading_orientation_SO3
         ref_vec_pos, vec_pos = r_B + [0, 0, 0.1], r_B + [0, 0, 0.15]
         ref_vel_vec_color, vel_vec_color = np.array([1, 0.5, 0, .7]), np.array([0, 1, 1, .7])
@@ -161,17 +166,38 @@ class QuadrupedEnv(gym.Env):
             self.viewer.close()
             self.viewer = None
 
-    @property
-    def hip_positions(self):
+    def hip_positions(self, frame='world'):
+        if frame == 'world':
+            R = np.eye(3)
+        elif frame == 'base':
+            R = self.base_configuration[0:3, 0:3]
+        else:
+            raise ValueError(f"Invalid frame: {frame} != 'world' or 'base'")
+
         FL_hip_id = mujoco.mj_name2id(self.mjModel, mujoco.mjtObj.mjOBJ_BODY, 'FL_hip')
         FR_hip_id = mujoco.mj_name2id(self.mjModel, mujoco.mjtObj.mjOBJ_BODY, 'FR_hip')
         RL_hip_id = mujoco.mj_name2id(self.mjModel, mujoco.mjtObj.mjOBJ_BODY, 'RL_hip')
         RR_hip_id = mujoco.mj_name2id(self.mjModel, mujoco.mjtObj.mjOBJ_BODY, 'RR_hip')
-        return LegsSignal(
-            FR=self.mjData.body_xpos[FR_hip_id],
-            FL=self.mjData.body_xpos[FL_hip_id],
-            RR=self.mjData.body_xpos[RR_hip_id],
-            RL=self.mjData.body_xpos[RL_hip_id],
+        return LegsAttr(
+            FR=R.T @ self.mjData.body(FR_hip_id).xpos,
+            FL=R.T @ self.mjData.body(FL_hip_id).xpos,
+            RR=R.T @ self.mjData.body(RR_hip_id).xpos,
+            RL=R.T @ self.mjData.body(RL_hip_id).xpos,
+            )
+
+    def feet_pos(self, frame='world'):
+        if frame == 'world':
+            R = np.eye(3)
+        elif frame == 'base':
+            R = self.base_configuration[0:3, 0:3]
+        else:
+            raise ValueError(f"Invalid frame: {frame} != 'world' or 'base'")
+
+        return LegsAttr(  # TODO: Why geom_xpos and not body(id).xpos? are these the same?
+            FR=R.T @ self.mjData.geom_xpos[self._feet_geom_id.FR],
+            FL=R.T @ self.mjData.geom_xpos[self._feet_geom_id.FL],
+            RR=R.T @ self.mjData.geom_xpos[self._feet_geom_id.RR],
+            RL=R.T @ self.mjData.geom_xpos[self._feet_geom_id.RL],
             )
 
     @property
@@ -186,10 +212,30 @@ class QuadrupedEnv(gym.Env):
         return X_B
 
     @property
-    def target_base_velocity(self):
+    def base_pos(self):
+        return self.mjData.qpos[0:3]
+
+    @property
+    def base_lin_vel(self):
+        return self.mjData.qvel[0:3]
+
+    @property
+    def base_ang_vel(self):
+        return self.mjData.qvel[3:6]
+
+    @property
+    def base_ori_euler_xyz(self):
+        quat_wxyz = self.mjData.qpos[3:7]
+        quat_xyzw = np.roll(quat_wxyz, -1)
+        return Rotation.from_quat(quat_xyzw).as_euler('xyz')
+
+    @property
+    def target_base_vel(self):
         """
         Returns the target base velocity (3,) in the world reference frame.
         """
+        if self._ref_base_velocity is None:
+            raise RuntimeError(f"Please call env.reset() before accessing the target base velocity.")
         R_B_heading = self.heading_orientation_SO3
         ref_dr_B = R_B_heading @ self._ref_base_velocity.reshape(3, 1)
         return ref_dr_B.squeeze()
