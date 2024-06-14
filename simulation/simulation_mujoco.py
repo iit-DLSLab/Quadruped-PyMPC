@@ -500,10 +500,10 @@ with mujoco.viewer.launch_passive(m, d, show_left_ui=False, show_right_ui=False)
             if(config.simulation_params['use_inertia_recomputation']):
                 inertia = srb_inertia_computation.compute_inertia(d.qpos)
 
+            optimize_swing = 0 #1 for always, 0 for apex
             if((config.mpc_params['optimize_step_freq'])):
                 # we can always optimize the step freq, or just at the apex of the swing
                 # to avoid possible jittering in the solution
-                optimize_swing = 0 #1 for always, 0 for apex
                 for leg in range(4):
                 # Swing time check 
                     if(current_contact[leg] == 0):
