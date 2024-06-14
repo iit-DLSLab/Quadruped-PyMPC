@@ -75,7 +75,7 @@ Gradient-based MPC: It uses [CasADI](https://web.casadi.org/) to define the mode
     export ACADOS_SOURCE_DIR="/path_to_acados"
     ```
 
-Notice that if you are using Mac, you should set
+    Notice that if you are using Mac, you should set
     
     ```
     DYLD_LIBRARY_PATH=$LD_LIBRARY_PATH:"/path_to_acados/lib"
