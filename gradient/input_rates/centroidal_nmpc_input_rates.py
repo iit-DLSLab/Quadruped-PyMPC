@@ -82,11 +82,11 @@ class Acados_NMPC_InputRates:
         self.ocp = self.create_ocp_solver_description(acados_model)
         
         self.ocp.code_export_directory = dir_path + '/c_generated_code'
-        if (not os.path.isdir(dir_path + "/c_generated_code") or os.listdir(dir_path + "/c_generated_code") == []):
-            self.acados_ocp_solver =  AcadosOcpSolver(self.ocp, json_file=self.ocp.code_export_directory + "/centroidal_nmpc" + ".json")
+        #if (not os.path.isdir(dir_path + "/c_generated_code") or os.listdir(dir_path + "/c_generated_code") == []):
+        self.acados_ocp_solver =  AcadosOcpSolver(self.ocp, json_file=self.ocp.code_export_directory + "/centroidal_nmpc" + ".json")
  
-        else :
-            self.acados_ocp_solver =  AcadosOcpSolver(self.ocp, json_file=self.ocp.code_export_directory + "/centroidal_nmpc" + ".json", build = False, generate = True)
+        #else :
+        #    self.acados_ocp_solver =  AcadosOcpSolver(self.ocp, json_file=self.ocp.code_export_directory + "/centroidal_nmpc" + ".json", build = False, generate = True)
 
 
         # Initialize solver
