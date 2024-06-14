@@ -75,6 +75,13 @@ Gradient-based MPC: It uses [CasADI](https://web.casadi.org/) to define the mode
     export ACADOS_SOURCE_DIR="/path_to_acados"
     ```
 
+Notice that if you are using Mac, you should set
+    
+    ```
+    DYLD_LIBRARY_PATH=$LD_LIBRARY_PATH:"/path_to_acados/lib"
+    export ACADOS_SOURCE_DIR="/path_to_acados"
+    ```
+
 The first time you run the simulation with acados, in the terminal you will be asked to install tera_render. You should accept to proceed.
 
 ## How to run
