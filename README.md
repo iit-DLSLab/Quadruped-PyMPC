@@ -63,7 +63,7 @@ Gradient-based MPC: It uses [CasADI](https://web.casadi.org/) to define the mode
     ```
     mkdir build
     cd build
-    cmake -DACADOS_WITH_QPOASES=ON  -DACADOS_WITH_OSQP=ON ..
+    cmake ..
     make install -j4
     pip install -e ./../interfaces/acados_template
     ```
