@@ -27,6 +27,9 @@ class LegsAttr:
     >>> # Get the (4, 3) numpy array of the feet positions in the order FR, FL, RR, RL
     >>> import numpy as np
     >>> a = np.array([feet_pos.to_list(order=['FR', 'FL', 'RR', 'RL'])])
+    >>> # Transpose the FR attribute
+    >>> feet_pos.FR = feet_pos.FR.T
+    >>> feet_pos.FR
     """
     FR: Any
     FL: Any
@@ -54,3 +57,35 @@ class LegsAttr:
 
     def __repr__(self):
         return self.__str__()
+
+    # def __getattr__(self, name):
+    #     """ Override __getattr__ method to access the attributes of the objects associated to each leg directly.
+    #     """
+    #     if name in self.__dict__:
+    #         return self.__dict__[name]
+    #     else:
+    #         return LegsAttr(FR=getattr(self.FR, name), FL=getattr(self.FL, name), RR=getattr(self.RR, name), RL=getattr(self.RL, name))
+
+    def __add__(self, other):
+        if isinstance(other, LegsAttr):
+            return LegsAttr(FR=self.FR + other.FR, FL=self.FL + other.FL, RR=self.RR + other.RR, RL=self.RL + other.RL)
+        else:
+            raise TypeError("Unsupported operand type for +: 'LegsAttr' and '{}'".format(type(other)))
+
+    def __sub__(self, other):
+        if isinstance(other, LegsAttr):
+            return LegsAttr(FR=self.FR - other.FR, FL=self.FL - other.FL, RR=self.RR - other.RR, RL=self.RL - other.RL)
+        else:
+            raise TypeError("Unsupported operand type for -: 'LegsAttr' and '{}'".format(type(other)))
+
+    def __truediv__(self, other):
+        if isinstance(other, (int, float)):
+            return LegsAttr(FR=self.FR / other, FL=self.FL / other, RR=self.RR / other, RL=self.RL / other)
+        else:
+            raise TypeError("Unsupported operand type for /: 'LegsAttr' and '{}'".format(type(other)))
+
+    def __matmul__(self, other):
+        if isinstance(other, LegsAttr):
+            return LegsAttr(FR=self.FR @ other.FR, FL=self.FL @ other.FL, RR=self.RR @ other.RR, RL=self.RL @ other.RL)
+        else:
+            raise TypeError("Unsupported operand type for @: 'LegsAttr' and '{}'".format(type(other)))

@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import time
-from typing import Any
+from typing import Any, Union
 
 import gymnasium as gym
 from gymnasium import spaces
@@ -27,7 +27,8 @@ class QuadrupedEnv(gym.Env):
                  sim_dt=0.002,
                  base_vel_command_type: str = 'forward',
                  base_vel_range: tuple[float, float] = (0.28, 0.3),
-                 feet_geom_name: LegsAttr = LegsAttr("FR", "FL", "RR", "RL"),
+                 feet_geom_name: LegsAttr = LegsAttr(FL='FL', FR='FR', RL='RL', RR='RR'),
+                 feet_body_name: LegsAttr = LegsAttr(FL='FL_calf', FR='FR_calf', RL='RL_calf', RR='RR_calf'),
                  n_robots=1,
                  ):
         super(QuadrupedEnv, self).__init__()
@@ -63,12 +64,19 @@ class QuadrupedEnv(gym.Env):
         # Get limits from the model
         self.observation_space = spaces.Box(low=-np.inf, high=np.inf, shape=(obs_dim,), dtype=np.float32)
 
-        # Check the provided feet geometry names are within the model
+        # Check the provided feet geometry and body names are within the model. These are used to compute the Jacobians
+        # of the feet positions.
         self._feet_geom_id = LegsAttr(None, None, None, None)
+        self._feet_body_id = LegsAttr(None, None, None, None)
+        _all_geoms = [mujoco.mj_id2name(self.mjModel, i, mujoco.mjtObj.mjOBJ_GEOM) for i in range(self.mjModel.ngeom)]
+        _all_bodies = [mujoco.mj_id2name(self.mjModel, i, mujoco.mjtObj.mjOBJ_BODY) for i in range(self.mjModel.nbody)]
         for lef_name in ["FR", "FL", "RR", "RL"]:
             foot_geom_id = mujoco.mj_name2id(self.mjModel, mujoco.mjtObj.mjOBJ_GEOM, feet_geom_name[lef_name])
-            assert foot_geom_id != -1, f"Foot geometry {feet_geom_name[lef_name]} not found in the model."
+            assert foot_geom_id != -1, f"Foot geometry {feet_geom_name[lef_name]} not found in {_all_geoms}."
             self._feet_geom_id[lef_name] = foot_geom_id
+            foot_body_id = mujoco.mj_name2id(self.mjModel, mujoco.mjtObj.mjOBJ_BODY, feet_body_name[lef_name])
+            assert foot_body_id != -1, f"Foot body {feet_body_name[lef_name]} not found in {_all_bodies}."
+            self._feet_body_id[lef_name] = foot_body_id
 
         self.viewer = None
         self.step_num = 0
@@ -199,6 +207,57 @@ class QuadrupedEnv(gym.Env):
             RR=R.T @ self.mjData.geom_xpos[self._feet_geom_id.RR],
             RL=R.T @ self.mjData.geom_xpos[self._feet_geom_id.RL],
             )
+
+    def feet_jacobians(self, frame='world', return_rot_jac=False) -> Union[LegsAttr, tuple[LegsAttr, LegsAttr]]:
+        """ Compute the Jacobians of the feet positions
+
+        This function computes the translational and rotational Jacobians of the feet positions. Each feet position is
+        defined as the position of the geometry corresponding to each foot, passed in the `feet_geom_name` argument of
+        the constructor. The body to which each feet point/geometry is attached to is assumed to be the one passed in
+        the `feet_body_name` argument of the constructor.
+
+        The Jacobians returned can be used to compute the relationship between joint velocities and feet velocities,
+        such that if r_dot_FL is the velocity of the FL foot in the world frame, then:
+        r_dot_FL = J_FL @ qvel, where J_FL in R^{3 x mjModel.nv} is the Jacobian of the FL foot position.
+        Args:
+            frame: Either 'world' or 'base'. The reference frame in which the Jacobians are computed.
+            return_rot_jac: Whether to compute the rotational Jacobians. If False, only the translational Jacobians
+                are computed.
+        Returns:
+            If `return_rot_jac` is False:
+            LegsAttr: A dictionary-like object with:
+                - FR: (3, mjModel.nv) Jacobian of the FR foot position in the specified frame.
+                - FL: (3, mjModel.nv) Jacobian of the FL foot position in the specified frame.
+                - RR: (3, mjModel.nv) Jacobian of the RR foot position in the specified frame.
+                - RL: (3, mjModel.nv) Jacobian of the RL foot position in the specified frame.
+            If `return_rot_jac` is True:
+            tuple: A tuple with two LegsAttr objects:
+                - The first LegsAttr object contains the translational Jacobians as described above.
+                - The second LegsAttr object contains the rotational Jacobians.
+        """
+        if frame == 'world':
+            R = np.eye(3)
+        elif frame == 'base':
+            R = self.base_configuration[0:3, 0:3]
+        else:
+            raise ValueError(f"Invalid frame: {frame} != 'world' or 'base'")
+        feet_trans_jac = LegsAttr(*[np.zeros((3, self.mjModel.nv)) for _ in range(4)])
+        feet_rot_jac = LegsAttr(*[np.zeros((3, self.mjModel.nv)) if not return_rot_jac else None for _ in range(4)])
+        feet_pos = self.feet_pos(frame='world')  # Mujoco mj_jac expects the point in global coordinates.
+
+        for leg_name in ["FR", "FL", "RR", "RL"]:
+            mujoco.mj_jac(m=self.mjModel,
+                          d=self.mjData,
+                          jacp=feet_trans_jac[leg_name],
+                          jacr=feet_rot_jac[leg_name],
+                          point=feet_pos[leg_name],  # Point in global coordinates
+                          body=self._feet_body_id[leg_name]  # Body to which `point` is attached to.
+                          )
+            feet_trans_jac[leg_name] = R.T @ feet_trans_jac[leg_name]
+            if return_rot_jac:
+                feet_rot_jac[leg_name] = R.T @ feet_rot_jac[leg_name]
+
+        return feet_trans_jac if not return_rot_jac else (feet_trans_jac, feet_rot_jac)
 
     @property
     def base_configuration(self):

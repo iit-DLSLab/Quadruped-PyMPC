@@ -547,38 +547,25 @@ while True:
     # Compute Stance Torque ---------------------------------------------------------------------------
     # Compute the jacobian of the contact points
     # TODO: Comment should explain this Jacobian, is this the Jacobian of the contact points?
-    # mujoco.mj_jac(env.mjModel, env.mjData, jac_foot_FL, None, env.mjData.geom_xpos[FL_id], FL_calf_id)
-    # mujoco.mj_jac(env.mjModel, env.mjData, jac_foot_FR, None, env.mjData.geom_xpos[FR_id], FR_calf_id)
-    # mujoco.mj_jac(env.mjModel, env.mjData, jac_foot_RL, None, env.mjData.geom_xpos[RL_id], RL_calf_id)
-    # mujoco.mj_jac(env.mjModel, env.mjData, jac_foot_RR, None, env.mjData.geom_xpos[RR_id], RR_calf_id)
 
     jac_feet = env.feet_jacobians(frame='world', return_rot_jac=False)
-
     # Compute jacobian derivatives of the contact points
     # TODO: Mujoco offers analytical derivatives of the Jacobian, why finite difference?
-    jac_foot_FL_dot = np.array((jac_feet.FL - jac_feet_prev.FL) / simulation_dt)
-    jac_foot_FR_dot = np.array((jac_feet.FR - jac_feet_prev.FR) / simulation_dt)
-    jac_foot_RL_dot = np.array((jac_feet.RL - jac_feet_prev.RL) / simulation_dt)
-    jac_foot_RR_dot = np.array((jac_feet.RR - jac_feet_prev.RR) / simulation_dt)
-
-    # Update previous jacobians
-    jac_feet_prev = copy.deepcopy(jac_feet)
-
+    jac_feet_dot = (jac_feet - jac_feet_prev) / simulation_dt   # Finite difference approximation
+    jac_feet_prev = copy.deepcopy(jac_feet)  # Update previous Jacobians
     # Compute the torque with the contact jacobian (-J*f)
     # index 6:9 -> FL, 9:12 -> FR, 12:15 -> RL, 15:18 -> RR  # TODO: This should not be hardcoded.
-    tau_FL = -np.matmul(jac_feet.FL[0:3, 6:9].T, nmpc_GRFs[0:3]) * current_contact[0]
-    tau_FR = -np.matmul(jac_feet.FR[0:3, 9:12].T, nmpc_GRFs[3:6]) * current_contact[1]
-    tau_RL = -np.matmul(jac_feet.RL[0:3, 12:15].T, nmpc_GRFs[6:9]) * current_contact[2]
-    tau_RR = -np.matmul(jac_feet.RR[0:3, 15:18].T, nmpc_GRFs[9:12]) * current_contact[3]
+    tau_FL = -np.matmul(jac_feet.FL[:, 6:9].T,   nmpc_GRFs[0:3]) * current_contact[0]
+    tau_FR = -np.matmul(jac_feet.FR[:, 9:12].T,  nmpc_GRFs[3:6]) * current_contact[1]
+    tau_RL = -np.matmul(jac_feet.RL[:, 12:15].T, nmpc_GRFs[6:9]) * current_contact[2]
+    tau_RR = -np.matmul(jac_feet.RR[:, 15:18].T, nmpc_GRFs[9:12]) * current_contact[3]
     # ---------------------------------------------------------------------------------------------------
 
     # Compute Swing Torque ------------------------------------------------------------------------------
     # Compute foot position and velocities
     # TODO: The feet velocity can be computed from qvel and the jacobian, why finite difference?
-    velocity_foot_FL = copy.deepcopy((feet_pos.FL - feet_pos_prev.FL) / simulation_dt)
-    velocity_foot_FR = copy.deepcopy((feet_pos.FR - feet_pos_prev.FR) / simulation_dt)
-    velocity_foot_RL = copy.deepcopy((feet_pos.RL - feet_pos_prev.RL) / simulation_dt)
-    velocity_foot_RR = copy.deepcopy((feet_pos.RR - feet_pos_prev.RR) / simulation_dt)
+    # feet_vel = (feet_pos - feet_pos_prev) / simulation_dt  # Finite difference approximation
+    feet_vel = LegsAttr(**{leg_name: jac_feet[leg_name] @ env.mjData.qvel for leg_name in legs_order})
     # Update previous foot positions
     feet_pos_prev = copy.deepcopy(feet_pos)
 
@@ -635,12 +622,12 @@ while True:
                                                                        joints_pos_FL,
                                                                        joints_vel_FL,
                                                                        jac_feet.FL[0:3, 6:9],
-                                                                       jac_foot_FL_dot[0:3, 6:9],
+                                                                       jac_feet_dot.FL[0:3, 6:9],
                                                                        lift_off_positions.FL,
                                                                        nmpc_footholds[0],
                                                                        swing_time[0],
                                                                        feet_pos.FL,
-                                                                       velocity_foot_FL,
+                                                                       feet_vel.FL,
                                                                        h_FL,
                                                                        mass_matrix_FL)
 
@@ -651,12 +638,12 @@ while True:
                                                                        joints_pos_FR,
                                                                        joints_vel_FR,
                                                                        jac_feet.FR[0:3, 9:12],
-                                                                       jac_foot_FR_dot[0:3, 9:12],
+                                                                       jac_feet_dot.FR[0:3, 9:12],
                                                                        lift_off_positions.FR,
                                                                        nmpc_footholds[1],
                                                                        swing_time[1],
                                                                        feet_pos.FR,
-                                                                       velocity_foot_FR,
+                                                                       feet_vel.FR,
                                                                        h_FR,
                                                                        mass_matrix_FR)
 
@@ -667,12 +654,12 @@ while True:
                                                                        joints_pos_RL,
                                                                        joints_vel_RL,
                                                                        jac_feet.RL[0:3, 12:15],
-                                                                       jac_foot_RL_dot[0:3, 12:15],
+                                                                       jac_feet_dot.RL[0:3, 12:15],
                                                                        lift_off_positions.RL,
                                                                        nmpc_footholds[2],
                                                                        swing_time[2],
                                                                        feet_pos.RL,
-                                                                       velocity_foot_RL,
+                                                                       feet_vel.RL,
                                                                        h_RL,
                                                                        mass_matrix_RL)
 
@@ -683,12 +670,12 @@ while True:
                                                                        joints_pos_RR,
                                                                        joints_vel_RR,
                                                                        jac_feet.RR[0:3, 15:18],
-                                                                       jac_foot_RR_dot[0:3, 15:18],
+                                                                       jac_feet_dot.RR[0:3, 15:18],
                                                                        lift_off_positions.RR,
                                                                        nmpc_footholds[3],
                                                                        swing_time[3],
                                                                        feet_pos.RR,
-                                                                       velocity_foot_RR,
+                                                                       feet_vel.RR,
                                                                        h_RR,
                                                                        mass_matrix_RR)
 
