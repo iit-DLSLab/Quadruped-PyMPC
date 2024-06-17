@@ -495,9 +495,6 @@ while True:
 
     # The swing controller is in the end-effector space. For its computation,
     # we save for simplicity joints position and velocities
-    # TODO: Indices should not be hardcoded. Env should be provided with the joint names per legs, such that ids are
-    #  automatically queried per robot URDF. We should assume quadruped structure, nothing else (leg names, leg order)
-
     qpos, qvel = env.mjData.qpos, env.mjData.qvel
     # centrifugal, coriolis, gravity
     legs_qfrc_bias = LegsAttr(FL=env.mjData.qfrc_bias[env.legs_qvel_idx.FL],
