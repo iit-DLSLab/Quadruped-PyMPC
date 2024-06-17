@@ -1,7 +1,8 @@
 from __future__ import annotations
 
 import time
-from typing import Any
+from collections import OrderedDict
+from typing import Any, Union
 
 import gymnasium as gym
 from gymnasium import spaces
@@ -15,19 +16,21 @@ from scipy.spatial.transform import Rotation
 
 from helpers.other import render_vector
 
-from quadruped_utils import LegsAttr
+from quadruped_utils import JointInfo, LegsAttr
 
 
 class QuadrupedEnv(gym.Env):
     metadata = {'render.modes': ['human'], 'version': 1}
 
     def __init__(self,
-                 robot='mini_cheetah',
+                 robot: str,
+                 legs_joint_names: LegsAttr,  # Joint names associated to each of the four legs
                  scene='flat',
                  sim_dt=0.002,
                  base_vel_command_type: str = 'forward',
                  base_vel_range: tuple[float, float] = (0.28, 0.3),
-                 feet_geom_name: LegsAttr = LegsAttr("FR", "FL", "RR", "RL"),
+                 feet_geom_name: LegsAttr = LegsAttr(FL='FL', FR='FR', RL='RL', RR='RR'),
+                 feet_body_name: LegsAttr = LegsAttr(FL='FL_calf', FR='FR_calf', RL='RL_calf', RR='RR_calf'),
                  n_robots=1,
                  ):
         super(QuadrupedEnv, self).__init__()
@@ -49,7 +52,23 @@ class QuadrupedEnv(gym.Env):
         # Set the simulation step size (dt)
         self.mjModel.opt.timestep = sim_dt
 
-        # Action space: Torque values for each joint
+        assert legs_joint_names is not None, f"Please provide the joint names associated with each of the four legs."
+        self.joint_info = self.joint_info(self.mjModel)
+        self.legs_qpos_idx = LegsAttr(None, None, None, None)
+        self.legs_qvel_idx = LegsAttr(None, None, None, None)
+        # Ensure the joint names of the robot's legs are present in the model. And store the qpos and qvel indices
+        for leg_name in ["FR", "FL", "RR", "RL"]:
+            qpos_idx, qvel_idx = [], []
+            leg_joints = legs_joint_names[leg_name]
+            for joint_name in leg_joints:
+                assert joint_name in self.joint_info, f"Joint {joint_name} not found in {list(self.joint_info.keys())}"
+                qpos_idx.extend(self.joint_info[joint_name].qpos_idx)
+                qvel_idx.extend(self.joint_info[joint_name].qvel_idx)
+            self.legs_qpos_idx[leg_name] = qpos_idx
+            self.legs_qvel_idx[leg_name] = qvel_idx
+        # Get the number of joints and actuators
+
+        # Action space: Torque values for each joint _________________________________________________________________
         tau_low, tau_high = self.mjModel.actuator_forcerange[:, 0], self.mjModel.actuator_forcerange[:, 1]
         is_act_lim = [np.inf if not lim else 1.0 for lim in self.mjModel.actuator_forcelimited]
         self.action_space = spaces.Box(
@@ -58,17 +77,25 @@ class QuadrupedEnv(gym.Env):
             high=np.asarray([tau if not lim else np.inf for tau, lim in zip(tau_high, is_act_lim)]),
             dtype=np.float32)
 
-        # Observation space: Position, velocity, orientation, and foot positions
+        # TODO: Make observation space parameterizable.
+        # Observation space: Position, velocity, orientation, and foot positions _______________________________________
         obs_dim = self.mjModel.nq + self.mjModel.nv
         # Get limits from the model
         self.observation_space = spaces.Box(low=-np.inf, high=np.inf, shape=(obs_dim,), dtype=np.float32)
 
-        # Check the provided feet geometry names are within the model
+        # Check the provided feet geometry and body names are within the model. These are used to compute the Jacobians
+        # of the feet positions.
         self._feet_geom_id = LegsAttr(None, None, None, None)
+        self._feet_body_id = LegsAttr(None, None, None, None)
+        _all_geoms = [mujoco.mj_id2name(self.mjModel, i, mujoco.mjtObj.mjOBJ_GEOM) for i in range(self.mjModel.ngeom)]
+        _all_bodies = [mujoco.mj_id2name(self.mjModel, i, mujoco.mjtObj.mjOBJ_BODY) for i in range(self.mjModel.nbody)]
         for lef_name in ["FR", "FL", "RR", "RL"]:
             foot_geom_id = mujoco.mj_name2id(self.mjModel, mujoco.mjtObj.mjOBJ_GEOM, feet_geom_name[lef_name])
-            assert foot_geom_id != -1, f"Foot geometry {feet_geom_name[lef_name]} not found in the model."
+            assert foot_geom_id != -1, f"Foot geometry {feet_geom_name[lef_name]} not found in {_all_geoms}."
             self._feet_geom_id[lef_name] = foot_geom_id
+            foot_body_id = mujoco.mj_name2id(self.mjModel, mujoco.mjtObj.mjOBJ_BODY, feet_body_name[lef_name])
+            assert foot_body_id != -1, f"Foot body {feet_body_name[lef_name]} not found in {_all_bodies}."
+            self._feet_body_id[lef_name] = foot_body_id
 
         self.viewer = None
         self.step_num = 0
@@ -187,18 +214,76 @@ class QuadrupedEnv(gym.Env):
 
     def feet_pos(self, frame='world'):
         if frame == 'world':
+            X = np.eye(4)
+        elif frame == 'base':
+            X = self.base_configuration
+        else:
+            raise ValueError(f"Invalid frame: {frame} != 'world' or 'base'")
+
+        def homogenous_transform(pos: np.ndarray, X: np.ndarray) -> np.ndarray:
+            assert pos.flatten().shape == (3,)
+            assert X.shape == (4, 4)
+            pos_hom = np.concatenate([pos.flatten(), [1]])
+            X_pos_hom = X @ pos_hom
+            return X_pos_hom[:3]
+
+        return LegsAttr(
+            FR=homogenous_transform(self.mjData.geom_xpos[self._feet_geom_id.FR], X.T),
+            FL=homogenous_transform(self.mjData.geom_xpos[self._feet_geom_id.FL], X.T),
+            RR=homogenous_transform(self.mjData.geom_xpos[self._feet_geom_id.RR], X.T),
+            RL=homogenous_transform(self.mjData.geom_xpos[self._feet_geom_id.RL], X.T),
+            )
+
+    def feet_jacobians(self, frame='world', return_rot_jac=False) -> Union[LegsAttr, tuple[LegsAttr, LegsAttr]]:
+        """ Compute the Jacobians of the feet positions
+
+        This function computes the translational and rotational Jacobians of the feet positions. Each feet position is
+        defined as the position of the geometry corresponding to each foot, passed in the `feet_geom_name` argument of
+        the constructor. The body to which each feet point/geometry is attached to is assumed to be the one passed in
+        the `feet_body_name` argument of the constructor.
+
+        The Jacobians returned can be used to compute the relationship between joint velocities and feet velocities,
+        such that if r_dot_FL is the velocity of the FL foot in the world frame, then:
+        r_dot_FL = J_FL @ qvel, where J_FL in R^{3 x mjModel.nv} is the Jacobian of the FL foot position.
+        Args:
+            frame: Either 'world' or 'base'. The reference frame in which the Jacobians are computed.
+            return_rot_jac: Whether to compute the rotational Jacobians. If False, only the translational Jacobians
+                are computed.
+        Returns:
+            If `return_rot_jac` is False:
+            LegsAttr: A dictionary-like object with:
+                - FR: (3, mjModel.nv) Jacobian of the FR foot position in the specified frame.
+                - FL: (3, mjModel.nv) Jacobian of the FL foot position in the specified frame.
+                - RR: (3, mjModel.nv) Jacobian of the RR foot position in the specified frame.
+                - RL: (3, mjModel.nv) Jacobian of the RL foot position in the specified frame.
+            If `return_rot_jac` is True:
+            tuple: A tuple with two LegsAttr objects:
+                - The first LegsAttr object contains the translational Jacobians as described above.
+                - The second LegsAttr object contains the rotational Jacobians.
+        """
+        if frame == 'world':
             R = np.eye(3)
         elif frame == 'base':
             R = self.base_configuration[0:3, 0:3]
         else:
             raise ValueError(f"Invalid frame: {frame} != 'world' or 'base'")
+        feet_trans_jac = LegsAttr(*[np.zeros((3, self.mjModel.nv)) for _ in range(4)])
+        feet_rot_jac = LegsAttr(*[np.zeros((3, self.mjModel.nv)) if not return_rot_jac else None for _ in range(4)])
+        feet_pos = self.feet_pos(frame='world')  # Mujoco mj_jac expects the point in global coordinates.
 
-        return LegsAttr(  # TODO: Why geom_xpos and not body(id).xpos? are these the same?
-            FR=R.T @ self.mjData.geom_xpos[self._feet_geom_id.FR],
-            FL=R.T @ self.mjData.geom_xpos[self._feet_geom_id.FL],
-            RR=R.T @ self.mjData.geom_xpos[self._feet_geom_id.RR],
-            RL=R.T @ self.mjData.geom_xpos[self._feet_geom_id.RL],
-            )
+        for leg_name in ["FR", "FL", "RR", "RL"]:
+            mujoco.mj_jac(m=self.mjModel,
+                          d=self.mjData,
+                          jacp=feet_trans_jac[leg_name],
+                          jacr=feet_rot_jac[leg_name],
+                          point=feet_pos[leg_name],  # Point in global coordinates
+                          body=self._feet_body_id[leg_name]  # Body to which `point` is attached to.
+                          )
+            feet_trans_jac[leg_name] = R.T @ feet_trans_jac[leg_name]
+            if return_rot_jac:
+                feet_rot_jac[leg_name] = R.T @ feet_rot_jac[leg_name]
+
+        return feet_trans_jac if not return_rot_jac else (feet_trans_jac, feet_rot_jac)
 
     @property
     def base_configuration(self):
@@ -210,6 +295,10 @@ class QuadrupedEnv(gym.Env):
         X_B[0:3, 0:3] = Rotation.from_quat(quat_xyzw).as_matrix()
         X_B[0:3, 3] = com_pos
         return X_B
+
+    @property
+    def joint_space_state(self):
+        return self.mjData.qpos[7:], self.mjData.qvel[6:]
 
     @property
     def base_pos(self):
@@ -278,6 +367,51 @@ class QuadrupedEnv(gym.Env):
     def _is_done(self):
         # Example termination condition (to be defined based on the task)
         return False
+
+    # Function to get joint names and their DoF indices in qpos and qvel
+    @staticmethod
+    def joint_info(model: mujoco.MjModel) -> OrderedDict[str, JointInfo]:
+        """ Thanks to the obscure Mujoco API, this function tries to do the horrible hacks to get the joint information
+        we need to do a minimum robotics project with a rigid body system.
+
+        Returns:
+
+        """
+        joint_info = OrderedDict()
+        for joint_id in range(model.njnt):
+            # Get the starting index of the joint name in the model.names string
+            name_start_index = model.name_jntadr[joint_id]
+            # Extract the joint name from the model.names bytes and decode it
+            joint_name = model.names[name_start_index:].split(b'\x00', 1)[0].decode('utf-8')
+            joint_type = model.jnt_type[joint_id]
+            qpos_idx_start = model.jnt_qposadr[joint_id]
+            qvel_idx_start = model.jnt_dofadr[joint_id]
+
+            if joint_type == mujoco.mjtJoint.mjJNT_FREE:
+                joint_nq, joint_nv = 7, 6
+            elif joint_type == mujoco.mjtJoint.mjJNT_BALL:
+                joint_nq, joint_nv = 4, 3
+            elif joint_type == mujoco.mjtJoint.mjJNT_SLIDE:
+                joint_nq, joint_nv = 1, 1
+            elif joint_type == mujoco.mjtJoint.mjJNT_HINGE:
+                joint_nq, joint_nv = 1, 1
+            else:
+                raise RuntimeError(f"Unknown mujoco joint type: {joint_type} available {mujoco.mjtJoint}")
+
+            qpos_idx = np.arange(qpos_idx_start, qpos_idx_start + joint_nq)
+            qvel_idx = np.arange(qvel_idx_start, qvel_idx_start + joint_nv)
+
+            joint_info[joint_name] = JointInfo(
+                name=joint_name,
+                type=joint_type,
+                body_id=model.jnt_bodyid[joint_id],
+                range=model.jnt_range[joint_id],
+                nq=joint_nq,
+                nv=joint_nv,
+                qpos_idx=qpos_idx,
+                qvel_idx=qvel_idx)
+
+        return joint_info
 
 
 # Example usage:
