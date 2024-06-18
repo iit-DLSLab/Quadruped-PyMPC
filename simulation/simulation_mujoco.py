@@ -140,7 +140,7 @@ else:
     step_frequency = 2
     duty_factor = 0.65
     p_gait = Gait.FULL_STANCE
-    print("FULL STANCE")
+    # print("FULL STANCE")
 # __________________________________________________________________________________________________
 
 # Periodic gait generator _________________________________________________________________________
@@ -214,8 +214,6 @@ last_render_time = time.time()
 # Main simulation loop ------------------------------------------------------------------
 while True:
     step_start = time.time()
-    if (use_print_debug):
-        print("###############")
 
     # Update the robot state --------------------------------
     feet_pos = env.feet_pos(frame='world')
@@ -283,7 +281,7 @@ while True:
         base_position=env.base_pos,
         yaw=env.base_ori_euler_xyz[2],
         lift_foot_position=lift_off_positions)
-    ref_state["ref_orientation"] = np.array([roll, pitch, 0])
+    ref_state["ref_orientation"] = np.array([roll, pitch, env.base_ori_euler_xyz[2]])
 
     # Update the reference height given the foot in contact
     num_feet_in_contact = np.sum(current_contact)
@@ -376,7 +374,6 @@ while True:
             index_shift = 0
             optimizer_cost = best_cost
 
-
         # If we use Gradient-Based MPC
         else:
             time_start = time.time()
@@ -421,7 +418,7 @@ while True:
                 # preparation phase
                 controller.acados_ocp_solver.options_set('rti_phase', 1)
                 status = controller.acados_ocp_solver.solve()
-                print("preparation phase time: ", controller.acados_ocp_solver.get_stats('time_tot'))
+                # print("preparation phase time: ", controller.acados_ocp_solver.get_stats('time_tot'))
 
         # TODO: Indexing should not be hardcoded. Env should provide indexing of leg actuator dimensions.
         nmpc_GRFs = LegsAttr(FL=nmpc_GRFs[0:3] * current_contact[0],
@@ -502,33 +499,34 @@ while True:
     # TODO: The order of the action space should not be hardoded, it should be provided by the environment.
     action = np.concatenate((tau.to_list(order=["FR", "FL", "RR", "RL"]))).reshape(env.mjModel.nu)
 
-    env.step(action=action)
+    obs, reward, is_terminated, is_truncated, info = env.step(action=action)
 
     # Render only at a certain frequency
-    if time.time() - last_render_time > 1.0 / RENDER_FREQ:
+    if time.time() - last_render_time > 1.0 / RENDER_FREQ or env.step_num == 0:
         feet_traj_geom_ids = plot_swing_mujoco(viewer=env.viewer,
                                                swing_traj_controller=stc,
                                                swing_period=swing_period,
-                                               swing_time=LegsAttr(FL=swing_time[0], FR=swing_time[1], RL=swing_time[2],
+                                               swing_time=LegsAttr(FL=swing_time[0],
+                                                                   FR=swing_time[1],
+                                                                   RL=swing_time[2],
                                                                    RR=swing_time[3]),
                                                lift_off_positions=lift_off_positions,
                                                nmpc_footholds=nmpc_footholds,
                                                ref_feet_pos=ref_feet_pos,
                                                geom_ids=feet_traj_geom_ids)
         env.render()
+        if env.step_num == 1:
+            print("")
         last_render_time = time.time()
 
     # Update the periodic gait generator
     pgg.run(simulation_dt, pgg.step_freq)
 
-    if env.step_num > 2000:
+    if env.step_num > 2000 or is_terminated or is_truncated:
+        if is_terminated:
+            print("Environment terminated")
         env.reset()
-        # TODO: Need to reset some Control parameters here.
-        previous_contact = np.array([1, 1, 1, 1])
-        jac_feet_prev = LegsAttr(*[np.zeros((3, env.mjModel.nv)) for _ in range(4)])
-        state_prev = {}
-        swing_time = [0, 0, 0, 0]
-        lift_off_positions = env.feet_pos(frame='world')
-
-    print("loop time: ", time.time() - step_start)
+        current_contact = np.array([0, 0, 0, 0])
+        z_foot_mean = 0.0
+    # print("loop time: ", time.time() - step_start)
     # ---------------------------------------------------------------------------------------------------

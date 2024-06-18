@@ -1,10 +1,11 @@
 from __future__ import annotations
 
+import itertools
 import os
 import time
 from collections import OrderedDict
 from pathlib import Path
-from typing import Any, Union
+from typing import Any
 
 import gymnasium as gym
 import mujoco
@@ -13,6 +14,7 @@ import numpy as np
 from gymnasium import spaces
 from scipy.spatial.transform import Rotation
 
+from utils.math_utils import homogenous_transform
 from utils.mujoco_visual import render_vector
 from utils.quadruped_utils import JointInfo, LegsAttr
 
@@ -142,10 +144,11 @@ class QuadrupedEnv(gym.Env):
         reward = self._compute_reward()
 
         # Check if done (simplified, usually more complex)
-        is_terminated = self._is_done()
+        invalid_contact, contact_info = self._check_for_invalid_contacts()
+        is_terminated = invalid_contact  # and ...
         is_truncated = False
         # Info dictionary
-        info = dict(time=self.mjData.time, step_num=self.step_num)
+        info = dict(time=self.mjData.time, step_num=self.step_num, invalid_contacts=contact_info)
 
         self.step_num += 1
         return obs, reward, is_terminated, is_truncated, info
@@ -184,8 +187,6 @@ class QuadrupedEnv(gym.Env):
             q_vel_amp = 0.1
             self.mjData.qpos[7:] += np.random.uniform(-q_pos_amp, q_pos_amp, self.mjModel.nq - 7)
             self.mjData.qvel[6:] += np.random.uniform(-q_vel_amp, q_vel_amp, self.mjModel.nv - 6)
-            self.mjData.qpos[2] += .1  # Add a small offset to the z position
-
             # Random orientation
             ori_xyzw = Rotation.from_euler('xyz',
                                            [np.random.uniform(-5 * np.pi / 180, 5 * np.pi / 180),
@@ -195,9 +196,24 @@ class QuadrupedEnv(gym.Env):
             self.mjData.qpos[3:7] = ori_wxyz
             # Random xy position withing a 2 x 2 square
             self.mjData.qpos[0:2] = np.random.uniform(-1, 1, 2)
+
+            # Perform a forward dynamics computation to update the contact information
+            mujoco.mj_step1(self.mjModel, self.mjData)
+            # Check if the robot is in contact with the ground
+            contact_state, contacts = self.feet_contact_state
+            while np.any(contact_state.to_list()):
+                all_contacts = list(itertools.chain(*contacts.to_list()))
+                max_penetration_distance = np.max([np.abs(contact.dist) for contact in all_contacts])
+                self.mjData.qpos[2] += max_penetration_distance * 1.5
+                mujoco.mj_step1(self.mjModel, self.mjData)
+                contact_state, contacts = self.feet_contact_state
         else:
             self.mjData.qpos = qpos
             self.mjData.qvel = qvel
+
+        # Reset the accelerations to zero
+        self.mjData.qacc[:] = 0
+        self.mjData.qacc_warmstart[:] = 0
 
         # Reset the desired base velocity command
         # ----------------------------------------------------------------------
@@ -307,13 +323,6 @@ class QuadrupedEnv(gym.Env):
         else:
             raise ValueError(f"Invalid frame: {frame} != 'world' or 'base'")
 
-        def homogenous_transform(pos: np.ndarray, X: np.ndarray) -> np.ndarray:
-            assert pos.flatten().shape == (3,)
-            assert X.shape == (4, 4)
-            pos_hom = np.concatenate([pos.flatten(), [1]])
-            X_pos_hom = X @ pos_hom
-            return X_pos_hom[:3]
-
         return LegsAttr(
             FR=homogenous_transform(self.mjData.geom_xpos[self._feet_geom_id.FR], X.T),
             FL=homogenous_transform(self.mjData.geom_xpos[self._feet_geom_id.FL], X.T),
@@ -321,9 +330,7 @@ class QuadrupedEnv(gym.Env):
             RL=homogenous_transform(self.mjData.geom_xpos[self._feet_geom_id.RL], X.T),
             )
 
-    def feet_jacobians(
-            self, frame: str = 'world', return_rot_jac: bool = False
-            ) -> Union[LegsAttr, tuple[LegsAttr, LegsAttr]]:
+    def feet_jacobians(self, frame: str = 'world', return_rot_jac: bool = False) -> LegsAttr | tuple[LegsAttr, ...]:
         """Compute the Jacobians of the feet positions.
 
         This function computes the translational and rotational Jacobians of the feet positions. Each feet position is
@@ -450,6 +457,42 @@ class QuadrupedEnv(gym.Env):
         """Returns the simulation time in seconds."""
         return self.mjData.time
 
+    @property
+    def feet_contact_state(self) -> [LegsAttr, LegsAttr]:
+        """Returns the boolean contact state of the feet.
+
+        This function considers only contacts between the feet and the ground.
+
+        Returns
+        -------
+            LegsAttr: A dictionary-like object with:
+                - FL: (bool) True if the FL foot is in contact with the ground.
+                - FR: (bool) True if the FR foot is in contact with the ground.
+                - RL: (bool) True if the RL foot is in contact with the ground.
+                - RR: (bool) True if the RR foot is in contact with the ground.
+            LegsAttr: A dictionary-like object with:
+                - FL: list[MjContact] A list of contact objects associated with the FL foot.
+                - FR: list[MjContact] A list of contact objects associated with the FR foot.
+                - RL: list[MjContact] A list of contact objects associated with the RL foot.
+                - RR: list[MjContact] A list of contact objects associated with the RR foot.
+        """
+        contact_state = LegsAttr(FL=False, FR=False, RL=False, RR=False)
+        legs_contacts = LegsAttr(FL=[], FR=[], RL=[], RR=[])
+        for contact in self.mjData.contact:
+            # Get body IDs from geom IDs
+            body1_id = self.mjModel.geom_bodyid[contact.geom1]
+            body2_id = self.mjModel.geom_bodyid[contact.geom2]
+
+            if 0 in [body1_id, body2_id]:  # World body ID is 0
+                second_id = body2_id if body1_id == 0 else body1_id
+                if second_id in self._feet_body_id.to_list():  # Check if contact occurs with anything but the feet
+                    for leg_name in ["FL", "FR", "RL", "RR"]:
+                        if second_id == self._feet_body_id[leg_name]:
+                            contact_state[leg_name] = True
+                            legs_contacts[leg_name].append(contact)
+
+        return contact_state, legs_contacts
+
     def _get_obs(self):
         # Observation includes position, velocity, orientation, and foot positions
         qpos = self.mjData.qpos
@@ -461,9 +504,27 @@ class QuadrupedEnv(gym.Env):
         # Reward could be based on distance traveled, energy efficiency, etc.
         return 0
 
-    def _is_done(self):
-        # Example termination condition (to be defined based on the task)
-        return False
+    def _check_for_invalid_contacts(self) -> [bool, dict]:
+        """Env termination occurs when a contact is detected on the robot's base."""
+        invalid_contacts = {}
+        invalid_contact_detected = False
+        for contact in self.mjData.contact:
+            # Get body IDs from geom IDs
+            body1_id = self.mjModel.geom_bodyid[contact.geom1]
+            body2_id = self.mjModel.geom_bodyid[contact.geom2]
+
+            if 0 in [body1_id, body2_id]:  # World body ID is 0
+                second_id = body2_id if body1_id == 0 else body1_id
+                if second_id not in self._feet_body_id.to_list():  # Check if contact occurs with anything but the feet
+                    # Get body names from body IDs
+                    body1_name = mujoco.mj_id2name(self.mjModel, mujoco.mjtObj.mjOBJ_BODY, body1_id)
+                    body2_name = mujoco.mj_id2name(self.mjModel, mujoco.mjtObj.mjOBJ_BODY, body2_id)
+                    invalid_contacts[f"{body1_name}:{body1_id}_{body2_name}:{body2_id}"] = contact
+                    invalid_contact_detected = True
+            else:  # Contact between two bodies of the robot
+                pass  # Do nothing for now
+
+        return invalid_contact_detected, invalid_contacts  # No invalid contact detected
 
     # Function to get joint names and their DoF indices in qpos and qvel
     @staticmethod
