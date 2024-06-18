@@ -1,17 +1,12 @@
 import numpy as np
-from numpy.linalg import norm
-import time
-import unittest
-import casadi as cs
 # import example_robot_data as robex
 import mujoco
 
-import pinocchio as pin
 # from pinocchio import casadi as cpin
 
 import os
 
-from quadruped_utils import LegsAttr
+from utils.quadruped_utils import LegsAttr
 
 dir_path = os.path.dirname(os.path.realpath(__file__))
 

@@ -1,25 +1,25 @@
 from __future__ import annotations
 
+import os
 import time
 from collections import OrderedDict
+from pathlib import Path
 from typing import Any, Union
 
 import gymnasium as gym
-from gymnasium import spaces
-import numpy as np
-import mujoco.viewer
 import mujoco
-from pathlib import Path
-import os
-
+import mujoco.viewer
+import numpy as np
+from gymnasium import spaces
 from scipy.spatial.transform import Rotation
 
-from helpers.other import render_vector
-
-from quadruped_utils import JointInfo, LegsAttr
+from utils.mujoco_visual import render_vector
+from utils.quadruped_utils import JointInfo, LegsAttr
 
 
 class QuadrupedEnv(gym.Env):
+    """A simple quadruped environment for testing model-based controllers and imitation learning algorithms."""
+
     metadata = {'render.modes': ['human'], 'version': 1}
 
     def __init__(self,
@@ -33,6 +33,20 @@ class QuadrupedEnv(gym.Env):
                  feet_body_name: LegsAttr = LegsAttr(FL='FL_calf', FR='FR_calf', RL='RL_calf', RR='RR_calf'),
                  n_robots=1,
                  ):
+        """Initialize the quadruped environment.
+
+        Args:
+        ----
+            robot: (str) The name of the robot model to be used.
+            legs_joint_names: (LegsAttr) The joint names associated with each of the four legs.
+            scene: (str) The scene to be used in the simulation.
+            sim_dt: (float) The simulation time step.
+            base_vel_command_type: (str) The type of base velocity command. Either 'forward' or 'random_orientation'.
+            base_vel_range: (tuple) The range of the base velocity command.
+            feet_geom_name: (LegsAttr) The name of the geometry associated with each of the four feet.
+            feet_body_name: (LegsAttr) The name of the body associated with each of the four feet.
+            n_robots: (int) The number of robots in the environment.
+        """
         super(QuadrupedEnv, self).__init__()
 
         self.base_vel_command_type = base_vel_command_type
@@ -52,7 +66,7 @@ class QuadrupedEnv(gym.Env):
         # Set the simulation step size (dt)
         self.mjModel.opt.timestep = sim_dt
 
-        assert legs_joint_names is not None, f"Please provide the joint names associated with each of the four legs."
+        assert legs_joint_names is not None, "Please provide the joint names associated with each of the four legs."
         self.joint_info = self.joint_info(self.mjModel)
         self.legs_qpos_idx = LegsAttr(None, None, None, None)
         self.legs_qvel_idx = LegsAttr(None, None, None, None)
@@ -103,6 +117,20 @@ class QuadrupedEnv(gym.Env):
         self._geom_ids = {}
 
     def step(self, action) -> tuple[np.ndarray, float, bool, bool, dict]:
+        """Apply the action to the robot, evolve the simulation, and return the observation, reward, and termination.
+
+        Args:
+        ----
+            action: (np.ndarray) The desired joint-space torques to apply to each of the robot's DoF actuators.
+
+        Returns:
+        -------
+            np.ndarray: The state observation.
+            float: The reward.
+            bool: Whether the episode is terminated.
+            bool: Whether the episode is truncated.
+            dict: Additional information.
+        """
         # Apply action (torque) to the robot
         self.mjData.ctrl = action
         mujoco.mj_step(self.mjModel, self.mjData)
@@ -122,7 +150,24 @@ class QuadrupedEnv(gym.Env):
         self.step_num += 1
         return obs, reward, is_terminated, is_truncated, info
 
-    def reset(self, qpos=None, qvel=None, seed: int | None = None, options: dict[str, Any] | None = None):
+    def reset(self,
+              qpos: np.ndarray = None,
+              qvel: np.ndarray = None,
+              seed: int | None = None,
+              options: dict[str, Any] | None = None) -> np.ndarray:
+        """Reset the environment.
+
+        Args:
+        ----
+            qpos: (np.ndarray) Initial joint positions. If None, random initialization around keyframe 0.
+            qvel: (np.ndarray) Initial joint velocities. If None, random initialization around keyframe 0.
+            seed: (int) Seed for reproducibility.
+            options: (dict) Additional options for the reset.
+
+        Returns:
+        -------
+            np.ndarray: The initial observation.
+        """
         # Reset relevant variables
         self.step_num = 0
         self.mjData.time = 0.0
@@ -137,13 +182,25 @@ class QuadrupedEnv(gym.Env):
             # Add white noise to the joint-space position and velocity
             q_pos_amp = 20 * np.pi / 180
             q_vel_amp = 0.1
-            # self.mjData.qpos[7:] += np.random.uniform(-q_pos_amp, q_pos_amp, self.mjModel.nq - 7)
-            # self.mjData.qvel[6:] += np.random.uniform(-q_vel_amp, q_vel_amp, self.mjModel.nv - 6)
+            self.mjData.qpos[7:] += np.random.uniform(-q_pos_amp, q_pos_amp, self.mjModel.nq - 7)
+            self.mjData.qvel[6:] += np.random.uniform(-q_vel_amp, q_vel_amp, self.mjModel.nv - 6)
+            self.mjData.qpos[2] += .1  # Add a small offset to the z position
+
+            # Random orientation
+            ori_xyzw = Rotation.from_euler('xyz',
+                                           [np.random.uniform(-5 * np.pi / 180, 5 * np.pi / 180),
+                                            np.random.uniform(-5 * np.pi / 180, 5 * np.pi / 180),
+                                            np.random.uniform(-np.pi, np.pi)]).as_quat(canonical=True)
+            ori_wxyz = np.roll(ori_xyzw, 1)
+            self.mjData.qpos[3:7] = ori_wxyz
+            # Random xy position withing a 2 x 2 square
+            self.mjData.qpos[0:2] = np.random.uniform(-1, 1, 2)
         else:
             self.mjData.qpos = qpos
             self.mjData.qvel = qvel
 
-        # Reset the desired base velocity command ----------------------------------------------------------------------
+        # Reset the desired base velocity command
+        # ----------------------------------------------------------------------
         if self.base_vel_command_type == 'forward':
             base_vel_norm = np.random.uniform(*self.base_vel_range)
             base_heading_vel_vec = np.array([1, 0, 0])  # Move in the "forward" direction
@@ -162,10 +219,10 @@ class QuadrupedEnv(gym.Env):
         r_B = X_B[:3, 3]
         dr_B = self.mjData.qvel[0:3]
         ref_dr_B = self.target_base_vel
-        R_heading = self.heading_orientation_SO3
         ref_vec_pos, vec_pos = r_B + [0, 0, 0.1], r_B + [0, 0, 0.15]
         ref_vel_vec_color, vel_vec_color = np.array([1, 0.5, 0, .7]), np.array([0, 1, 1, .7])
         ref_vec_scale, vec_scale = np.linalg.norm(ref_dr_B) / 1.0, np.linalg.norm(dr_B) / 1.0
+
         if self.viewer is None:
             self.viewer = mujoco.viewer.launch_passive(
                 self.mjModel, self.mjData, show_left_ui=False, show_right_ui=False
@@ -186,14 +243,30 @@ class QuadrupedEnv(gym.Env):
                           geom_id=self._geom_ids['ref_dr_B_vec'])
             render_vector(self.viewer, dr_B, vec_pos, vec_scale, vel_vec_color,
                           geom_id=self._geom_ids['dr_B_vec'])
+
         self.viewer.sync()
 
     def close(self):
+        """Close the viewer."""
         if self.viewer is not None:
             self.viewer.close()
             self.viewer = None
 
-    def hip_positions(self, frame='world'):
+    def hip_positions(self, frame='world') -> LegsAttr:
+        """Get the hip positions in the specified frame.
+
+        Args:
+        ----
+            frame:  Either 'world' or 'base'. The reference frame in which the hip positions are computed.
+
+        Returns:
+        -------
+            LegsAttr: A dictionary-like object with:
+                - FR: (3,) position of the FR hip in the specified frame.
+                - FL: (3,) position of the FL hip in the specified frame.
+                - RR: (3,) position of the RR hip in the specified frame.
+                - RL: (3,) position of the RL hip in the specified frame.
+        """
         if frame == 'world':
             R = np.eye(3)
         elif frame == 'base':
@@ -212,7 +285,21 @@ class QuadrupedEnv(gym.Env):
             RL=R.T @ self.mjData.body(RL_hip_id).xpos,
             )
 
-    def feet_pos(self, frame='world'):
+    def feet_pos(self, frame='world') -> LegsAttr:
+        """Get the feet positions in the specified frame.
+
+        Args:
+        ----
+            frame: Either 'world' or 'base'. The reference frame in which the feet positions are computed.
+
+        Returns:
+        -------
+            LegsAttr: A dictionary-like object with:
+                - FR: (3,) position of the FR foot in the specified frame.
+                - FL: (3,) position of the FL foot in the specified frame.
+                - RR: (3,) position of the RR foot in the specified frame.
+                - RL: (3,) position of the RL foot in the specified frame.
+        """
         if frame == 'world':
             X = np.eye(4)
         elif frame == 'base':
@@ -234,8 +321,10 @@ class QuadrupedEnv(gym.Env):
             RL=homogenous_transform(self.mjData.geom_xpos[self._feet_geom_id.RL], X.T),
             )
 
-    def feet_jacobians(self, frame='world', return_rot_jac=False) -> Union[LegsAttr, tuple[LegsAttr, LegsAttr]]:
-        """ Compute the Jacobians of the feet positions
+    def feet_jacobians(
+            self, frame: str = 'world', return_rot_jac: bool = False
+            ) -> Union[LegsAttr, tuple[LegsAttr, LegsAttr]]:
+        """Compute the Jacobians of the feet positions.
 
         This function computes the translational and rotational Jacobians of the feet positions. Each feet position is
         defined as the position of the geometry corresponding to each foot, passed in the `feet_geom_name` argument of
@@ -245,11 +334,15 @@ class QuadrupedEnv(gym.Env):
         The Jacobians returned can be used to compute the relationship between joint velocities and feet velocities,
         such that if r_dot_FL is the velocity of the FL foot in the world frame, then:
         r_dot_FL = J_FL @ qvel, where J_FL in R^{3 x mjModel.nv} is the Jacobian of the FL foot position.
+
         Args:
+        ----
             frame: Either 'world' or 'base'. The reference frame in which the Jacobians are computed.
             return_rot_jac: Whether to compute the rotational Jacobians. If False, only the translational Jacobians
                 are computed.
+
         Returns:
+        -------
             If `return_rot_jac` is False:
             LegsAttr: A dictionary-like object with:
                 - FR: (3, mjModel.nv) Jacobian of the FR foot position in the specified frame.
@@ -287,7 +380,7 @@ class QuadrupedEnv(gym.Env):
 
     @property
     def base_configuration(self):
-        """Robot base configuration (homogenous transformation matrix) in world reference frame """
+        """Robot base configuration (homogenous transformation matrix) in world reference frame."""
         com_pos = self.mjData.qpos[0:3]  # world frame
         quat_wxyz = self.mjData.qpos[3:7]  # world frame (wxyz) mujoco convention
         quat_xyzw = np.roll(quat_wxyz, -1)  # SciPy convention (xyzw)
@@ -298,42 +391,43 @@ class QuadrupedEnv(gym.Env):
 
     @property
     def joint_space_state(self):
+        """Returns the joint-space state (qpos, qvel) of the robot."""
         return self.mjData.qpos[7:], self.mjData.qvel[6:]
 
     @property
     def base_pos(self):
+        """Returns the base position (3,) in the world reference frame."""
         return self.mjData.qpos[0:3]
 
     @property
     def base_lin_vel(self):
+        """Returns the base linear velocity (3,) in the world reference frame."""
         return self.mjData.qvel[0:3]
 
     @property
     def base_ang_vel(self):
+        """Returns the base angular velocity (3,) in the world reference frame."""
         return self.mjData.qvel[3:6]
 
     @property
     def base_ori_euler_xyz(self):
+        """Returns the base orientation in Euler XYZ angles (roll, pitch, yaw) in the world reference frame."""
         quat_wxyz = self.mjData.qpos[3:7]
         quat_xyzw = np.roll(quat_wxyz, -1)
         return Rotation.from_quat(quat_xyzw).as_euler('xyz')
 
     @property
     def target_base_vel(self):
-        """
-        Returns the target base velocity (3,) in the world reference frame.
-        """
+        """Returns the target base velocity (3,) in the world reference frame."""
         if self._ref_base_velocity is None:
-            raise RuntimeError(f"Please call env.reset() before accessing the target base velocity.")
+            raise RuntimeError("Please call env.reset() before accessing the target base velocity.")
         R_B_heading = self.heading_orientation_SO3
         ref_dr_B = R_B_heading @ self._ref_base_velocity.reshape(3, 1)
         return ref_dr_B.squeeze()
 
     @property
     def heading_orientation_SO3(self):
-        """
-        Returns a SO(3) rotation matrix that aligns with the robot's base heading orientation and the world z axis.
-        """
+        """Returns a SO(3) matrix that aligns with the robot's base heading orientation and the world z axis."""
         X_B = self.base_configuration
         R_B = X_B[0:3, 0:3]
         euler_xyz = Rotation.from_matrix(R_B).as_euler('xyz')
@@ -343,14 +437,17 @@ class QuadrupedEnv(gym.Env):
 
     @property
     def applied_join_torques(self):
+        """Returns the true joint torques used in evolving the physics simulation."""
         return self.mjData.qfrc_applied
 
     @property
     def simulation_dt(self):
+        """Returns the simulation dt in seconds."""
         return self.mjModel.opt.timestep
 
     @property
     def simulation_time(self):
+        """Returns the simulation time in seconds."""
         return self.mjData.time
 
     def _get_obs(self):
@@ -371,11 +468,23 @@ class QuadrupedEnv(gym.Env):
     # Function to get joint names and their DoF indices in qpos and qvel
     @staticmethod
     def joint_info(model: mujoco.MjModel) -> OrderedDict[str, JointInfo]:
-        """ Thanks to the obscure Mujoco API, this function tries to do the horrible hacks to get the joint information
+        """Returns the joint-space information of the model.
+
+        Thanks to the obscure Mujoco API, this function tries to do the horrible hacks to get the joint information
         we need to do a minimum robotics project with a rigid body system.
 
-        Returns:
-
+        Returns
+        -------
+            A dictionary with the joint names as keys and the JointInfo namedtuple as values.
+                each JointInfo namedtuple contains the following fields:
+                - name: The joint name.
+                - type: The joint type (mujoco.mjtJoint).
+                - body_id: The body id to which the joint is attached.
+                - range: The joint range.
+                - nq: The number of joint position variables.
+                - nv: The number of joint velocity variables.
+                - qpos_idx: The indices of the joint position variables in the qpos array.
+                - qvel_idx: The indices of the joint velocity variables in the qvel array.
         """
         joint_info = OrderedDict()
         for joint_id in range(model.njnt):

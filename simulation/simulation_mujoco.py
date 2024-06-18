@@ -1,62 +1,36 @@
 # Description: This script is used to simulate the full model of the robot in mujoco
-from pathlib import Path
 
-# Authors: Giulio Turrisi -
-
-import mujoco.viewer
-import mujoco
-import copy
+# Authors:
+# - Giulio Turrisi
+# - Daniel Ordoñez Apraez
+import os
 import time
-import pprint
-import casadi as cs
+
+import mujoco
 import numpy as np
 
+# Parameters for both MPC and simulation
+import config as cfg
 from helpers.foothold_reference_generator import FootholdReferenceGenerator
 from helpers.periodic_gait_generator import Gait, PeriodicGaitGenerator
 from helpers.srb_inertia_computation import SrbInertiaComputation
 from helpers.swing_trajectory_controller import SwingTrajectoryController
 from helpers.terrain_estimator import TerrainEstimator
-from quadruped_utils import LegsAttr
 from simulation.quadruped_env import QuadrupedEnv
+from utils.math_utils import skew
+from utils.mujoco_visual import plot_swing_mujoco
+from utils.quadruped_utils import LegsAttr
+
+# TODO: Why is this here?
+os.environ['XLA_FLAGS'] = ('--xla_gpu_triton_gemm_any=True')
 
 np.set_printoptions(precision=3, suppress=True)
 
-import os
-
-dir_path = os.path.dirname(os.path.realpath(__file__))
-os.environ['XLA_FLAGS'] = ('--xla_gpu_triton_gemm_any=True')
-
-import sys
-
-sys.path.append(dir_path + '/../')
-sys.path.append(dir_path + '/../helpers/')
-sys.path.append(dir_path + '/../helpers/swing_generators/')
-sys.path.append(dir_path + '/../gradient/')
-sys.path.append(dir_path + '/../gradient/input_rates/')
-sys.path.append(dir_path + '/../gradient/nominal/')
-sys.path.append(dir_path + '/../gradient/collaborative/')
-sys.path.append(dir_path + '/../sampling/')
-
-import threading
-import readchar
-
-# General magic
-# from foothold_reference_generator import FootholdReferenceGenerator
-# from swing_trajectory_controller import SwingTrajectoryController
-# from periodic_gait_generator import PeriodicGaitGenerator, Gait
-# from srb_inertia_computation import SrbInertiaComputation
-# from terrain_estimator import TerrainEstimator
-
-
-# Parameters for both MPC and simulation
-import config as cfg
-
 robot_name = cfg.robot
 scene_name = cfg.simulation_params['scene']
-
-# Simulation dt
 simulation_dt = cfg.simulation_params['dt']
 
+# Create the quadruped robot environment. _______________________________________________________________________
 env = QuadrupedEnv(robot=robot_name,
                    # TODO: This should come from a cfg.robot. Not hardcoded.
                    legs_joint_names=LegsAttr(FL=["FL_hip_joint", "FL_thigh_joint", "FL_calf_joint"],
@@ -72,6 +46,7 @@ env = QuadrupedEnv(robot=robot_name,
 env.reset()
 env.render()
 mass = np.sum(env.mjModel.body_mass)
+# _______________________________________________________________________________________________________________
 
 # TODO: CONTROLLER INITIALIZATION CODE THAT SHOULD BE REMOVED FROM HERE.
 #  Here we should simply initialize the selected controller with the desired configuration E.g.:
@@ -222,7 +197,6 @@ current_contact = np.array([1, 1, 1, 1])
 nmpc_GRFs = np.zeros((12,))
 nmpc_wrenches = np.zeros((6,))
 nmpc_footholds = np.zeros((12,))
-nmpc_predicted_state = None
 
 # Jacobian matrices
 jac_feet_prev = LegsAttr(*[np.zeros((3, env.mjModel.nv)) for _ in range(4)])
@@ -232,9 +206,11 @@ tau = LegsAttr(*[np.zeros((env.mjModel.nv, 1)) for _ in range(4)])
 # State
 state_current, state_prev = {}, {}
 feet_pos = None
-FL_idx, FR_idx, RL_idx, RR_idx = 0, 1, 2, 3
+feet_traj_geom_ids = None
 legs_order = ["FL", "FR", "RL", "RR"]
 
+RENDER_FREQ = 30  # Hz
+last_render_time = time.time()
 # Main simulation loop ------------------------------------------------------------------
 while True:
     step_start = time.time()
@@ -278,7 +254,7 @@ while True:
         contact_sequence = contact_sequence[:, 0:horizon]
         contact_sequence[:, 0:cfg.mpc_params['horizon_fine_grained']] = contact_sequence_fine_grained
 
-    previous_contact = copy.deepcopy(current_contact)
+    previous_contact = current_contact
     current_contact = np.array([contact_sequence[0][0],
                                 contact_sequence[1][0],
                                 contact_sequence[2][0],
@@ -392,40 +368,40 @@ while True:
                 swing_period = (1 - duty_factor) * (1 / pgg.step_freq)  # + 0.07
                 stc.regenerate_swing_trajectory_generator(step_height=step_height, swing_period=swing_period)
 
-            nmpc_footholds = np.zeros((4, 3))
-            nmpc_footholds[0] = ref_state["ref_foot_FL"]
-            nmpc_footholds[1] = ref_state["ref_foot_FR"]
-            nmpc_footholds[2] = ref_state["ref_foot_RL"]
-            nmpc_footholds[3] = ref_state["ref_foot_RR"]
+            nmpc_footholds = ref_feet_pos
 
             nmpc_GRFs = np.array(nmpc_GRFs)
 
-            previous_contact_mpc = copy.deepcopy(current_contact)
+            previous_contact_mpc = current_contact
             index_shift = 0
             optimizer_cost = best_cost
 
 
         # If we use Gradient-Based MPC
         else:
-
             time_start = time.time()
-            nmpc_GRFs, \
-                nmpc_footholds, \
-                nmpc_predicted_state, \
-                status = controller.compute_control(state_current, ref_state, contact_sequence,
-                                                    inertia=inertia.flatten())
+            nmpc_GRFs, nmpc_footholds, _, status = controller.compute_control(
+                state_current,
+                ref_state,
+                contact_sequence,
+                inertia=inertia.flatten()
+                )
+            # TODO functions should output this class instance.
+            nmpc_footholds = LegsAttr(FL=nmpc_footholds[0],
+                                      FR=nmpc_footholds[1],
+                                      RL=nmpc_footholds[2],
+                                      RR=nmpc_footholds[3])
 
             optimizer_cost = controller.acados_ocp_solver.get_cost()
 
-            if ((cfg.mpc_params['optimize_step_freq']) and (optimize_swing == 1)):
+            if cfg.mpc_params['optimize_step_freq'] and optimize_swing == 1:
                 contact_sequence_temp = np.zeros((len(cfg.mpc_params['step_freq_available']), 4, horizon * 2))
-
                 for j in range(len(cfg.mpc_params['step_freq_available'])):
                     pgg_temp = PeriodicGaitGenerator(duty_factor=duty_factor,
                                                      step_freq=cfg.mpc_params['step_freq_available'][j], p_gait=p_gait,
                                                      horizon=horizon * 2)
-                    pgg_temp.t = copy.deepcopy(pgg.t)
-                    pgg_temp.init = copy.deepcopy(pgg.init)
+                    pgg_temp.t = pgg.t
+                    pgg_temp.init = pgg.init
                     contact_sequence_temp[j] = pgg_temp.compute_contact_sequence(mpc_dt=mpc_dt,
                                                                                  simulation_dt=simulation_dt)
 
@@ -447,22 +423,17 @@ while True:
                 status = controller.acados_ocp_solver.solve()
                 print("preparation phase time: ", controller.acados_ocp_solver.get_stats('time_tot'))
 
-        # TODO: Indexing should not be hardcoded.
+        # TODO: Indexing should not be hardcoded. Env should provide indexing of leg actuator dimensions.
         nmpc_GRFs = LegsAttr(FL=nmpc_GRFs[0:3] * current_contact[0],
                              FR=nmpc_GRFs[3:6] * current_contact[1],
                              RL=nmpc_GRFs[6:9] * current_contact[2],
                              RR=nmpc_GRFs[9:12] * current_contact[3])
 
-        # Compute wrench. This goes to the estimator!
-        wrench_linear = np.sum(nmpc_GRFs.to_list(), axis=0)
-
+        # Compute the linear and angular components of the wrench. This goes to the estimator!
+        wrench_lin = np.sum(nmpc_GRFs.to_list(), axis=0)
         feet_pos_base = env.feet_pos(frame='base')
-        wrench_angular = cs.skew(feet_pos_base.FL) @ nmpc_GRFs.FL + \
-                         cs.skew(feet_pos_base.FR) @ nmpc_GRFs.FR + \
-                         cs.skew(feet_pos_base.RL) @ nmpc_GRFs.RL + \
-                         cs.skew(feet_pos_base.RR) @ nmpc_GRFs.RR
-        wrench_angular = np.array(wrench_angular)
-        nmpc_wrenches = np.concatenate((wrench_linear, wrench_angular.flatten()), axis=0)
+        wrench_ang = np.sum([skew(feet_pos_base[leg_name]) @ nmpc_GRFs[leg_name] for leg_name in legs_order], axis=0)
+        nmpc_wrenches = np.concatenate((wrench_lin, wrench_ang.flatten()), axis=0)
     # -------------------------------------------------------------------------------------------------
 
     # Compute Stance Torque ---------------------------------------------------------------------------
@@ -471,16 +442,17 @@ while True:
     feet_vel = LegsAttr(**{leg_name: feet_jac[leg_name] @ env.mjData.qvel for leg_name in legs_order})
     # Compute jacobian derivatives of the contact points
     jac_feet_dot = (feet_jac - jac_feet_prev) / simulation_dt  # Finite difference approximation
-    jac_feet_prev = copy.deepcopy(feet_jac)  # Update previous Jacobians
-    # Compute the torque with the contact jacobian (-J*f)
-    # index 6:9 -> FL, 9:12 -> FR, 12:15 -> RL, 15:18 -> RR  # TODO: This should not be hardcoded.
+    jac_feet_prev = feet_jac  # Update previous Jacobians
+    # Compute the torque with the contact jacobian (-J.T @ f)   J: R^nv -> R^3,   f: R^3
     tau.FL = -np.matmul(feet_jac.FL[:, env.legs_qvel_idx.FL].T, nmpc_GRFs.FL)
+    tau.FR = -np.matmul(feet_jac.FR[:, env.legs_qvel_idx.FR].T, nmpc_GRFs.FR)
     tau.FR = -np.matmul(feet_jac.FR[:, env.legs_qvel_idx.FR].T, nmpc_GRFs.FR)
     tau.RL = -np.matmul(feet_jac.RL[:, env.legs_qvel_idx.RL].T, nmpc_GRFs.RL)
     tau.RR = -np.matmul(feet_jac.RR[:, env.legs_qvel_idx.RR].T, nmpc_GRFs.RR)
     # ---------------------------------------------------------------------------------------------------
 
     # Compute Swing Torque ------------------------------------------------------------------------------
+    # TODO: Move contact sequence to labels FL, FR, RL, RR instead of a fixed indexing.
     for leg_id, leg_name in enumerate(legs_order):
         # Swing time reset
         if current_contact[leg_id] == 0:
@@ -488,10 +460,9 @@ while True:
                 swing_time[leg_id] = swing_time[leg_id] + simulation_dt
         else:
             swing_time[leg_id] = 0
-
         # Set lif-offs
         if previous_contact[leg_id] == 1 and current_contact[leg_id] == 0:
-            lift_off_positions[leg_name] = copy.deepcopy(feet_pos[leg_name])
+            lift_off_positions[leg_name] = feet_pos[leg_name]
 
     # The swing controller is in the end-effector space. For its computation,
     # we save for simplicity joints position and velocities
@@ -501,7 +472,6 @@ while True:
                               FR=env.mjData.qfrc_bias[env.legs_qvel_idx.FR],
                               RL=env.mjData.qfrc_bias[env.legs_qvel_idx.RL],
                               RR=env.mjData.qfrc_bias[env.legs_qvel_idx.RR])
-
     # and inertia matrix
     mass_matrix = np.zeros((env.mjModel.nv, env.mjModel.nv))
     mujoco.mj_fullM(env.mjModel, mass_matrix, env.mjData.qM)
@@ -512,31 +482,53 @@ while True:
                                 RR=mass_matrix[np.ix_(env.legs_qvel_idx.RR, env.legs_qvel_idx.RR)])
 
     for leg_id, leg_name in enumerate(legs_order):
-        if current_contact[leg_id] == 0:
-            tau[leg_name], _, _ = stc.compute_swing_control(env.mjModel,
-                                                            qpos[env.legs_qpos_idx[leg_name]],
-                                                            qvel[env.legs_qvel_idx[leg_name]],
-                                                            feet_jac[leg_name][:, env.legs_qvel_idx[leg_name]],
-                                                            jac_feet_dot[leg_name][:, env.legs_qvel_idx[leg_name]],
-                                                            lift_off_positions[leg_name],
-                                                            nmpc_footholds[leg_id],
-                                                            swing_time[leg_id],
-                                                            feet_pos[leg_name],
-                                                            feet_vel[leg_name],
-                                                            legs_qfrc_bias[leg_name],
-                                                            legs_mass_matrix[leg_name])
+        if current_contact[leg_id] == 0:  # If in swing phase, compute the swing trajectory tracking control.
+            tau[leg_name], _, _ = stc.compute_swing_control(
+                model=env.mjModel,
+                q=qpos[env.legs_qpos_idx[leg_name]],
+                q_dot=qvel[env.legs_qvel_idx[leg_name]],
+                J=feet_jac[leg_name][:, env.legs_qvel_idx[leg_name]],
+                J_dot=jac_feet_dot[leg_name][:, env.legs_qvel_idx[leg_name]],
+                lift_off=lift_off_positions[leg_name],
+                touch_down=nmpc_footholds[leg_name],
+                swing_time=swing_time[leg_id],
+                foot_pos=feet_pos[leg_name],
+                foot_vel=feet_vel[leg_name],
+                h=legs_qfrc_bias[leg_name],
+                mass_matrix=legs_mass_matrix[leg_name]
+                )
     # ---------------------------------------------------------------------------------------------------
     # Set control and mujoco step ----------------------------------------------------------------------
     # TODO: The order of the action space should not be hardoded, it should be provided by the environment.
     action = np.concatenate((tau.to_list(order=["FR", "FL", "RR", "RL"]))).reshape(env.mjModel.nu)
-    if (use_print_debug):
-        print("tau: \n", tau)
 
     env.step(action=action)
-    env.render()
+
+    # Render only at a certain frequency
+    if time.time() - last_render_time > 1.0 / RENDER_FREQ:
+        feet_traj_geom_ids = plot_swing_mujoco(viewer=env.viewer,
+                                               swing_traj_controller=stc,
+                                               swing_period=swing_period,
+                                               swing_time=LegsAttr(FL=swing_time[0], FR=swing_time[1], RL=swing_time[2],
+                                                                   RR=swing_time[3]),
+                                               lift_off_positions=lift_off_positions,
+                                               nmpc_footholds=nmpc_footholds,
+                                               ref_feet_pos=ref_feet_pos,
+                                               geom_ids=feet_traj_geom_ids)
+        env.render()
+        last_render_time = time.time()
 
     # Update the periodic gait generator
     pgg.run(simulation_dt, pgg.step_freq)
+
+    if env.step_num > 2000:
+        env.reset()
+        # TODO: Need to reset some Control parameters here.
+        previous_contact = np.array([1, 1, 1, 1])
+        jac_feet_prev = LegsAttr(*[np.zeros((3, env.mjModel.nv)) for _ in range(4)])
+        state_prev = {}
+        swing_time = [0, 0, 0, 0]
+        lift_off_positions = env.feet_pos(frame='world')
 
     print("loop time: ", time.time() - step_start)
     # ---------------------------------------------------------------------------------------------------

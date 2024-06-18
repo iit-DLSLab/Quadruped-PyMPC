@@ -1,14 +1,7 @@
 import numpy as np
-from numpy.linalg import norm
-import time
-import unittest
-import casadi as cs
 #import example_robot_data as robex
-import mujoco
 
-import pinocchio as pin
-
-from quadruped_utils import LegsAttr
+from utils.quadruped_utils import LegsAttr
 
 
 #from pinocchio import casadi as cpin

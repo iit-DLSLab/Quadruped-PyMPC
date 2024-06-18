@@ -3,13 +3,12 @@
 # Authors: Giulio Turrisi - 
 
 from acados_template import AcadosOcp, AcadosOcpSolver
-from centroidal_model_nominal import Centroidal_Model_Nominal
+from .centroidal_model_nominal import Centroidal_Model_Nominal
 import numpy as np
 import scipy.linalg
 import casadi as cs
 import copy
 
-import time
 
 import os 
 dir_path = os.path.dirname(os.path.realpath(__file__))
