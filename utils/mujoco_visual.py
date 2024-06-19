@@ -60,6 +60,7 @@ def render_vector(viewer: Handle,
 
     return geom_id
 
+
 def render_sphere(viewer: Handle,
                   position: np.ndarray,
                   diameter: float,
@@ -97,6 +98,7 @@ def render_sphere(viewer: Handle,
         )
 
     return geom_id
+
 
 def render_line(viewer: Handle,
                 initial_point: np.ndarray,
@@ -140,13 +142,14 @@ def render_line(viewer: Handle,
     mujoco.mjv_initGeom(
         geom,
         type=mujoco.mjtGeom.mjGEOM_LINE,
-        size=np.asarray([width, 0.1, np.linalg.norm(vector)]) ,
+        size=np.asarray([width, 0.1, np.linalg.norm(vector)]),
         pos=initial_point,
         mat=ori_mat.flatten(),
         rgba=color
         )
 
     return geom_id
+
 
 def plot_swing_mujoco(viewer: Handle,
                       swing_traj_controller: SwingTrajectoryController,
@@ -181,7 +184,7 @@ def plot_swing_mujoco(viewer: Handle,
         # Instantiate a new geometry
         for leg_id, leg_name in enumerate(['FL', 'FR', 'RL', 'RR']):
             viewer.user_scn.ngeom += NUM_TRAJ_POINTS
-            geom_ids[leg_name] = list(range(viewer.user_scn.ngeom - NUM_TRAJ_POINTS -1, viewer.user_scn.ngeom - 1))
+            geom_ids[leg_name] = list(range(viewer.user_scn.ngeom - NUM_TRAJ_POINTS - 1, viewer.user_scn.ngeom - 1))
 
     # viewer.user_scn.ngeom = 1
     # We first draw the trajectory of the feet
@@ -212,4 +215,3 @@ def plot_swing_mujoco(viewer: Handle,
                       geom_id=geom_ids[leg_name][-1]
                       )
     return geom_ids
-

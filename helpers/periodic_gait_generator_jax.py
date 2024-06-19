@@ -194,7 +194,7 @@ if __name__ == "__main__":
         duty_factor = 0.7
         p_gait = Gait.PACE
     
-    pgg = PeriodicGaitGenerator(duty_factor=duty_factor, step_freq=step_frequency, p_gait=p_gait, horizon=horizon)
+    pgg = PeriodicGaitGenerator(duty_factor=duty_factor, step_freq=step_frequency, gait_type=p_gait, horizon=horizon)
     pgg_jax = PeriodicGaitGeneratorJax(duty_factor=duty_factor, step_freq=step_frequency, horizon=horizon, mpc_dt=mpc_dt)
     jitted_pgg = jax.jit(pgg_jax.compute_contact_sequence)
     for j in range(100):

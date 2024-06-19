@@ -20,9 +20,15 @@ from utils.quadruped_utils import JointInfo, LegsAttr
 
 
 class QuadrupedEnv(gym.Env):
-    """A simple quadruped environment for testing model-based controllers and imitation learning algorithms."""
+    """A simple quadruped environment for testing model-based controllers and imitation learning algorithms.
 
-    metadata = {'render.modes': ['human'], 'version': 1}
+    To deal with different quadruped robots, which might have different joint naming and ordering conventions, this
+    environment uses the `LegsAttr` dataclass to store attributes associated with the legs of a quadruped robot. This
+    dataclass uses the naming convention FR, FL, RR, RL to represent the Front Right, Front Left, Rear Right, and Rear
+    Left legs, respectively.
+    """
+
+    metadata = {'render.modes': ['human'], 'version': 0}
 
     def __init__(self,
                  robot: str,
@@ -32,7 +38,7 @@ class QuadrupedEnv(gym.Env):
                  base_vel_command_type: str = 'forward',
                  base_vel_range: tuple[float, float] = (0.28, 0.3),
                  feet_geom_name: LegsAttr = LegsAttr(FL='FL', FR='FR', RL='RL', RR='RR'),
-                 feet_body_name: LegsAttr = LegsAttr(FL='FL_calf', FR='FR_calf', RL='RL_calf', RR='RR_calf'),
+                 state_obs_names: list[str] = ('qpos', 'qvel', 'tau_applied', 'feet_pos:base', 'feet_vel:base'),
                  n_robots=1,
                  ):
         """Initialize the quadruped environment.
@@ -47,7 +53,8 @@ class QuadrupedEnv(gym.Env):
             base_vel_range: (tuple) The range of the base velocity command.
             feet_geom_name: (LegsAttr) The name of the geometry associated with each of the four feet.
             feet_body_name: (LegsAttr) The name of the body associated with each of the four feet.
-            n_robots: (int) The number of robots in the environment.
+            state_obs_names: (list) The names of the state observations to be included in the observation space.
+            n_robots: (int) The number of robots in the environment. @Giovany's magic.
         """
         super(QuadrupedEnv, self).__init__()
 
@@ -68,6 +75,7 @@ class QuadrupedEnv(gym.Env):
         # Set the simulation step size (dt)
         self.mjModel.opt.timestep = sim_dt
 
+        # Identify the legs DoF indices/address in the qpos and qvel arrays ___________________________________________
         assert legs_joint_names is not None, "Please provide the joint names associated with each of the four legs."
         self.joint_info = self.joint_info(self.mjModel)
         self.legs_qpos_idx = LegsAttr(None, None, None, None)
@@ -82,7 +90,6 @@ class QuadrupedEnv(gym.Env):
                 qvel_idx.extend(self.joint_info[joint_name].qvel_idx)
             self.legs_qpos_idx[leg_name] = qpos_idx
             self.legs_qvel_idx[leg_name] = qvel_idx
-        # Get the number of joints and actuators
 
         # Action space: Torque values for each joint _________________________________________________________________
         tau_low, tau_high = self.mjModel.actuator_forcerange[:, 0], self.mjModel.actuator_forcerange[:, 1]
@@ -104,18 +111,16 @@ class QuadrupedEnv(gym.Env):
         self._feet_geom_id = LegsAttr(None, None, None, None)
         self._feet_body_id = LegsAttr(None, None, None, None)
         _all_geoms = [mujoco.mj_id2name(self.mjModel, i, mujoco.mjtObj.mjOBJ_GEOM) for i in range(self.mjModel.ngeom)]
-        _all_bodies = [mujoco.mj_id2name(self.mjModel, i, mujoco.mjtObj.mjOBJ_BODY) for i in range(self.mjModel.nbody)]
         for lef_name in ["FR", "FL", "RR", "RL"]:
             foot_geom_id = mujoco.mj_name2id(self.mjModel, mujoco.mjtObj.mjOBJ_GEOM, feet_geom_name[lef_name])
-            assert foot_geom_id != -1, f"Foot geometry {feet_geom_name[lef_name]} not found in {_all_geoms}."
+            assert foot_geom_id != -1, f"Foot GEOM {feet_geom_name[lef_name]} not found in {_all_geoms}."
             self._feet_geom_id[lef_name] = foot_geom_id
-            foot_body_id = mujoco.mj_name2id(self.mjModel, mujoco.mjtObj.mjOBJ_BODY, feet_body_name[lef_name])
-            assert foot_body_id != -1, f"Foot body {feet_body_name[lef_name]} not found in {_all_bodies}."
+            foot_body_id, foot_body_name = self._get_geom_body_info(geom_id=foot_geom_id)
             self._feet_body_id[lef_name] = foot_body_id
 
         self.viewer = None
         self.step_num = 0
-        self._ref_base_velocity = None
+        self._ref_base_vel_H = None  # Reference base velocity in "Horizontal" frame (see heading_orientation_SO3)
         self._geom_ids = {}
 
     def step(self, action) -> tuple[np.ndarray, float, bool, bool, dict]:
@@ -195,7 +200,7 @@ class QuadrupedEnv(gym.Env):
             ori_wxyz = np.roll(ori_xyzw, 1)
             self.mjData.qpos[3:7] = ori_wxyz
             # Random xy position withing a 2 x 2 square
-            self.mjData.qpos[0:2] = np.random.uniform(-1, 1, 2)
+            self.mjData.qpos[0:2] = np.random.uniform(-2, 2, 2)
 
             # Perform a forward dynamics computation to update the contact information
             mujoco.mj_step1(self.mjModel, self.mjData)
@@ -204,7 +209,7 @@ class QuadrupedEnv(gym.Env):
             while np.any(contact_state.to_list()):
                 all_contacts = list(itertools.chain(*contacts.to_list()))
                 max_penetration_distance = np.max([np.abs(contact.dist) for contact in all_contacts])
-                self.mjData.qpos[2] += max_penetration_distance * 1.5
+                self.mjData.qpos[2] += max_penetration_distance * 2
                 mujoco.mj_step1(self.mjModel, self.mjData)
                 contact_state, contacts = self.feet_contact_state
         else:
@@ -214,6 +219,8 @@ class QuadrupedEnv(gym.Env):
         # Reset the accelerations to zero
         self.mjData.qacc[:] = 0
         self.mjData.qacc_warmstart[:] = 0
+        # This ensures all registers/arrays are updated
+        mujoco.mj_step(self.mjModel, self.mjData)
 
         # Reset the desired base velocity command
         # ----------------------------------------------------------------------
@@ -227,7 +234,7 @@ class QuadrupedEnv(gym.Env):
         else:
             raise ValueError(f"Invalid base velocity command type: {self.base_vel_command_type}")
 
-        self._ref_base_velocity = base_vel_norm * base_heading_vel_vec
+        self._ref_base_vel_H = base_vel_norm * base_heading_vel_vec
         return self._get_obs()
 
     def render(self, mode='human'):
@@ -289,7 +296,7 @@ class QuadrupedEnv(gym.Env):
             R = self.base_configuration[0:3, 0:3]
         else:
             raise ValueError(f"Invalid frame: {frame} != 'world' or 'base'")
-
+        # TODO: this should not be hardcoded.
         FL_hip_id = mujoco.mj_name2id(self.mjModel, mujoco.mjtObj.mjOBJ_BODY, 'FL_hip')
         FR_hip_id = mujoco.mj_name2id(self.mjModel, mujoco.mjtObj.mjOBJ_BODY, 'FR_hip')
         RL_hip_id = mujoco.mj_name2id(self.mjModel, mujoco.mjtObj.mjOBJ_BODY, 'RL_hip')
@@ -386,6 +393,42 @@ class QuadrupedEnv(gym.Env):
         return feet_trans_jac if not return_rot_jac else (feet_trans_jac, feet_rot_jac)
 
     @property
+    def feet_contact_state(self) -> [LegsAttr, LegsAttr]:
+        """Returns the boolean contact state of the feet.
+
+        This function considers only contacts between the feet and the ground.
+
+        Returns
+        -------
+            LegsAttr: A dictionary-like object with:
+                - FL: (bool) True if the FL foot is in contact with the ground.
+                - FR: (bool) True if the FR foot is in contact with the ground.
+                - RL: (bool) True if the RL foot is in contact with the ground.
+                - RR: (bool) True if the RR foot is in contact with the ground.
+            LegsAttr: A dictionary-like object with:
+                - FL: list[MjContact] A list of contact objects associated with the FL foot.
+                - FR: list[MjContact] A list of contact objects associated with the FR foot.
+                - RL: list[MjContact] A list of contact objects associated with the RL foot.
+                - RR: list[MjContact] A list of contact objects associated with the RR foot.
+        """
+        contact_state = LegsAttr(FL=False, FR=False, RL=False, RR=False)
+        legs_contacts = LegsAttr(FL=[], FR=[], RL=[], RR=[])
+        for contact in self.mjData.contact:
+            # Get body IDs from geom IDs
+            body1_id = self.mjModel.geom_bodyid[contact.geom1]
+            body2_id = self.mjModel.geom_bodyid[contact.geom2]
+
+            if 0 in [body1_id, body2_id]:  # World body ID is 0
+                second_id = body2_id if body1_id == 0 else body1_id
+                if second_id in self._feet_body_id.to_list():  # Check if contact occurs with anything but the feet
+                    for leg_name in ["FL", "FR", "RL", "RR"]:
+                        if second_id == self._feet_body_id[leg_name]:
+                            contact_state[leg_name] = True
+                            legs_contacts[leg_name].append(contact)
+
+        return contact_state, legs_contacts
+
+    @property
     def base_configuration(self):
         """Robot base configuration (homogenous transformation matrix) in world reference frame."""
         com_pos = self.mjData.qpos[0:3]  # world frame
@@ -426,10 +469,10 @@ class QuadrupedEnv(gym.Env):
     @property
     def target_base_vel(self):
         """Returns the target base velocity (3,) in the world reference frame."""
-        if self._ref_base_velocity is None:
+        if self._ref_base_vel_H is None:
             raise RuntimeError("Please call env.reset() before accessing the target base velocity.")
         R_B_heading = self.heading_orientation_SO3
-        ref_dr_B = R_B_heading @ self._ref_base_velocity.reshape(3, 1)
+        ref_dr_B = R_B_heading @ self._ref_base_vel_H.reshape(3, 1)
         return ref_dr_B.squeeze()
 
     @property
@@ -444,7 +487,10 @@ class QuadrupedEnv(gym.Env):
 
     @property
     def applied_join_torques(self):
-        """Returns the true joint torques used in evolving the physics simulation."""
+        """Returns the true joint torques used in evolving the physics simulation.
+
+        Differs from action if actuator hasnon-ideal dynamics.
+        """
         return self.mjData.qfrc_applied
 
     @property
@@ -456,42 +502,6 @@ class QuadrupedEnv(gym.Env):
     def simulation_time(self):
         """Returns the simulation time in seconds."""
         return self.mjData.time
-
-    @property
-    def feet_contact_state(self) -> [LegsAttr, LegsAttr]:
-        """Returns the boolean contact state of the feet.
-
-        This function considers only contacts between the feet and the ground.
-
-        Returns
-        -------
-            LegsAttr: A dictionary-like object with:
-                - FL: (bool) True if the FL foot is in contact with the ground.
-                - FR: (bool) True if the FR foot is in contact with the ground.
-                - RL: (bool) True if the RL foot is in contact with the ground.
-                - RR: (bool) True if the RR foot is in contact with the ground.
-            LegsAttr: A dictionary-like object with:
-                - FL: list[MjContact] A list of contact objects associated with the FL foot.
-                - FR: list[MjContact] A list of contact objects associated with the FR foot.
-                - RL: list[MjContact] A list of contact objects associated with the RL foot.
-                - RR: list[MjContact] A list of contact objects associated with the RR foot.
-        """
-        contact_state = LegsAttr(FL=False, FR=False, RL=False, RR=False)
-        legs_contacts = LegsAttr(FL=[], FR=[], RL=[], RR=[])
-        for contact in self.mjData.contact:
-            # Get body IDs from geom IDs
-            body1_id = self.mjModel.geom_bodyid[contact.geom1]
-            body2_id = self.mjModel.geom_bodyid[contact.geom2]
-
-            if 0 in [body1_id, body2_id]:  # World body ID is 0
-                second_id = body2_id if body1_id == 0 else body1_id
-                if second_id in self._feet_body_id.to_list():  # Check if contact occurs with anything but the feet
-                    for leg_name in ["FL", "FR", "RL", "RR"]:
-                        if second_id == self._feet_body_id[leg_name]:
-                            contact_state[leg_name] = True
-                            legs_contacts[leg_name].append(contact)
-
-        return contact_state, legs_contacts
 
     def _get_obs(self):
         # Observation includes position, velocity, orientation, and foot positions
@@ -525,6 +535,17 @@ class QuadrupedEnv(gym.Env):
                 pass  # Do nothing for now
 
         return invalid_contact_detected, invalid_contacts  # No invalid contact detected
+
+    def _get_geom_body_info(self, geom_name: str = None, geom_id: int = None) -> [int, str]:
+        """Returns the body ID and name associated with the geometry name or ID."""
+        assert geom_name is not None or geom_id is not None, "Please provide either the geometry name or ID."
+        if geom_name is not None:
+            geom_id = mujoco.mj_name2id(self.mjModel, mujoco.mjtObj.mjOBJ_GEOM, geom_name)
+
+        body_id = self.mjModel.geom_bodyid[geom_id]
+        body_name = mujoco.mj_id2name(self.mjModel, mujoco.mjtObj.mjOBJ_BODY, body_id)
+
+        return body_id, body_name
 
     # Function to get joint names and their DoF indices in qpos and qvel
     @staticmethod

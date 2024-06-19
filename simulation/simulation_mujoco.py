@@ -9,17 +9,17 @@ import time
 import mujoco
 import numpy as np
 
-# Parameters for both MPC and simulation
 import config as cfg
+
+# Parameters for both MPC and simulation
 from helpers.foothold_reference_generator import FootholdReferenceGenerator
-from helpers.periodic_gait_generator import Gait, PeriodicGaitGenerator
+from helpers.periodic_gait_generator import PeriodicGaitGenerator
 from helpers.srb_inertia_computation import SrbInertiaComputation
 from helpers.swing_trajectory_controller import SwingTrajectoryController
-from helpers.terrain_estimator import TerrainEstimator
 from simulation.quadruped_env import QuadrupedEnv
 from utils.math_utils import skew
 from utils.mujoco_visual import plot_swing_mujoco
-from utils.quadruped_utils import LegsAttr
+from utils.quadruped_utils import Gait, LegsAttr, estimate_terrain_slope
 
 # TODO: Why is this here?
 os.environ['XLA_FLAGS'] = ('--xla_gpu_triton_gemm_any=True')
@@ -29,6 +29,22 @@ np.set_printoptions(precision=3, suppress=True)
 robot_name = cfg.robot
 scene_name = cfg.simulation_params['scene']
 simulation_dt = cfg.simulation_params['dt']
+
+# TODO: This is how you should load the configuration file. Any parameters needed for some class should passed
+#  ON THE CONSTRUCTOR of the class or on specific function arguments. The configuration file should ONLY be used by this
+#  script. IF any external user wants to use a specific module of this repository it will have to remove the config
+#  import at each script/module
+# cfg = OmegaConf.load('cfg/config.yaml')
+
+# # Load the specified robot configuration:
+# robot_name = cfg.robot
+# base_cfg = OmegaConf.load('cfg/robot/base_quadruped.yaml')  # Base quadruped configuration
+# robot_cfg = OmegaConf.load(f'cfg/robot/{robot_name}.yaml')  # Robot specific configuration
+# # Merge the configurations, replacing the robot specific parameters with the ones from the specific robot
+# configuration.
+# cfg = OmegaConf.merge(cfg, base_cfg, robot_cfg)
+# # Do argument interpolation such that configs vals ${robot.name} are replaced by the actual value.
+# OmegaConf.resolve(cfg)
 
 # Create the quadruped robot environment. _______________________________________________________________________
 env = QuadrupedEnv(robot=robot_name,
@@ -41,11 +57,14 @@ env = QuadrupedEnv(robot=robot_name,
                    sim_dt=simulation_dt,
                    base_vel_command_type="forward",
                    feet_geom_name=LegsAttr(FL='FL', FR='FR', RL='RL', RR='RR'),  # Geom/Frame id of feet
-                   feet_body_name=LegsAttr(FL='FL_calf', FR='FR_calf', RL='RL_calf', RR='RR_calf'),  # Body id of feet
                    )
 env.reset()
 env.render()
 mass = np.sum(env.mjModel.body_mass)
+
+# TODO: This should be removed from here.
+cfg.mass = mass
+cfg.mpc_params["grf_max"] = mass * 9.81
 # _______________________________________________________________________________________________________________
 
 # TODO: CONTROLLER INITIALIZATION CODE THAT SHOULD BE REMOVED FROM HERE.
@@ -145,7 +164,7 @@ else:
 
 # Periodic gait generator _________________________________________________________________________
 # Given the possibility to use nonuniform discretization, we generate a contact sequence two times longer
-pgg = PeriodicGaitGenerator(duty_factor=duty_factor, step_freq=step_frequency, p_gait=p_gait, horizon=horizon * 2)
+pgg = PeriodicGaitGenerator(duty_factor=duty_factor, step_freq=step_frequency, gait_type=p_gait, horizon=horizon * 2)
 contact_sequence = pgg.compute_contact_sequence(mpc_dt=mpc_dt, simulation_dt=simulation_dt)
 nominal_sample_freq = step_frequency
 # Create the foothold reference generator
@@ -157,8 +176,6 @@ step_height = cfg.simulation_params['step_height']
 swing_period = (1 - duty_factor) * (1 / step_frequency)  # + 0.07
 position_gain_fb = cfg.simulation_params['swing_position_gain_fb']
 velocity_gain_fb = cfg.simulation_params['swing_velocity_gain_fb']
-use_print_debug = cfg.simulation_params['use_print_debug']
-use_visualization_debug = cfg.simulation_params['use_visualization_debug']
 swing_generator = cfg.simulation_params['swing_generator']
 stc = SwingTrajectoryController(step_height=step_height, swing_period=swing_period,
                                 position_gain_fb=position_gain_fb, velocity_gain_fb=velocity_gain_fb,
@@ -169,7 +186,6 @@ lift_off_positions = env.feet_pos(frame='world')
 
 # Terrain estimator
 z_foot_mean = 0.0
-terrain_computation = TerrainEstimator()
 
 # Online computation of the inertia parameter
 srb_inertia_computation = SrbInertiaComputation()  # TODO: This seems to be unsused.
@@ -232,6 +248,8 @@ while True:
     # -------------------------------------------------------
 
     # Update the contact sequence ---------------------------
+    # Update the periodic gait generator
+    pgg.run(simulation_dt, pgg.step_freq)
     if (gait == "full_stance"):
         contact_sequence = np.ones((4, horizon * 2))
     else:
@@ -276,17 +294,18 @@ while True:
                       # Also update the reference base linear velocity and # TODO: orientation.
                       ref_linear_velocity=env.target_base_vel)
     # -------------------------------------------------------------------------------------------------
-    # Compute the terrain estimation and reference height ---------------------------------------------
-    roll, pitch = terrain_computation.compute_terrain_estimation(
+    # Estimate the terrain slope and elevation -------------------------------------------------------
+    roll, pitch = estimate_terrain_slope(
         base_position=env.base_pos,
         yaw=env.base_ori_euler_xyz[2],
-        lift_foot_position=lift_off_positions)
-    ref_state["ref_orientation"] = np.array([roll, pitch, env.base_ori_euler_xyz[2]])
+        feet_pos=lift_off_positions)
+    ref_state["ref_orientation"] = np.array([roll, pitch, 0])
 
     # Update the reference height given the foot in contact
     num_feet_in_contact = np.sum(current_contact)
     feet_pos_z = np.asarray(feet_pos.to_list(order=legs_order))[:, 2]
     if num_feet_in_contact != 0:
+        # TODO: Is this a moving average ?
         z_foot_mean_temp = np.sum(feet_pos_z * current_contact) / num_feet_in_contact
         z_foot_mean = z_foot_mean_temp * 0.4 + z_foot_mean * 0.6
     ref_state["ref_position"][2] = cfg.simulation_params['ref_z'] + z_foot_mean
@@ -395,9 +414,9 @@ while True:
                 contact_sequence_temp = np.zeros((len(cfg.mpc_params['step_freq_available']), 4, horizon * 2))
                 for j in range(len(cfg.mpc_params['step_freq_available'])):
                     pgg_temp = PeriodicGaitGenerator(duty_factor=duty_factor,
-                                                     step_freq=cfg.mpc_params['step_freq_available'][j], p_gait=p_gait,
+                                                     step_freq=cfg.mpc_params['step_freq_available'][j], gait_type=p_gait,
                                                      horizon=horizon * 2)
-                    pgg_temp.t = pgg.t
+                    pgg_temp.phase_signal = pgg.phase_signal
                     pgg_temp.init = pgg.init
                     contact_sequence_temp[j] = pgg_temp.compute_contact_sequence(mpc_dt=mpc_dt,
                                                                                  simulation_dt=simulation_dt)
@@ -515,18 +534,19 @@ while True:
                                                ref_feet_pos=ref_feet_pos,
                                                geom_ids=feet_traj_geom_ids)
         env.render()
-        if env.step_num == 1:
-            print("")
         last_render_time = time.time()
-
-    # Update the periodic gait generator
-    pgg.run(simulation_dt, pgg.step_freq)
 
     if env.step_num > 2000 or is_terminated or is_truncated:
         if is_terminated:
             print("Environment terminated")
         env.reset()
+        pgg.reset()
+        lift_off_positions = env.feet_pos(frame='world')
         current_contact = np.array([0, 0, 0, 0])
+        previous_contact = np.asarray(current_contact)
         z_foot_mean = 0.0
     # print("loop time: ", time.time() - step_start)
     # ---------------------------------------------------------------------------------------------------
+
+if __name__ == '__main__':
+    pass

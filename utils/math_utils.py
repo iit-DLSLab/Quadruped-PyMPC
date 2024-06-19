@@ -8,20 +8,20 @@ def skew(x):
                      [-x[1], x[0], 0]])
 
 
-def homogenous_transform(v: np.ndarray, X: np.ndarray) -> np.ndarray:
+def homogenous_transform(vec: np.ndarray, X: np.ndarray) -> np.ndarray:
     """Apply a homogeneous transformation matrix to a 3D vector.
 
     Args:
     ----
-        v: (3,) vector
+        vec: (3,) vector
         X: (4, 4) homogeneous transformation matrix
 
     Returns:
     -------
         (3,) vector
     """
-    assert v.flatten().shape == (3,)
+    assert vec.flatten().shape == (3,)
     assert X.shape == (4, 4) and X[3, 3] == 1, f"Expected homogeneous transformation matrix, got {X}"
-    pos_hom = np.concatenate([v.flatten(), [1]])
+    pos_hom = np.concatenate([vec.flatten(), [1]])
     X_pos_hom = X @ pos_hom
     return X_pos_hom[:3]
