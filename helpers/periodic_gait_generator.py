@@ -2,12 +2,12 @@ import copy
 
 import numpy as np
 
-from utils.quadruped_utils import Gait
+from utils.quadruped_utils import GaitType
 
 
 class PeriodicGaitGenerator:
 
-    def __init__(self, duty_factor, step_freq, gait_type: Gait, horizon):
+    def __init__(self, duty_factor, step_freq, gait_type: GaitType, horizon):
         self.duty_factor = duty_factor
         self.step_freq = step_freq
         self.horizon = horizon
@@ -17,20 +17,20 @@ class PeriodicGaitGenerator:
 
     def reset(self):
         # Choose of the gait, this represent the delay of each leg
-        if self.gait_type == Gait.TROT:
+        if self.gait_type == GaitType.TROT:
             # self.delta = [0.0, 0.5, 0.5, 0.0]
             self.phase_offset = [0.5, 1.0, 1.0, 0.5]
-        elif self.gait_type == Gait.PACE:
+        elif self.gait_type == GaitType.PACE:
             self.phase_offset = [0.8, 0.3, 0.8, 0.3]
-        elif self.gait_type == Gait.BOUNDING:
+        elif self.gait_type == GaitType.BOUNDING:
             self.phase_offset = [0.5, 0.5, 0.0, 0.0]
-        elif self.gait_type == Gait.CIRCULARCRAWL:
+        elif self.gait_type == GaitType.CIRCULARCRAWL:
             self.phase_offset = [0.0, 0.25, 0.75, 0.5]
-        elif self.gait_type == Gait.BFDIAGONALCRAWL:
+        elif self.gait_type == GaitType.BFDIAGONALCRAWL:
             self.phase_offset = [0.0, 0.25, 0.5, 0.75]
-        elif self.gait_type == Gait.BACKDIAGONALCRAWL:
+        elif self.gait_type == GaitType.BACKDIAGONALCRAWL:
             self.phase_offset = [0.0, 0.5, 0.75, 0.25]
-        elif self.gait_type == Gait.FRONTDIAGONALCRAWL:
+        elif self.gait_type == GaitType.FRONTDIAGONALCRAWL:
             self.phase_offset = [0.5, 1.0, 0.75, 1.25]
         else:
             self.phase_offset = [0.0, 0.5, 0.5, 0.0]
