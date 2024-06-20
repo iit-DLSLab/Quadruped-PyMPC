@@ -70,7 +70,10 @@ class QuadrupedEnv(gym.Env):
         assert model_file_path.exists(), f"Model file not found: {model_file_path.absolute().resolve()}"
 
         # Load the robot and scene to mujoco
-        self.mjModel = mujoco.MjModel.from_xml_path(str(model_file_path))
+        try:
+            self.mjModel = mujoco.MjModel.from_xml_path(str(model_file_path))
+        except ValueError as e:
+            raise ValueError(f"Error loading the scene {model_file_path}:") from e
         self.mjData = mujoco.MjData(self.mjModel)
         # Set the simulation step size (dt)
         self.mjModel.opt.timestep = sim_dt
@@ -120,7 +123,9 @@ class QuadrupedEnv(gym.Env):
 
         self.viewer = None
         self.step_num = 0
-        self._ref_base_vel_H = None  # Reference base velocity in "Horizontal" frame (see heading_orientation_SO3)
+        # Reference base velocity in "Horizontal" frame (see heading_orientation_SO3)
+        self._ref_base_lin_vel_H, self._base_ang_yaw_dot = None, None
+        # Store the ids of visual aid geometries
         self._geom_ids = {}
 
     def step(self, action) -> tuple[np.ndarray, float, bool, bool, dict]:
@@ -209,7 +214,7 @@ class QuadrupedEnv(gym.Env):
             while np.any(contact_state.to_list()):
                 all_contacts = list(itertools.chain(*contacts.to_list()))
                 max_penetration_distance = np.max([np.abs(contact.dist) for contact in all_contacts])
-                self.mjData.qpos[2] += max_penetration_distance * 2
+                self.mjData.qpos[2] += max_penetration_distance * 1.1
                 mujoco.mj_step1(self.mjModel, self.mjData)
                 contact_state, contacts = self.feet_contact_state
         else:
@@ -224,31 +229,37 @@ class QuadrupedEnv(gym.Env):
 
         # Reset the desired base velocity command
         # ----------------------------------------------------------------------
-        if self.base_vel_command_type == 'forward':
+        if 'forward' in self.base_vel_command_type:
             base_vel_norm = np.random.uniform(*self.base_vel_range)
             base_heading_vel_vec = np.array([1, 0, 0])  # Move in the "forward" direction
-        elif self.base_vel_command_type == 'random_orientation':
+        elif 'random' in self.base_vel_command_type:
             base_vel_norm = np.random.uniform(*self.base_vel_range)
             heading_angle = np.random.uniform(-np.pi, np.pi)
             base_heading_vel_vec = np.array([np.cos(heading_angle), np.sin(heading_angle), 0])
         else:
-            raise ValueError(f"Invalid base velocity command type: {self.base_vel_command_type}")
+            raise ValueError(f"Invalid base linear velocity command type: {self.base_vel_command_type}")
 
-        self._ref_base_vel_H = base_vel_norm * base_heading_vel_vec
+        if 'rotate' in self.base_vel_command_type:
+            self._base_ang_yaw_dot = np.random.uniform(-np.pi / 4, np.pi / 4)
+        else:
+            self._base_ang_yaw_dot = 0.0
+
+        self._ref_base_lin_vel_H = base_vel_norm * base_heading_vel_vec
+
         return self._get_obs()
 
-    def render(self, mode='human'):
+    def render(self, mode='human', key_callback: mujoco.viewer.KeyCallbackType = None):
         X_B = self.base_configuration
         r_B = X_B[:3, 3]
         dr_B = self.mjData.qvel[0:3]
-        ref_dr_B = self.target_base_vel
+        ref_dr_B, _ = self.target_base_vel()
         ref_vec_pos, vec_pos = r_B + [0, 0, 0.1], r_B + [0, 0, 0.15]
         ref_vel_vec_color, vel_vec_color = np.array([1, 0.5, 0, .7]), np.array([0, 1, 1, .7])
         ref_vec_scale, vec_scale = np.linalg.norm(ref_dr_B) / 1.0, np.linalg.norm(dr_B) / 1.0
 
         if self.viewer is None:
             self.viewer = mujoco.viewer.launch_passive(
-                self.mjModel, self.mjData, show_left_ui=False, show_right_ui=False
+                self.mjModel, self.mjData, show_left_ui=False, show_right_ui=False, key_callback=key_callback,
                 )
             mujoco.mjv_defaultFreeCamera(self.mjModel, self.viewer.cam)
             # self.viewer.user_scn.flags[mujoco.mjtRndFlag.mjRND_SHADOW] = 0
@@ -267,6 +278,7 @@ class QuadrupedEnv(gym.Env):
             render_vector(self.viewer, dr_B, vec_pos, vec_scale, vel_vec_color,
                           geom_id=self._geom_ids['dr_B_vec'])
 
+        self._update_camera_target(self.viewer.cam, r_B)
         self.viewer.sync()
 
     def close(self):
@@ -308,6 +320,34 @@ class QuadrupedEnv(gym.Env):
             RL=R.T @ self.mjData.body(RL_hip_id).xpos,
             )
 
+    def target_base_vel(self):
+        """Returns the target base linear (3,) and angular (3,) velocity in the world reference frame."""
+        if self._ref_base_lin_vel_H is None:
+            raise RuntimeError("Please call env.reset() before accessing the target base velocity.")
+        R_B_heading = self.heading_orientation_SO3
+        ref_dr_B = R_B_heading @ self._ref_base_lin_vel_H.reshape(3, 1)
+        return ref_dr_B.squeeze(), np.array([0., 0., self._base_ang_yaw_dot])
+
+    def get_base_inertia(self) -> np.ndarray:
+        """
+        Function to get the rotational inertia matrix of the base of the robot at the current configuration.
+
+        Args:
+            model: The MuJoCo model.
+            data: The MuJoCo data.
+
+        Returns:
+            np.ndarray: The rotational inertia matrix of the base in the current configuration.
+        """
+        # Initialize the full mass matrix
+        mass_matrix = np.zeros((self.mjModel.nv, self.mjModel.nv))
+        mujoco.mj_fullM(self.mjModel, mass_matrix, self.mjData.qM)
+
+        # Extract the 3x3 rotational inertia matrix of the base (assuming the base has 6 DoFs)
+        inertia_B_at_qpos = mass_matrix[3:6, 3:6]
+
+        return inertia_B_at_qpos
+
     def feet_pos(self, frame='world') -> LegsAttr:
         """Get the feet positions in the specified frame.
 
@@ -336,6 +376,7 @@ class QuadrupedEnv(gym.Env):
             RR=homogenous_transform(self.mjData.geom_xpos[self._feet_geom_id.RR], X.T),
             RL=homogenous_transform(self.mjData.geom_xpos[self._feet_geom_id.RL], X.T),
             )
+
 
     def feet_jacobians(self, frame: str = 'world', return_rot_jac: bool = False) -> LegsAttr | tuple[LegsAttr, ...]:
         """Compute the Jacobians of the feet positions.
@@ -467,15 +508,6 @@ class QuadrupedEnv(gym.Env):
         return Rotation.from_quat(quat_xyzw).as_euler('xyz')
 
     @property
-    def target_base_vel(self):
-        """Returns the target base velocity (3,) in the world reference frame."""
-        if self._ref_base_vel_H is None:
-            raise RuntimeError("Please call env.reset() before accessing the target base velocity.")
-        R_B_heading = self.heading_orientation_SO3
-        ref_dr_B = R_B_heading @ self._ref_base_vel_H.reshape(3, 1)
-        return ref_dr_B.squeeze()
-
-    @property
     def heading_orientation_SO3(self):
         """Returns a SO(3) matrix that aligns with the robot's base heading orientation and the world z axis."""
         X_B = self.base_configuration
@@ -546,6 +578,12 @@ class QuadrupedEnv(gym.Env):
         body_name = mujoco.mj_id2name(self.mjModel, mujoco.mjtObj.mjOBJ_BODY, body_id)
 
         return body_id, body_name
+
+    # Function to update the camera position
+    def _update_camera_target(self, cam, target_point: np.ndarray):
+        cam.lookat[:] = target_point  # Update the camera lookat point to the target point
+        # Potentially do other fancy stuff.
+        pass
 
     # Function to get joint names and their DoF indices in qpos and qvel
     @staticmethod

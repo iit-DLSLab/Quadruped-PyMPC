@@ -100,12 +100,7 @@ def render_sphere(viewer: Handle,
     return geom_id
 
 
-def render_line(viewer: Handle,
-                initial_point: np.ndarray,
-                target_point: np.ndarray,
-                width: float,
-                color: np.ndarray,
-                geom_id: int = -1) -> int:
+def render_line(viewer, initial_point, target_point, width, color, geom_id=-1):
     """
     Function to render a line in the Mujoco viewer.
 
@@ -122,28 +117,34 @@ def render_line(viewer: Handle,
     if geom_id < 0:
         # Instantiate a new geometry
         geom = mujoco.MjvGeom()
-        geom.type = mujoco.mjtGeom.mjGEOM_LINE
         viewer.user_scn.ngeom += 1
         geom_id = viewer.user_scn.ngeom - 1
 
     geom = viewer.user_scn.geoms[geom_id]
 
-    # Define the a rotation matrix with the Z axis aligned with the line direction
+    # Define the rotation matrix with the Z axis aligned with the line direction
     vector = target_point - initial_point
-    vec_z = vector.squeeze() / np.linalg.norm(vector + 1e-5)
-    # Define any orthogonal to z vector as the X axis using the Gram-Schmidt process
+    length = np.linalg.norm(vector)
+    if length == 0:
+        return geom_id
+
+    vec_z = vector / length
+
+    # Use Gram-Schmidt process to find an orthogonal vector for X axis
     rand_vec = np.random.rand(3)
-    vec_x = rand_vec - (np.dot(rand_vec, vec_z) * vec_z)
-    vec_x = vec_x / np.linalg.norm(vec_x)
+    vec_x = rand_vec - np.dot(rand_vec, vec_z) * vec_z
+    vec_x /= np.linalg.norm(vec_x)
+
     # Define the Y axis as the cross product of X and Z
     vec_y = cross2(vec_z, vec_x)
 
     ori_mat = Rotation.from_matrix(np.array([vec_x, vec_y, vec_z]).T).as_matrix()
+
     mujoco.mjv_initGeom(
         geom,
-        type=mujoco.mjtGeom.mjGEOM_LINE,
-        size=np.asarray([width, 0.1, np.linalg.norm(vector)]),
-        pos=initial_point,
+        type=mujoco.mjtGeom.mjGEOM_CAPSULE,
+        size=np.array([width, length/2 + width/4, width]),
+        pos=(initial_point + target_point) / 2,
         mat=ori_mat.flatten(),
         rgba=color
         )
@@ -191,6 +192,8 @@ def plot_swing_mujoco(viewer: Handle,
     des_foot_traj = LegsAttr(FL=[], FR=[], RL=[], RR=[])
     for leg_id, leg_name in enumerate(['FL', 'FR', 'RL', 'RR']):
         # TODO: This function should be vectorized rather than queried sequentially
+        if swing_time[leg_name] == 0.0:
+            continue
         for point_idx, foot_swing_time in enumerate(np.linspace(swing_time[leg_name], swing_period, NUM_TRAJ_POINTS)):
             ref_foot_pos, _, _ = swing_traj_controller.swing_generator.compute_trajectory_references(
                 foot_swing_time,
@@ -202,7 +205,7 @@ def plot_swing_mujoco(viewer: Handle,
             render_line(viewer=viewer,
                         initial_point=des_foot_traj[leg_name][point_idx],
                         target_point=des_foot_traj[leg_name][point_idx + 1],
-                        width=0.1,
+                        width=.005,
                         color=np.array([1, 0, 0, 1]),
                         geom_id=geom_ids[leg_name][point_idx]
                         )

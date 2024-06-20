@@ -3,7 +3,7 @@
 # Authors: Giulio Turrisi - 
 
 from acados_template import AcadosOcp, AcadosOcpSolver
-from centroidal_model_input_rates import Centroidal_Model_InputRates
+from .centroidal_model_input_rates import Centroidal_Model_InputRates
 import numpy as np
 import scipy.linalg
 import casadi as cs

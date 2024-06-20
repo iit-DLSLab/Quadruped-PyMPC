@@ -4,7 +4,7 @@ and of the internal simulations that can be launch from the folder /simulation.
 import numpy as np
 
 # These are used both for a real experiment and a simulation -----------
-robot = 'aliengo'  # 'go2', 'aliengo', 'hyqreal', 'mini_cheetah'
+robot = 'mini_cheetah'  # 'go2', 'aliengo', 'hyqreal', 'mini_cheetah'
 
 robot_leg_joints = dict(FL=['FL_hip_joint', 'FL_thigh_joint', 'FL_calf_joint',],
                         FR=['FR_hip_joint', 'FR_thigh_joint', 'FR_calf_joint',],
@@ -16,6 +16,7 @@ if (robot == 'go2'):
                         [1.21660000e-04, 4.68645637e-01, -3.12000000e-05],
                         [-1.55444692e-02, -3.12000000e-05, 5.24474661e-01]])
     urdf_filename = "go2.urdf"
+    hip_height = 0.28
 
 elif (robot == 'aliengo'):
     mass = 24.637
@@ -24,6 +25,7 @@ elif (robot == 'aliengo'):
                         [-0.021400468992761768, 0.0004641447134275615, 1.503217877350808]])
 
     urdf_filename = "aliengo.urdf"
+    hip_height = 0.35
 
 elif (robot == 'hyqreal'):
     mass = 108.40
@@ -35,13 +37,14 @@ elif (robot == 'hyqreal'):
                             FR=['rf_haa_joint', 'rf_hfe_joint', 'rf_kfe_joint',],
                             RL=['lh_haa_joint', 'lh_hfe_joint', 'lh_kfe_joint',],
                             RR=['rh_haa_joint', 'rh_hfe_joint', 'rh_kfe_joint',])
-
+    hip_height = 0.5
 elif (robot == 'mini_cheetah'):
     mass = 12.5
     inertia = np.array([[1.58460467e-01, 1.21660000e-04, -1.55444692e-02],
                         [1.21660000e-04, 4.68645637e-01, -3.12000000e-05],
                         [-1.55444692e-02, -3.12000000e-05, 5.24474661e-01]])
     urdf_filename = "mini_cheetah.urdf"
+    hip_height = 0.20
 
 mpc_params = {
     # 'nominal' optimized directly the GRF
@@ -146,30 +149,17 @@ mpc_params = {
     # for the sampling controller, this is done in the rollout
     # for the gradient-based controller, this is done with a batched version of the ocp
     'optimize_step_freq':                      False,
-    'step_freq_available':                     [1.3, 2.0, 2.4]
+    'step_freq_available':                     [0.00, 0.5, 1.0, 2.0, 3.0]
 
     }
 # -----------------------------------------------------------------------
-
-
-# This is only used if a simulation in the folder /simulation is run ---
-if (robot == 'go2'):
-    ref_z = 0.28
-elif (robot == 'aliengo'):
-    ref_z = 0.35
-elif (robot == 'hyqreal'):
-    ref_z = 0.5
-elif (robot == 'mini_cheetah'):
-    ref_z = 0.2
-else:
-    raise NotImplementedError("This robot is not implemented yet")
 
 simulation_params = {
     'swing_generator':             'scipy',  # 'scipy', 'explicit', 'ndcurves'
     'swing_position_gain_fb':      5000,
     'swing_velocity_gain_fb':      100,
     'swing_integral_gain_fb':      0,
-    'step_height':                 0.05,  # 0.05 go2
+    'step_height':                 0.3 * hip_height,  # 0.05 go2
 
     # this is the integration time used in the simulator
     'dt':                          0.002,
@@ -180,9 +170,9 @@ simulation_params = {
     'ref_x_dot':                   .3,
     'ref_y_dot':                   0.,
     'ref_yaw_dot':                 0.0,
-    'ref_z':                       ref_z,
-    'ref_pitch':                   0.0,
-    'ref_roll':                    0,
+    'ref_z':                       hip_height,
+    # 'ref_pitch':                   0.0,
+    # 'ref_roll':                    0,
 
     # the MPC will be called every 1/(mpc_frequency*dt) timesteps
     # this helps to evaluate more realistically the performance of the controller
@@ -199,7 +189,7 @@ simulation_params = {
 
     'use_kind_of_real_time':       True,
 
-    'scene':                       'rough',  # flat, rough, stairs, suspend_stairs, slope, perlin, image
+    'scene':                       'perlin',  # flat, rough, stairs, suspend_stairs, slope, perlin, image
 
     }
 # -----------------------------------------------------------------------

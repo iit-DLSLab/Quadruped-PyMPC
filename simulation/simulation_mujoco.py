@@ -53,7 +53,7 @@ def update_contact_sequence(pgg, horizon, mpc_dt, simulation_dt):
 
 def get_gait_params(gait_type: str) -> [GaitType, float, float]:
     if gait_type == "trot":
-        step_frequency = 1.3
+        step_frequency = 1.8
         duty_factor = 0.65
         gait_type = GaitType.TROT
     elif gait_type == "crawl":
@@ -76,25 +76,31 @@ def get_gait_params(gait_type: str) -> [GaitType, float, float]:
     return gait_type, duty_factor, step_frequency
 
 
+def key_callback(env, x):
+    pass
+
+
 if __name__ == '__main__':
 
     robot_name = cfg.robot
+    hip_height = cfg.hip_height
     robot_legs_joints = cfg.robot_leg_joints
     scene_name = cfg.simulation_params['scene']
     simulation_dt = cfg.simulation_params['dt']
 
+    MAX_STEPS = 3000
     # Create the quadruped robot environment. _______________________________________________________________________
     env = QuadrupedEnv(robot=robot_name,
                        # TODO: This should come from a cfg.robot. Not hardcoded.
                        legs_joint_names=LegsAttr(**robot_legs_joints),
                        scene=scene_name,
-                       base_vel_range=(-0.3, 0.8),
+                       base_vel_range=(1.0 * hip_height, 3.0 * hip_height),
                        sim_dt=simulation_dt,
-                       base_vel_command_type="forward",
+                       base_vel_command_type="forward",  # "forward", "random", "forward+rotate", "random+rotate"
                        feet_geom_name=LegsAttr(FL='FL', FR='FR', RL='RL', RR='RR'),  # Geom/Frame id of feet
                        )
     env.reset()
-    env.render()
+    env.render(key_callback=None)  # Pass in the first render call any mujoco.viewer.KeyCallbackType
     mass = np.sum(env.mjModel.body_mass)
 
     # _______________________________________________________________________________________________________________
@@ -202,17 +208,17 @@ if __name__ == '__main__':
     # Initialization of variables used in the main control loop
     # ____________________________________________________________
     # Set the reference for the state
-    ref_pose = np.array([0, 0, cfg.simulation_params['ref_z']])
-    ref_linear_velocity = env.target_base_vel
-    ref_orientation = np.array([cfg.simulation_params['ref_roll'], cfg.simulation_params['ref_pitch'], 0])
-    ref_angular_velocity = np.array([0, 0, cfg.simulation_params['ref_yaw_dot']])
+    ref_pose = np.array([0, 0, cfg.hip_height])
+    ref_base_lin_vel, ref_base_ang_vel = env.target_base_vel()
+    ref_orientation = np.array([0.0, 0.0, 0.0])
     # # SET REFERENCE AS DICTIONARY
     # TODO: I would suggest to create a DataClass for "BaseConfig" used in the PotatoModel controllers.
-    ref_state = {'ref_position':         ref_pose,
-                 'ref_linear_velocity':  ref_linear_velocity,
-                 'ref_orientation':      ref_orientation,
-                 'ref_angular_velocity': ref_angular_velocity,
-                 }
+    ref_state = {}
+    # ref_state = {'ref_position':         ref_pose,
+    #              'ref_linear_velocity':  ref_base_lin_vel,
+    #              'ref_angular_velocity': ref_base_ang_vel,
+    #              'ref_orientation':      ref_orientation,
+    #              }
 
     # Starting contact sequence
     previous_contact = np.array([1, 1, 1, 1])
@@ -254,6 +260,9 @@ if __name__ == '__main__':
             foot_RL=feet_pos.RL,
             foot_RR=feet_pos.RR
             )
+
+        # Update target base velocity
+        ref_base_lin_vel, ref_base_ang_vel = env.target_base_vel()
         # -------------------------------------------------------
 
         # Update the desired contact sequence ---------------------------
@@ -272,25 +281,16 @@ if __name__ == '__main__':
             com_position=env.base_pos,
             rpy_angles=env.base_ori_euler_xyz,
             linear_com_velocity=env.base_lin_vel[0:2],
-            desired_linear_com_velocity=env.target_base_vel[0:2],
+            desired_linear_com_velocity=ref_base_lin_vel[0:2],
             hips_position=hip_pos,
             com_height=state_current["position"][2],
             lift_off_positions=lift_off_positions)
 
-        # Update state reference
-        ref_state |= dict(ref_foot_FL=ref_feet_pos.FL.reshape((1, 3)),
-                          ref_foot_FR=ref_feet_pos.FR.reshape((1, 3)),
-                          ref_foot_RL=ref_feet_pos.RL.reshape((1, 3)),
-                          ref_foot_RR=ref_feet_pos.RR.reshape((1, 3)),
-                          # Also update the reference base linear velocity and # TODO: orientation.
-                          ref_linear_velocity=env.target_base_vel)
-        # -------------------------------------------------------------------------------------------------
         # Estimate the terrain slope and elevation -------------------------------------------------------
         roll, pitch = estimate_terrain_slope(
             base_position=env.base_pos,
             yaw=env.base_ori_euler_xyz[2],
             feet_pos=lift_off_positions)
-        ref_state["ref_orientation"] = np.array([roll, pitch, 0])
 
         # Update the reference height given the foot in contact
         num_feet_in_contact = np.sum(current_contact)
@@ -299,7 +299,19 @@ if __name__ == '__main__':
             # TODO: Is this a moving average ?
             z_foot_mean_temp = np.sum(feet_pos_z * current_contact) / num_feet_in_contact
             z_foot_mean = z_foot_mean_temp * 0.4 + z_foot_mean * 0.6
-        ref_state["ref_position"][2] = cfg.simulation_params['ref_z'] + z_foot_mean
+        ref_pos = np.array([0, 0, cfg.hip_height])
+        ref_pos[2] = cfg.simulation_params['ref_z'] + z_foot_mean
+        # Update state reference ------------------------------------------------------------------------
+        ref_state |= dict(ref_foot_FL=ref_feet_pos.FL.reshape((1, 3)),
+                          ref_foot_FR=ref_feet_pos.FR.reshape((1, 3)),
+                          ref_foot_RL=ref_feet_pos.RL.reshape((1, 3)),
+                          ref_foot_RR=ref_feet_pos.RR.reshape((1, 3)),
+                          # Also update the reference base linear velocity and
+                          ref_linear_velocity=ref_base_lin_vel,
+                          ref_angular_velocity=ref_base_ang_vel,
+                          ref_orientation=np.array([roll, pitch, 0.0]),
+                          ref_position=ref_pos
+                          )
         # -------------------------------------------------------------------------------------------------
 
         # TODO: WTF is this ? Need documentation
@@ -391,7 +403,7 @@ if __name__ == '__main__':
                     state_current,
                     ref_state,
                     contact_sequence,
-                    inertia=inertia.flatten()
+                    inertia=env.get_base_inertia().flatten()  # TODO: Giulio check this. Where should we input that?
                     )
                 # TODO functions should output this class instance.
                 nmpc_footholds = LegsAttr(FL=nmpc_footholds[0],
@@ -462,6 +474,7 @@ if __name__ == '__main__':
 
         # Compute Swing Torque ------------------------------------------------------------------------------
         # TODO: Move contact sequence to labels FL, FR, RL, RR instead of a fixed indexing.
+        # TOOD: Should Swing time be returned by the "ppg?"
         for leg_id, leg_name in enumerate(legs_order):
             # Swing time reset
             if current_contact[leg_id] == 0:
@@ -529,7 +542,7 @@ if __name__ == '__main__':
             env.render()
             last_render_time = time.time()
 
-        if env.step_num > 2000 or is_terminated or is_truncated:
+        if env.step_num > MAX_STEPS or is_terminated or is_truncated:
             if is_terminated:
                 print("Environment terminated")
             env.reset()
