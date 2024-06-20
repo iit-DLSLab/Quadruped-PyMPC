@@ -4,7 +4,7 @@ import cv2
 import noise
 
 SCENE = "perlin" #rough, stairs, suspend_stairs, slope, perlin, image
-ROBOT = "mini_cheetah" #aliengo #go2 #hyqreal
+ROBOT = "aliengo" #aliengo #go2 #hyqreal
 INPUT_SCENE_PATH = "../robot_model/" + ROBOT + "/scene_flat" + ".xml"
 OUTPUT_SCENE_PATH = "../robot_model/" + ROBOT + "/scene_" + SCENE + ".xml"
 

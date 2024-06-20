@@ -1,4 +1,4 @@
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from enum import Enum
 from typing import Any
 
@@ -174,6 +174,7 @@ class JointInfo:
     nv : (int) The number of generalized velocities.
     qpos_idx : (tuple) The indices of the joint's generalized coordinates.
     qvel_idx : (tuple) The indices of the joint's generalized velocities.
+    tau_idx: (tuple) The indices of the joint's in the generalized forces vector.
     range : list(min, max) The range of the joint's generalized coordinates.
     """
 
@@ -185,6 +186,8 @@ class JointInfo:
     qpos_idx: tuple
     qvel_idx: tuple
     range: list
+    tau_idx: tuple = field(default_factory=tuple)
+    actuator_id: int = field(default=-1)
 
     def __str__(self):
         """Return a string representation of the joint information."""

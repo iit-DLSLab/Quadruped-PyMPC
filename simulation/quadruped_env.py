@@ -15,7 +15,7 @@ from gymnasium import spaces
 from scipy.spatial.transform import Rotation
 
 from utils.math_utils import homogenous_transform
-from utils.mujoco_visual import render_vector
+from utils.mujoco_utils.visual import render_vector
 from utils.quadruped_utils import JointInfo, LegsAttr
 
 
@@ -38,8 +38,7 @@ class QuadrupedEnv(gym.Env):
                  base_vel_command_type: str = 'forward',
                  base_vel_range: tuple[float, float] = (0.28, 0.3),
                  feet_geom_name: LegsAttr = LegsAttr(FL='FL', FR='FR', RL='RL', RR='RR'),
-                 state_obs_names: list[str] = ('qpos', 'qvel', 'tau_applied', 'feet_pos:base', 'feet_vel:base'),
-                 n_robots=1,
+                 state_obs_names: list[str] = ('qpos', 'qvel', 'tau_applied', 'feet_pos_base', 'feet_vel_base'),
                  ):
         """Initialize the quadruped environment.
 
@@ -54,14 +53,11 @@ class QuadrupedEnv(gym.Env):
             feet_geom_name: (LegsAttr) The name of the geometry associated with each of the four feet.
             feet_body_name: (LegsAttr) The name of the body associated with each of the four feet.
             state_obs_names: (list) The names of the state observations to be included in the observation space.
-            n_robots: (int) The number of robots in the environment. @Giovany's magic.
         """
         super(QuadrupedEnv, self).__init__()
 
         self.base_vel_command_type = base_vel_command_type
         self.base_vel_range = base_vel_range
-        if n_robots > 1:
-            raise NotImplementedError("Multiple robots not supported yet. (@Giovanny please!) ")
 
         # Define the model and data
         dir_path = os.path.dirname(os.path.realpath(__file__))
@@ -81,18 +77,21 @@ class QuadrupedEnv(gym.Env):
         # Identify the legs DoF indices/address in the qpos and qvel arrays ___________________________________________
         assert legs_joint_names is not None, "Please provide the joint names associated with each of the four legs."
         self.joint_info = self.joint_info(self.mjModel)
-        self.legs_qpos_idx = LegsAttr(None, None, None, None)
-        self.legs_qvel_idx = LegsAttr(None, None, None, None)
-        # Ensure the joint names of the robot's legs are present in the model. And store the qpos and qvel indices
+        self.legs_qpos_idx = LegsAttr(None, None, None, None) # Indices of legs joints in qpos vector
+        self.legs_qvel_idx = LegsAttr(None, None, None, None) # Indices of legs joints in qvel vector
+        self.legs_tau_idx = LegsAttr(None, None, None, None)  # Indices of legs actuators in gen forces vector
+        # Ensure the joint names of the robot's legs' joints are in the model. And store the qpos and qvel indices
         for leg_name in ["FR", "FL", "RR", "RL"]:
-            qpos_idx, qvel_idx = [], []
+            qpos_idx, qvel_idx, tau_idx = [], [], []
             leg_joints = legs_joint_names[leg_name]
             for joint_name in leg_joints:
                 assert joint_name in self.joint_info, f"Joint {joint_name} not found in {list(self.joint_info.keys())}"
                 qpos_idx.extend(self.joint_info[joint_name].qpos_idx)
                 qvel_idx.extend(self.joint_info[joint_name].qvel_idx)
+                tau_idx.extend(self.joint_info[joint_name].tau_idx)
             self.legs_qpos_idx[leg_name] = qpos_idx
             self.legs_qvel_idx[leg_name] = qvel_idx
+            self.legs_tau_idx[leg_name] = tau_idx
 
         # Action space: Torque values for each joint _________________________________________________________________
         tau_low, tau_high = self.mjModel.actuator_forcerange[:, 0], self.mjModel.actuator_forcerange[:, 1]
@@ -329,14 +328,15 @@ class QuadrupedEnv(gym.Env):
         return ref_dr_B.squeeze(), np.array([0., 0., self._base_ang_yaw_dot])
 
     def get_base_inertia(self) -> np.ndarray:
-        """
-        Function to get the rotational inertia matrix of the base of the robot at the current configuration.
+        """Function to get the rotational inertia matrix of the base of the robot at the current configuration.
 
         Args:
+        ----
             model: The MuJoCo model.
             data: The MuJoCo data.
 
         Returns:
+        -------
             np.ndarray: The rotational inertia matrix of the base in the current configuration.
         """
         # Initialize the full mass matrix
@@ -347,6 +347,47 @@ class QuadrupedEnv(gym.Env):
         inertia_B_at_qpos = mass_matrix[3:6, 3:6]
 
         return inertia_B_at_qpos
+
+    def get_reflected_inertia(self) -> np.ndarray:
+        """Compute the reflected rotational inertia of the entire robot at the current configuration.
+
+        Returns
+        -------
+            np.ndarray: The reflected rotational inertia matrix in the base frame.
+        """
+        base_pos = self.mjData.xpos[0]  # Assuming the base is the first body (body_id 0)
+        base_quat = self.mjData.xquat[0]  # Quaternion of the base
+        base_rot = Rotation.from_quat(np.roll(base_quat, -1)).as_matrix()  # Rotation matrix from quaternion
+
+        reflected_inertia = np.zeros((3, 3))  # Initialize the reflected inertia tensor
+
+        for body_id in range(1, self.mjModel.nbody):  # Skip the base itself
+            # Get inertia tensor of the body in its local frame
+            body_inertia_local = np.diag(self.mjModel.body_inertia[body_id])
+
+            # Get the position and orientation of the body
+            body_pos = self.mjData.xpos[body_id]
+            body_quat = self.mjData.xquat[body_id]
+            body_rot = Rotation.from_quat(np.roll(body_quat, -1)).as_matrix()  # Rotation matrix from quaternion
+
+            # Transform the local inertia tensor to the world frame
+            body_inertia_world = body_rot @ body_inertia_local @ body_rot.T
+
+            # Compute the displacement from the base to the body's center of mass
+            r = body_pos - base_pos
+
+            # Apply the parallel axis theorem (Steiner's theorem)
+            mass = self.mjModel.body_mass[body_id]
+            r_cross = np.outer(r, r)
+            steiner_term = mass * (np.dot(r, r) * np.eye(3) - r_cross)
+
+            # Transform the inertia tensor to the base frame
+            body_inertia_base = base_rot.T @ (body_inertia_world + steiner_term) @ base_rot
+
+            # Accumulate the inertia tensor
+            reflected_inertia += body_inertia_base
+
+        return reflected_inertia
 
     def feet_pos(self, frame='world') -> LegsAttr:
         """Get the feet positions in the specified frame.
@@ -376,7 +417,6 @@ class QuadrupedEnv(gym.Env):
             RR=homogenous_transform(self.mjData.geom_xpos[self._feet_geom_id.RR], X.T),
             RL=homogenous_transform(self.mjData.geom_xpos[self._feet_geom_id.RL], X.T),
             )
-
 
     def feet_jacobians(self, frame: str = 'world', return_rot_jac: bool = False) -> LegsAttr | tuple[LegsAttr, ...]:
         """Compute the Jacobians of the feet positions.
@@ -640,6 +680,21 @@ class QuadrupedEnv(gym.Env):
                 qpos_idx=qpos_idx,
                 qvel_idx=qvel_idx)
 
+        # Iterate over all actuators
+        current_dim = 0
+        for acutator_idx in range(model.nu):
+            name_start_index = model.name_actuatoradr[acutator_idx]
+            act_name = model.names[name_start_index:].split(b'\x00', 1)[0].decode('utf-8')
+            mj_actuator_id = mujoco.mj_name2id(model, mujoco.mjtObj.mjOBJ_ACTUATOR, act_name)
+            # Get the joint index associated with the actuator
+            joint_id = model.actuator_trnid[mj_actuator_id, 0]
+            # Get the joint name from the joint index
+            joint_name = mujoco.mj_id2name(model, mujoco.mjtObj.mjOBJ_JOINT, joint_id)
+
+            # Add the actuator indx to the joint_info
+            joint_info[joint_name].actuator_id = mj_actuator_id
+            joint_info[joint_name].tau_idx = tuple(range(current_dim, current_dim + joint_info[joint_name].nv))
+            current_dim += joint_info[joint_name].nv
         return joint_info
 
 

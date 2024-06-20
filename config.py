@@ -44,7 +44,7 @@ elif (robot == 'mini_cheetah'):
                         [1.21660000e-04, 4.68645637e-01, -3.12000000e-05],
                         [-1.55444692e-02, -3.12000000e-05, 5.24474661e-01]])
     urdf_filename = "mini_cheetah.urdf"
-    hip_height = 0.20
+    hip_height = 0.25
 
 mpc_params = {
     # 'nominal' optimized directly the GRF

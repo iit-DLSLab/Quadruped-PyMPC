@@ -117,8 +117,7 @@ if __name__ == "__main__":
     import mujoco
     import mujoco.viewer
     import copy
-    from other import euler_from_quaternion
-    from utils.mujoco_visual import plot_swing_mujoco
+    from utils.mujoco_utils.visual import plot_swing_mujoco
 
     # Mujoco model and data
     m = mujoco.MjModel.from_xml_path('./../external/mujoco_menagerie/unitree_go2/scene.xml')

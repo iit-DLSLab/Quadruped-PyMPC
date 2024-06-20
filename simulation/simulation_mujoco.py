@@ -18,7 +18,7 @@ from helpers.srb_inertia_computation import SrbInertiaComputation
 from helpers.swing_trajectory_controller import SwingTrajectoryController
 from simulation.quadruped_env import QuadrupedEnv
 from utils.math_utils import skew
-from utils.mujoco_visual import plot_swing_mujoco
+from utils.mujoco_utils.visual import plot_swing_mujoco
 from utils.quadruped_utils import GaitType, LegsAttr, estimate_terrain_slope
 
 # TODO: Why is this here?
@@ -94,9 +94,9 @@ if __name__ == '__main__':
                        # TODO: This should come from a cfg.robot. Not hardcoded.
                        legs_joint_names=LegsAttr(**robot_legs_joints),
                        scene=scene_name,
-                       base_vel_range=(1.0 * hip_height, 3.0 * hip_height),
+                       base_vel_range=(2.0 * hip_height, 2.0 * hip_height),
                        sim_dt=simulation_dt,
-                       base_vel_command_type="forward",  # "forward", "random", "forward+rotate", "random+rotate"
+                       base_vel_command_type="random",  # "forward", "random", "forward+rotate", "random+rotate"
                        feet_geom_name=LegsAttr(FL='FL', FR='FR', RL='RL', RR='RR'),  # Geom/Frame id of feet
                        )
     env.reset()
@@ -522,7 +522,11 @@ if __name__ == '__main__':
         # ---------------------------------------------------------------------------------------------------
         # Set control and mujoco step ----------------------------------------------------------------------
         # TODO: The order of the action space should not be hardoded, it should be provided by the environment.
-        action = np.concatenate((tau.to_list(order=["FR", "FL", "RR", "RL"]))).reshape(env.mjModel.nu)
+        action = np.zeros(env.mjModel.nu)
+        action[env.legs_tau_idx.FL] = tau.FL
+        action[env.legs_tau_idx.FR] = tau.FR
+        action[env.legs_tau_idx.RL] = tau.RL
+        action[env.legs_tau_idx.RR] = tau.RR
 
         obs, reward, is_terminated, is_truncated, info = env.step(action=action)
 
