@@ -1,7 +1,11 @@
+from __future__ import annotations
+
+from collections import OrderedDict
 from dataclasses import dataclass, field
 from enum import Enum
 from typing import Any
 
+import mujoco
 import numpy as np
 
 
@@ -206,3 +210,73 @@ class GaitType(Enum):
     FRONTDIAGONALCRAWL = 6
     FULL_STANCE = 7
 
+
+def extract_mj_joint_info(model: mujoco.MjModel) -> OrderedDict[str, JointInfo]:
+    """Returns the joint-space information of the model.
+
+    Thanks to the obscure Mujoco API, this function tries to do the horrible hacks to get the joint information
+    we need to do a minimum robotics project with a rigid body system.
+
+    Returns
+    -------
+        A dictionary with the joint names as keys and the JointInfo namedtuple as values.
+            each JointInfo namedtuple contains the following fields:
+            - name: The joint name.
+            - type: The joint type (mujoco.mjtJoint).
+            - body_id: The body id to which the joint is attached.
+            - range: The joint range.
+            - nq: The number of joint position variables.
+            - nv: The number of joint velocity variables.
+            - qpos_idx: The indices of the joint position variables in the qpos array.
+            - qvel_idx: The indices of the joint velocity variables in the qvel array.
+    """
+    joint_info = OrderedDict()
+    for joint_id in range(model.njnt):
+        # Get the starting index of the joint name in the model.names string
+        name_start_index = model.name_jntadr[joint_id]
+        # Extract the joint name from the model.names bytes and decode it
+        joint_name = model.names[name_start_index:].split(b'\x00', 1)[0].decode('utf-8')
+        joint_type = model.jnt_type[joint_id]
+        qpos_idx_start = model.jnt_qposadr[joint_id]
+        qvel_idx_start = model.jnt_dofadr[joint_id]
+
+        if joint_type == mujoco.mjtJoint.mjJNT_FREE:
+            joint_nq, joint_nv = 7, 6
+        elif joint_type == mujoco.mjtJoint.mjJNT_BALL:
+            joint_nq, joint_nv = 4, 3
+        elif joint_type == mujoco.mjtJoint.mjJNT_SLIDE:
+            joint_nq, joint_nv = 1, 1
+        elif joint_type == mujoco.mjtJoint.mjJNT_HINGE:
+            joint_nq, joint_nv = 1, 1
+        else:
+            raise RuntimeError(f"Unknown mujoco joint type: {joint_type} available {mujoco.mjtJoint}")
+
+        qpos_idx = np.arange(qpos_idx_start, qpos_idx_start + joint_nq)
+        qvel_idx = np.arange(qvel_idx_start, qvel_idx_start + joint_nv)
+
+        joint_info[joint_name] = JointInfo(
+            name=joint_name,
+            type=joint_type,
+            body_id=model.jnt_bodyid[joint_id],
+            range=model.jnt_range[joint_id],
+            nq=joint_nq,
+            nv=joint_nv,
+            qpos_idx=qpos_idx,
+            qvel_idx=qvel_idx)
+
+    # Iterate over all actuators
+    current_dim = 0
+    for acutator_idx in range(model.nu):
+        name_start_index = model.name_actuatoradr[acutator_idx]
+        act_name = model.names[name_start_index:].split(b'\x00', 1)[0].decode('utf-8')
+        mj_actuator_id = mujoco.mj_name2id(model, mujoco.mjtObj.mjOBJ_ACTUATOR, act_name)
+        # Get the joint index associated with the actuator
+        joint_id = model.actuator_trnid[mj_actuator_id, 0]
+        # Get the joint name from the joint index
+        joint_name = mujoco.mj_id2name(model, mujoco.mjtObj.mjOBJ_JOINT, joint_id)
+
+        # Add the actuator indx to the joint_info
+        joint_info[joint_name].actuator_id = mj_actuator_id
+        joint_info[joint_name].tau_idx = tuple(range(current_dim, current_dim + joint_info[joint_name].nv))
+        current_dim += joint_info[joint_name].nv
+    return joint_info

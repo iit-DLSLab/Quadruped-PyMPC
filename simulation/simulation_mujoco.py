@@ -84,20 +84,20 @@ if __name__ == '__main__':
 
     robot_name = cfg.robot
     hip_height = cfg.hip_height
-    robot_legs_joints = cfg.robot_leg_joints
+    robot_leg_joints = cfg.robot_leg_joints
+    robot_feet_geom_names = cfg.robot_feet_geom_names
     scene_name = cfg.simulation_params['scene']
     simulation_dt = cfg.simulation_params['dt']
 
     MAX_STEPS = 3000
     # Create the quadruped robot environment. _______________________________________________________________________
     env = QuadrupedEnv(robot=robot_name,
-                       # TODO: This should come from a cfg.robot. Not hardcoded.
-                       legs_joint_names=LegsAttr(**robot_legs_joints),
+                       legs_joint_names=LegsAttr(**robot_leg_joints),
                        scene=scene_name,
-                       base_vel_range=(2.0 * hip_height, 2.0 * hip_height),
+                       base_lin_vel_range=(2.0 * hip_height, 2.0 * hip_height),
                        sim_dt=simulation_dt,
-                       base_vel_command_type="random",  # "forward", "random", "forward+rotate", "random+rotate"
-                       feet_geom_name=LegsAttr(FL='FL', FR='FR', RL='RL', RR='RR'),  # Geom/Frame id of feet
+                       base_vel_command_type="forward+rotate",  # "forward", "random", "forward+rotate", "random+rotate"
+                       feet_geom_name=LegsAttr(**robot_feet_geom_names),  # Geom/Frame id of feet
                        )
     env.reset()
     env.render(key_callback=None)  # Pass in the first render call any mujoco.viewer.KeyCallbackType
@@ -341,6 +341,8 @@ if __name__ == '__main__':
                                 (swing_time[leg_id] < (swing_period / 2.) + 0.02)):
                             optimize_swing = 1
                             nominal_sample_freq = step_frequency
+            else:
+                optimize_swing = 0
 
             # If we use sampling
             if (cfg.mpc_params['type'] == 'sampling'):
@@ -403,7 +405,8 @@ if __name__ == '__main__':
                     state_current,
                     ref_state,
                     contact_sequence,
-                    inertia=env.get_base_inertia().flatten()  # TODO: Giulio check this. Where should we input that?
+                    # inertia=cfg.inertia.flatten(),
+                    inertia=env.get_base_inertia().flatten()
                     )
                 # TODO functions should output this class instance.
                 nmpc_footholds = LegsAttr(FL=nmpc_footholds[0],
@@ -521,14 +524,15 @@ if __name__ == '__main__':
                     )
         # ---------------------------------------------------------------------------------------------------
         # Set control and mujoco step ----------------------------------------------------------------------
-        # TODO: The order of the action space should not be hardoded, it should be provided by the environment.
         action = np.zeros(env.mjModel.nu)
         action[env.legs_tau_idx.FL] = tau.FL
         action[env.legs_tau_idx.FR] = tau.FR
         action[env.legs_tau_idx.RL] = tau.RL
         action[env.legs_tau_idx.RR] = tau.RR
 
-        obs, reward, is_terminated, is_truncated, info = env.step(action=action)
+        state, reward, is_terminated, is_truncated, info = env.step(action=action)
+
+        state_obs = env.extract_obs_from_state(state)
 
         # Render only at a certain frequency
         if time.time() - last_render_time > 1.0 / RENDER_FREQ or env.step_num == 1:

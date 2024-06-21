@@ -3,7 +3,8 @@ from __future__ import annotations
 import itertools
 import os
 import time
-from collections import OrderedDict
+import warnings
+from collections import namedtuple
 from pathlib import Path
 from typing import Any
 
@@ -12,11 +13,17 @@ import mujoco
 import mujoco.viewer
 import numpy as np
 from gymnasium import spaces
+from mujoco import MjData, MjModel
 from scipy.spatial.transform import Rotation
 
 from utils.math_utils import homogenous_transform
 from utils.mujoco_utils.visual import render_vector
-from utils.quadruped_utils import JointInfo, LegsAttr
+from utils.quadruped_utils import LegsAttr, extract_mj_joint_info
+
+BASE_OBS = ['base_pos', 'base_lin_vel', 'base_ang_vel', 'base_ori_euler_xyz', 'base_ori_quat_wxyz', 'base_ori_SO3']
+GEN_CORDS_OBS = ['qpos', 'qvel', 'tau_applied', 'qpos_js', 'qvel_js']
+FEET_OBS = ['feet_pos', 'feet_pos_base', 'feet_vel', 'feet_vel_base']
+ALL_OBS = BASE_OBS + GEN_CORDS_OBS + FEET_OBS
 
 
 class QuadrupedEnv(gym.Env):
@@ -24,8 +31,8 @@ class QuadrupedEnv(gym.Env):
 
     To deal with different quadruped robots, which might have different joint naming and ordering conventions, this
     environment uses the `LegsAttr` dataclass to store attributes associated with the legs of a quadruped robot. This
-    dataclass uses the naming convention FR, FL, RR, RL to represent the Front Right, Front Left, Rear Right, and Rear
-    Left legs, respectively.
+    dataclass uses the naming convention FL, FR, RL, RR to represent the Front-Left, Front-Right, Rear-Right, and
+    Rear-Left legs, respectively.
     """
 
     metadata = {'render.modes': ['human'], 'version': 0}
@@ -36,9 +43,11 @@ class QuadrupedEnv(gym.Env):
                  scene='flat',
                  sim_dt=0.002,
                  base_vel_command_type: str = 'forward',
-                 base_vel_range: tuple[float, float] = (0.28, 0.3),
+                 base_lin_vel_range: tuple[float, float] = (0.28, 0.3),
+                 base_ang_vel_range: tuple[float, float] = (-np.pi * 3 / 4, np.pi * 3 / 4),
                  feet_geom_name: LegsAttr = LegsAttr(FL='FL', FR='FR', RL='RL', RR='RR'),
                  state_obs_names: list[str] = ('qpos', 'qvel', 'tau_applied', 'feet_pos_base', 'feet_vel_base'),
+                 legs_order: tuple[str] = ('FL', 'FR', 'RL', 'RR'),
                  ):
         """Initialize the quadruped environment.
 
@@ -57,7 +66,8 @@ class QuadrupedEnv(gym.Env):
         super(QuadrupedEnv, self).__init__()
 
         self.base_vel_command_type = base_vel_command_type
-        self.base_vel_range = base_vel_range
+        self.base_lin_vel_range, self.base_ang_vel_range = base_lin_vel_range, base_ang_vel_range
+        self.legs_order = legs_order
 
         # Define the model and data
         dir_path = os.path.dirname(os.path.realpath(__file__))
@@ -67,18 +77,18 @@ class QuadrupedEnv(gym.Env):
 
         # Load the robot and scene to mujoco
         try:
-            self.mjModel = mujoco.MjModel.from_xml_path(str(model_file_path))
+            self.mjModel: MjModel = mujoco.MjModel.from_xml_path(str(model_file_path))
         except ValueError as e:
             raise ValueError(f"Error loading the scene {model_file_path}:") from e
-        self.mjData = mujoco.MjData(self.mjModel)
+        self.mjData: MjData = mujoco.MjData(self.mjModel)
         # Set the simulation step size (dt)
         self.mjModel.opt.timestep = sim_dt
 
         # Identify the legs DoF indices/address in the qpos and qvel arrays ___________________________________________
         assert legs_joint_names is not None, "Please provide the joint names associated with each of the four legs."
-        self.joint_info = self.joint_info(self.mjModel)
-        self.legs_qpos_idx = LegsAttr(None, None, None, None) # Indices of legs joints in qpos vector
-        self.legs_qvel_idx = LegsAttr(None, None, None, None) # Indices of legs joints in qvel vector
+        self.joint_info = extract_mj_joint_info(self.mjModel)
+        self.legs_qpos_idx = LegsAttr(None, None, None, None)  # Indices of legs joints in qpos vector
+        self.legs_qvel_idx = LegsAttr(None, None, None, None)  # Indices of legs joints in qvel vector
         self.legs_tau_idx = LegsAttr(None, None, None, None)  # Indices of legs actuators in gen forces vector
         # Ensure the joint names of the robot's legs' joints are in the model. And store the qpos and qvel indices
         for leg_name in ["FR", "FL", "RR", "RL"]:
@@ -102,11 +112,10 @@ class QuadrupedEnv(gym.Env):
             high=np.asarray([tau if not lim else np.inf for tau, lim in zip(tau_high, is_act_lim)]),
             dtype=np.float32)
 
-        # TODO: Make observation space parameterizable.
-        # Observation space: Position, velocity, orientation, and foot positions _______________________________________
-        obs_dim = self.mjModel.nq + self.mjModel.nv
-        # Get limits from the model
-        self.observation_space = spaces.Box(low=-np.inf, high=np.inf, shape=(obs_dim,), dtype=np.float32)
+        # Observation space: _______________________________________
+        # Get the Env observation gym.Space, and a dict with the indices of each observation in the state vector
+        self.observation_space, self.state_obs_idx = self._configure_observation_space(state_obs_names)
+        self.state_obs_names = state_obs_names
 
         # Check the provided feet geometry and body names are within the model. These are used to compute the Jacobians
         # of the feet positions.
@@ -229,17 +238,17 @@ class QuadrupedEnv(gym.Env):
         # Reset the desired base velocity command
         # ----------------------------------------------------------------------
         if 'forward' in self.base_vel_command_type:
-            base_vel_norm = np.random.uniform(*self.base_vel_range)
+            base_vel_norm = np.random.uniform(*self.base_lin_vel_range)
             base_heading_vel_vec = np.array([1, 0, 0])  # Move in the "forward" direction
         elif 'random' in self.base_vel_command_type:
-            base_vel_norm = np.random.uniform(*self.base_vel_range)
+            base_vel_norm = np.random.uniform(*self.base_lin_vel_range)
             heading_angle = np.random.uniform(-np.pi, np.pi)
             base_heading_vel_vec = np.array([np.cos(heading_angle), np.sin(heading_angle), 0])
         else:
             raise ValueError(f"Invalid base linear velocity command type: {self.base_vel_command_type}")
 
         if 'rotate' in self.base_vel_command_type:
-            self._base_ang_yaw_dot = np.random.uniform(-np.pi / 4, np.pi / 4)
+            self._base_ang_yaw_dot = np.random.uniform(*self.base_ang_vel_range)
         else:
             self._base_ang_yaw_dot = 0.0
 
@@ -251,10 +260,10 @@ class QuadrupedEnv(gym.Env):
         X_B = self.base_configuration
         r_B = X_B[:3, 3]
         dr_B = self.mjData.qvel[0:3]
-        ref_dr_B, _ = self.target_base_vel()
+        ref_base_lin_vel_B, _ = self.target_base_vel()
         ref_vec_pos, vec_pos = r_B + [0, 0, 0.1], r_B + [0, 0, 0.15]
         ref_vel_vec_color, vel_vec_color = np.array([1, 0.5, 0, .7]), np.array([0, 1, 1, .7])
-        ref_vec_scale, vec_scale = np.linalg.norm(ref_dr_B) / 1.0, np.linalg.norm(dr_B) / 1.0
+        ref_vec_scale, vec_scale = np.linalg.norm(ref_base_lin_vel_B) / 1.0, np.linalg.norm(dr_B) / 1.0
 
         if self.viewer is None:
             self.viewer = mujoco.viewer.launch_passive(
@@ -265,14 +274,14 @@ class QuadrupedEnv(gym.Env):
             # self.viewer.user_scn.flags[mujoco.mjtRndFlag.mjRND_REFLECTION] = 0
             # Define markers for visualization of desired and current base velocity
             self._geom_ids['ref_dr_B_vec'] = render_vector(
-                viewer=self.viewer, vector=ref_dr_B, pos=ref_vec_pos, scale=ref_vec_scale, color=ref_vel_vec_color
+                self.viewer, vector=ref_base_lin_vel_B, pos=ref_vec_pos, scale=ref_vec_scale, color=ref_vel_vec_color
                 )
             self._geom_ids['dr_B_vec'] = render_vector(
-                viewer=self.viewer, vector=dr_B, pos=vec_pos, scale=vec_scale, color=vel_vec_color,
+                self.viewer, vector=dr_B, pos=vec_pos, scale=vec_scale, color=vel_vec_color,
                 )
         else:
             # Update the reference and current base velocity markers
-            render_vector(self.viewer, ref_dr_B, ref_vec_pos, ref_vec_scale, ref_vel_vec_color,
+            render_vector(self.viewer, ref_base_lin_vel_B, ref_vec_pos, ref_vec_scale, ref_vel_vec_color,
                           geom_id=self._geom_ids['ref_dr_B_vec'])
             render_vector(self.viewer, dr_B, vec_pos, vec_scale, vel_vec_color,
                           geom_id=self._geom_ids['dr_B_vec'])
@@ -324,11 +333,12 @@ class QuadrupedEnv(gym.Env):
         if self._ref_base_lin_vel_H is None:
             raise RuntimeError("Please call env.reset() before accessing the target base velocity.")
         R_B_heading = self.heading_orientation_SO3
-        ref_dr_B = R_B_heading @ self._ref_base_lin_vel_H.reshape(3, 1)
-        return ref_dr_B.squeeze(), np.array([0., 0., self._base_ang_yaw_dot])
+        ref_base_lin_vel = (R_B_heading @ self._ref_base_lin_vel_H.reshape(3, 1)).squeeze()
+        ref_base_ang_vel = np.array([0., 0., self._base_ang_yaw_dot])
+        return ref_base_lin_vel, ref_base_ang_vel
 
     def get_base_inertia(self) -> np.ndarray:
-        """Function to get the rotational inertia matrix of the base of the robot at the current configuration.
+        """Returns the reflected rotational inertia of the robot's base at the current configuration in world frame.
 
         Args:
         ----
@@ -337,7 +347,7 @@ class QuadrupedEnv(gym.Env):
 
         Returns:
         -------
-            np.ndarray: The rotational inertia matrix of the base in the current configuration.
+            np.ndarray: The reflected rotational inertia matrix in the world frame.
         """
         # Initialize the full mass matrix
         mass_matrix = np.zeros((self.mjModel.nv, self.mjModel.nv))
@@ -347,47 +357,6 @@ class QuadrupedEnv(gym.Env):
         inertia_B_at_qpos = mass_matrix[3:6, 3:6]
 
         return inertia_B_at_qpos
-
-    def get_reflected_inertia(self) -> np.ndarray:
-        """Compute the reflected rotational inertia of the entire robot at the current configuration.
-
-        Returns
-        -------
-            np.ndarray: The reflected rotational inertia matrix in the base frame.
-        """
-        base_pos = self.mjData.xpos[0]  # Assuming the base is the first body (body_id 0)
-        base_quat = self.mjData.xquat[0]  # Quaternion of the base
-        base_rot = Rotation.from_quat(np.roll(base_quat, -1)).as_matrix()  # Rotation matrix from quaternion
-
-        reflected_inertia = np.zeros((3, 3))  # Initialize the reflected inertia tensor
-
-        for body_id in range(1, self.mjModel.nbody):  # Skip the base itself
-            # Get inertia tensor of the body in its local frame
-            body_inertia_local = np.diag(self.mjModel.body_inertia[body_id])
-
-            # Get the position and orientation of the body
-            body_pos = self.mjData.xpos[body_id]
-            body_quat = self.mjData.xquat[body_id]
-            body_rot = Rotation.from_quat(np.roll(body_quat, -1)).as_matrix()  # Rotation matrix from quaternion
-
-            # Transform the local inertia tensor to the world frame
-            body_inertia_world = body_rot @ body_inertia_local @ body_rot.T
-
-            # Compute the displacement from the base to the body's center of mass
-            r = body_pos - base_pos
-
-            # Apply the parallel axis theorem (Steiner's theorem)
-            mass = self.mjModel.body_mass[body_id]
-            r_cross = np.outer(r, r)
-            steiner_term = mass * (np.dot(r, r) * np.eye(3) - r_cross)
-
-            # Transform the inertia tensor to the base frame
-            body_inertia_base = base_rot.T @ (body_inertia_world + steiner_term) @ base_rot
-
-            # Accumulate the inertia tensor
-            reflected_inertia += body_inertia_base
-
-        return reflected_inertia
 
     def feet_pos(self, frame='world') -> LegsAttr:
         """Get the feet positions in the specified frame.
@@ -417,6 +386,26 @@ class QuadrupedEnv(gym.Env):
             RR=homogenous_transform(self.mjData.geom_xpos[self._feet_geom_id.RR], X.T),
             RL=homogenous_transform(self.mjData.geom_xpos[self._feet_geom_id.RL], X.T),
             )
+
+    # LegsAttr(**{leg_name: feet_jac[leg_name] @ env.mjData.qvel for leg_name in legs_order})
+    def feet_vel(self, frame='world') -> LegsAttr:
+        """Get the feet velocities in the specified frame.
+
+        The feet velocities are computed using the Jacobians of the feet positions and the joint velocities.
+        Args:
+        ----
+            frame: Either 'world' or 'base'. The reference frame in which the feet velocities are computed.
+
+        Returns:
+        -------
+            LegsAttr: A dictionary-like object with:
+                - FR: (3,) velocity of the FR foot in the specified frame.
+                - FL: (3,) velocity of the FL foot in the specified frame.
+                - RR: (3,) velocity of the RR foot in the specified frame.
+                - RL: (3,) velocity of the RL foot in the specified frame.
+        """
+        feet_jac = self.feet_jacobians(frame=frame)
+        return LegsAttr(**{leg_name: feet_jac[leg_name] @ self.mjData.qvel for leg_name in self.legs_order})
 
     def feet_jacobians(self, frame: str = 'world', return_rot_jac: bool = False) -> LegsAttr | tuple[LegsAttr, ...]:
         """Compute the Jacobians of the feet positions.
@@ -558,12 +547,12 @@ class QuadrupedEnv(gym.Env):
         return R_B_horizontal
 
     @property
-    def applied_join_torques(self):
-        """Returns the true joint torques used in evolving the physics simulation.
+    def applied_joint_torques(self):
+        """Returns the true joint torques (self.mjModel.nu) used in evolving the physics simulation.
 
         Differs from action if actuator hasnon-ideal dynamics.
         """
-        return self.mjData.qfrc_applied
+        return self.mjData.qfrc_applied[6:]
 
     @property
     def simulation_dt(self):
@@ -575,11 +564,34 @@ class QuadrupedEnv(gym.Env):
         """Returns the simulation time in seconds."""
         return self.mjData.time
 
-    def _get_obs(self):
-        # Observation includes position, velocity, orientation, and foot positions
-        qpos = self.mjData.qpos
-        qvel = self.mjData.qvel
-        return np.concatenate([qpos, qvel])
+    def extract_obs_from_state(self, state_like_array: np.ndarray) -> namedtuple:
+        """ Extracts the state observation from a state-like array.
+
+        Parameters
+        ----------
+        state_like_array : np.ndarray
+            The state-like array to extract the state observation from. The shape of
+            the array should be (..., self.observation_space.shape).
+
+        Returns
+        -------
+        namedtuple
+            A namedtuple with the entries corresponding to each of the state observation
+            names, and their corresponding (..., obs_name_dimension) arrays.
+
+        Example
+        -------
+        >>> env = QuadrupedEnv(state_obs_names=['base_pos', 'qpos_js'])
+        >>> state = np.random.rand(env.observation_space.shape[0])
+        >>> state_obs = env.extract_obs_from_state(state)
+        >>> print(state_obs.base_pos)
+        >>> print(state_obs.qpos_js)
+        """
+        state_obs_shape = self.observation_space.shape
+        assert state_like_array.shape[-len(state_obs_shape):] == self.observation_space.shape, \
+            f"Invalid state vector shape: {state_like_array.shape}, expected: (...{self.observation_space.shape})"
+        StateObs = namedtuple('StateObs', self.state_obs_names)
+        return StateObs(*[state_like_array[..., idx] for idx in self.state_obs_idx.values()])
 
     def _compute_reward(self):
         # Example reward function (to be defined based on the task)
@@ -625,77 +637,156 @@ class QuadrupedEnv(gym.Env):
         # Potentially do other fancy stuff.
         pass
 
-    # Function to get joint names and their DoF indices in qpos and qvel
-    @staticmethod
-    def joint_info(model: mujoco.MjModel) -> OrderedDict[str, JointInfo]:
-        """Returns the joint-space information of the model.
-
-        Thanks to the obscure Mujoco API, this function tries to do the horrible hacks to get the joint information
-        we need to do a minimum robotics project with a rigid body system.
-
-        Returns
-        -------
-            A dictionary with the joint names as keys and the JointInfo namedtuple as values.
-                each JointInfo namedtuple contains the following fields:
-                - name: The joint name.
-                - type: The joint type (mujoco.mjtJoint).
-                - body_id: The body id to which the joint is attached.
-                - range: The joint range.
-                - nq: The number of joint position variables.
-                - nv: The number of joint velocity variables.
-                - qpos_idx: The indices of the joint position variables in the qpos array.
-                - qvel_idx: The indices of the joint velocity variables in the qvel array.
-        """
-        joint_info = OrderedDict()
-        for joint_id in range(model.njnt):
-            # Get the starting index of the joint name in the model.names string
-            name_start_index = model.name_jntadr[joint_id]
-            # Extract the joint name from the model.names bytes and decode it
-            joint_name = model.names[name_start_index:].split(b'\x00', 1)[0].decode('utf-8')
-            joint_type = model.jnt_type[joint_id]
-            qpos_idx_start = model.jnt_qposadr[joint_id]
-            qvel_idx_start = model.jnt_dofadr[joint_id]
-
-            if joint_type == mujoco.mjtJoint.mjJNT_FREE:
-                joint_nq, joint_nv = 7, 6
-            elif joint_type == mujoco.mjtJoint.mjJNT_BALL:
-                joint_nq, joint_nv = 4, 3
-            elif joint_type == mujoco.mjtJoint.mjJNT_SLIDE:
-                joint_nq, joint_nv = 1, 1
-            elif joint_type == mujoco.mjtJoint.mjJNT_HINGE:
-                joint_nq, joint_nv = 1, 1
+    def _get_obs(self):
+        """Returns the state observation based on the specified state observation names."""
+        obs = []
+        for obs_name in self.state_obs_names:
+            # Generalized position, velocity, and force (torque) spaces
+            if obs_name == 'qpos':
+                obs.append(self.mjData.qpos)
+            elif obs_name == 'qvel':
+                obs.append(self.mjData.qvel)
+            elif obs_name == 'tau_applied':
+                obs.append(self.applied_joint_torques)
+            # Joint-space position and velocity spaces
+            elif obs_name == 'qpos_js':
+                obs.append(self.mjData.qpos[7:])
+            elif obs_name == 'qvel_js':
+                obs.append(self.mjData.qvel[6:])
+            # Base position and velocity configurations (in world frame)
+            elif obs_name == 'base_pos':
+                obs.append(self.base_pos)
+            elif obs_name == 'base_lin_vel':
+                obs.append(self.base_lin_vel)
+            elif obs_name == 'base_ang_vel':
+                obs.append(self.base_ang_vel)
+            elif obs_name == 'base_ori_euler_xyz':
+                obs.append(self.base_ori_euler_xyz)
+            elif obs_name == 'base_ori_quat_wxyz':
+                obs.append(self.mjData.qpos[3:7])
+            elif obs_name == 'base_ori_SO3':
+                obs.append(self.base_configuration[0:3, 0:3].flatten())
+            # Feet positions and velocities
+            elif 'feet_pos' in obs_name:  # feet_pos:frame := feet_pos:world or feet_pos:base
+                frame = 'world' if 'base' not in obs_name else 'base'
+                obs.append(np.concatenate(self.feet_pos(frame).to_list(order=self.legs_order), axis=0))
+            elif 'feet_vel' in obs_name:  # feet_vel:frame := feet_vel:world or feet_vel:base
+                frame = 'world' if 'base' not in obs_name else 'base'
+                obs.append(np.concatenate(self.feet_vel(frame).to_list(order=self.legs_order), axis=0))
+            elif obs_name == 'contact_state':
+                contact_state, _ = self.feet_contact_state
+                obs.append(np.array(contact_state.to_list()))
             else:
-                raise RuntimeError(f"Unknown mujoco joint type: {joint_type} available {mujoco.mjtJoint}")
+                raise ValueError(f"Invalid observation name: {obs_name}, available obs: {ALL_OBS}")
 
-            qpos_idx = np.arange(qpos_idx_start, qpos_idx_start + joint_nq)
-            qvel_idx = np.arange(qvel_idx_start, qvel_idx_start + joint_nv)
+        state_obs = np.concatenate(obs, axis=0)
+        assert state_obs.shape == self.observation_space.shape, \
+            f"Invalid state observation shape: {state_obs.shape}, expected: {self.observation_space.shape}"
+        return state_obs
 
-            joint_info[joint_name] = JointInfo(
-                name=joint_name,
-                type=joint_type,
-                body_id=model.jnt_bodyid[joint_id],
-                range=model.jnt_range[joint_id],
-                nq=joint_nq,
-                nv=joint_nv,
-                qpos_idx=qpos_idx,
-                qvel_idx=qvel_idx)
+    def _configure_observation_space(self, state_obs_names: list[str]) -> [spaces.Space, dict[str, slice]]:
+        """ Configures the observation space for the environment based on the provided state observation names.
 
-        # Iterate over all actuators
-        current_dim = 0
-        for acutator_idx in range(model.nu):
-            name_start_index = model.name_actuatoradr[acutator_idx]
-            act_name = model.names[name_start_index:].split(b'\x00', 1)[0].decode('utf-8')
-            mj_actuator_id = mujoco.mj_name2id(model, mujoco.mjtObj.mjOBJ_ACTUATOR, act_name)
-            # Get the joint index associated with the actuator
-            joint_id = model.actuator_trnid[mj_actuator_id, 0]
-            # Get the joint name from the joint index
-            joint_name = mujoco.mj_id2name(model, mujoco.mjtObj.mjOBJ_JOINT, joint_id)
+           Args:
+               state_obs_names (list[str]): A list of state observation names based on which the observation space is
+               configured.
 
-            # Add the actuator indx to the joint_info
-            joint_info[joint_name].actuator_id = mj_actuator_id
-            joint_info[joint_name].tau_idx = tuple(range(current_dim, current_dim + joint_info[joint_name].nv))
-            current_dim += joint_info[joint_name].nv
-        return joint_info
+           Returns:
+               gym.Space: The environment state observation space.
+               dict: A dictionary mapping each state observation name to its indices in the observation space.
+       """
+        obs_dim, last_idx = 0, 0
+
+        obs_lim_min, obs_lim_max = [], []
+        qpos_lim_min, qpos_lim_max = self.mjModel.jnt_range[:, 0], self.mjModel.jnt_range[:, 1]
+        tau_lim_min, tau_lim_max = self.mjModel.actuator_ctrlrange[:, 0], self.mjModel.actuator_ctrlrange[:, 1]
+
+        obs_idx = {k: None for k in state_obs_names}
+        for obs_name in state_obs_names:
+            # Generalized position, velocity, and force (torque) spaces
+            if obs_name == 'qpos':
+                obs_dim += self.mjModel.nq
+                obs_lim_max.extend([np.inf] * 7 + qpos_lim_max[1:].tolist())  # Ignore the base position
+                obs_lim_min.extend([-np.inf] * 7 + qpos_lim_min[1:].tolist())  # Ignore the base position
+            elif obs_name == 'qvel':
+                obs_dim += self.mjModel.nv
+                obs_lim_max.extend([np.inf] * self.mjModel.nv)
+                obs_lim_min.extend([-np.inf] * self.mjModel.nv)
+            elif obs_name == 'tau_applied':
+                obs_dim += self.mjModel.nu
+                obs_lim_max.extend(tau_lim_max)
+                obs_lim_min.extend(tau_lim_min)
+            # Joint-space position and velocity spaces
+            elif obs_name == 'qpos_js':  # Joint space position configuration
+                obs_dim += self.mjModel.nq - 7
+                obs_lim_max.extend(qpos_lim_max)
+                obs_lim_min.extend(qpos_lim_min)
+            elif obs_name == 'qvel_js':  # Joint space velocity configuration
+                obs_dim += self.mjModel.nv - 6
+                obs_lim_max.extend([np.inf] * (self.mjModel.nv - 6))
+                obs_lim_min.extend([-np.inf] * (self.mjModel.nv - 6))
+            # Base position and velocity configurations (in world frame)
+            elif obs_name == 'base_pos':
+                if "qpos" in state_obs_names:
+                    warnings.warn("base_pos is redundant with additional obs qpos. base_pos = qpos[0:3]")
+                obs_dim += 3
+                obs_lim_max = [np.inf] * 3
+                obs_lim_min = [-np.inf] * 3
+            elif obs_name == 'base_lin_vel':
+                if "qvel" in state_obs_names:
+                    warnings.warn("base_lin_vel is redundant with additional obs qvel. base_lin_vel = qvel[0:3]")
+                obs_dim += 3
+                obs_lim_max = [np.inf] * 3
+                obs_lim_min = [-np.inf] * 3
+            elif obs_name == 'base_ang_vel':
+                if "qvel" in state_obs_names:
+                    warnings.warn("base_ang_vel is redundant with additional obs qvel. base_ang_vel = qvel[3:6]")
+                obs_dim += 3
+                obs_lim_max = [np.inf] * 3
+                obs_lim_min = [-np.inf] * 3
+            elif obs_name == 'base_ori_euler_xyz':
+                if "qpos" in state_obs_names:
+                    warnings.warn(
+                        "base_ori_euler_xyz is redundant with additional obs qpos. base_ori_euler_xyz = qpos[3:6]")
+                obs_dim += 3
+                obs_lim_max = [np.inf] * 3
+                obs_lim_min = [-np.inf] * 3
+            elif obs_name == 'base_ori_quat_wxyz':
+                if "qpos" in state_obs_names:
+                    warnings.warn(
+                        "base_ori_quat_wxyz is redundant with additional obs qpos. base_ori_quat_wxyz = qpos[3:7]")
+                obs_dim += 4
+                obs_lim_max = [np.inf] * 4
+                obs_lim_min = [-np.inf] * 4
+            elif obs_name == 'base_ori_SO3':
+                if "qpos" in state_obs_names:
+                    warnings.warn("base_ori_SO3 is redundant with additional obs qpos. base_ori_SO3 = qpos[3:7]")
+                obs_dim += 9
+                obs_lim_max = [np.inf] * 9
+                obs_lim_min = [-np.inf] * 9
+            # Feet positions and velocities
+            elif 'feet_pos' in obs_name:  # feet_pos:frame := feet_pos:world or feet_pos:base
+                obs_dim += 12
+                obs_lim_max.extend([np.inf] * 12)
+                obs_lim_min.extend([-np.inf] * 12)
+            elif 'feet_vel' in obs_name:  # feet_vel:frame := feet_vel:world or feet_vel:base
+                obs_dim += 12
+                obs_lim_max.extend([np.inf] * 12)
+                obs_lim_min.extend([-np.inf] * 12)
+            elif obs_name == 'contact_state':
+                obs_dim += 4
+                obs_lim_max.extend([1] * 4)
+                obs_lim_min.extend([0] * 4)
+            else:
+                raise ValueError(f"Invalid observation name: {obs_name}, available obs: {ALL_OBS}")
+
+            obs_idx[obs_name] = range(last_idx, obs_dim)
+            last_idx = obs_dim
+
+        obs_lim_min = np.array(obs_lim_min)
+        obs_lim_max = np.array(obs_lim_max)
+        observation_space = spaces.Box(low=obs_lim_min, high=obs_lim_max, shape=(obs_dim,), dtype=np.float32)
+        return observation_space, obs_idx
 
 
 # Example usage:
