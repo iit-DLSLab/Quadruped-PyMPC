@@ -45,6 +45,7 @@ class QuadrupedEnv(gym.Env):
                  base_vel_command_type: str = 'forward',
                  base_lin_vel_range: tuple[float, float] = (0.28, 0.3),
                  base_ang_vel_range: tuple[float, float] = (-np.pi * 3 / 4, np.pi * 3 / 4),
+                 ground_friction_coeff_range: tuple[float, float] = (0.4, 1.5),
                  feet_geom_name: LegsAttr = LegsAttr(FL='FL', FR='FR', RL='RL', RR='RR'),
                  state_obs_names: list[str] = ('qpos', 'qvel', 'tau_applied', 'feet_pos_base', 'feet_vel_base'),
                  legs_order: tuple[str] = ('FL', 'FR', 'RL', 'RR'),
@@ -67,6 +68,7 @@ class QuadrupedEnv(gym.Env):
 
         self.base_vel_command_type = base_vel_command_type
         self.base_lin_vel_range, self.base_ang_vel_range = base_lin_vel_range, base_ang_vel_range
+        self.ground_friction_coeff_range = ground_friction_coeff_range
         self.legs_order = legs_order
 
         # Define the model and data
@@ -254,8 +256,10 @@ class QuadrupedEnv(gym.Env):
 
         self._ref_base_lin_vel_H = base_vel_norm * base_heading_vel_vec
 
-        # TODO: Reset the ground friction
-        # self._set_ground_friction()
+        # Ground friction coefficient randomization if enabled.
+        tangential_friction = np.random.uniform(*self.ground_friction_coeff_range)
+        self._set_ground_friction(tangential_coeff=tangential_friction)
+
         return self._get_obs()
 
     def render(self, mode='human', key_callback: mujoco.viewer.KeyCallbackType = None):
@@ -673,12 +677,23 @@ class QuadrupedEnv(gym.Env):
         # Potentially do other fancy stuff.
         pass
 
-    def _set_ground_friction(self, friction_coff: float = 1.0):
+    def _set_ground_friction(self,
+                             tangential_coeff: float = 1.0,  # Default MJ tangential coefficient
+                             torsional_coeff: float = 0.005,  # Default MJ torsional coefficient
+                             rolling_coeff: float = 0.0  # Default MJ rolling coefficient
+                             ):
         """Initialize ground friction coefficients using a specified distribution."""
         pass
-        # TODO: Change the feet and ground friction coefficients (the mujoco used one will be the max of the two, so
-        #  we should set both to the same value). Define a distribution of tangential and torsional friction as a class
-        #  constructor parameter. Then, sample from this distribution at each reset.
+        for geom_id in range(self.mjModel.ngeom):
+            geom_name = mujoco.mj_id2name(self.mjModel, mujoco.mjtObj.mjOBJ_GEOM, geom_id)
+            if geom_name and geom_name.lower() in ['ground', 'floor', 'hfield', "terrain"]:
+                self.mjModel.geom_friction[geom_id, :] = [tangential_coeff, torsional_coeff, rolling_coeff]
+                print(f"Setting friction for {geom_name} to: {tangential_coeff, torsional_coeff, rolling_coeff}")
+            elif geom_id in self._feet_geom_id:  # Set the same friction coefficients for the feet geometries
+                self.mjModel.geom_friction[geom_id, :] = [tangential_coeff, torsional_coeff, rolling_coeff]
+            else:
+                pass
+
 
     def _get_obs(self):
         """Returns the state observation based on the specified state observation names."""

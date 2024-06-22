@@ -15,7 +15,7 @@ def render_vector(viewer: Handle,
                   vector: np.ndarray,
                   pos: np.ndarray,
                   scale: float,
-                  color: np.ndarray,
+                  color: np.ndarray = np.array([1, 0, 0, 1]),
                   geom_id: int = -1) -> int:
     """
     Function to render a vector in the Mujoco viewer.
