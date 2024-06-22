@@ -314,45 +314,25 @@ use_visualization_debug = config.simulation_params['use_visualization_debug']
 
 
 
-# Keyboard control
-def interactive_command_line():
-    global ref_linear_velocity, ref_angular_velocity, step_height
-    while True:
-        #command = input()
-        command = readchar.readkey()
-        if(command == "w"):
-            ref_linear_velocity[0] += 0.1
-        elif(command == "s"):
-            ref_linear_velocity[0] -= 0.1
-        elif(command == "a"):
-            ref_linear_velocity[1] += 0.1
-        elif(command == "d"):
-            ref_linear_velocity[1] -= 0.1
-        elif(command == "q"):
-            ref_angular_velocity[2] += 0.1
-        elif(command == "e"):
-            ref_angular_velocity[2] -= 0.1
-        elif(command == "0"):
-            ref_linear_velocity[0] = 0
-            ref_linear_velocity[1] = 0
-            ref_angular_velocity[2] = 0 
-        elif(command == "+"):
-            step_height += 0.01
-            stc.step_height = step_height
-            stc.regenerate_swing_trajectory_generator(step_height=step_height, swing_period=swing_period)
-        elif(command == "-"):
-            step_height -= 0.01
-            stc.step_height = step_height
-            stc.regenerate_swing_trajectory_generator(step_height=step_height, swing_period=swing_period)
-            
-t1 = threading.Thread(target=interactive_command_line)
-t1.daemon = True
-t1.start()
+
+def key_callback(keycode):
+    if(keycode == 262):   # arrow right
+        ref_angular_velocity[2] -= 0.1
+    elif(keycode == 263): # arrow left
+        ref_angular_velocity[2] += 0.1
+    elif(keycode == 265): # arrow up
+        ref_linear_velocity[0] += 0.1
+    elif(keycode == 264): # arrow down
+        ref_linear_velocity[0] -= 0.1
+    elif(keycode == 345): # ctrl
+        ref_linear_velocity[0] = 0
+        ref_linear_velocity[1] = 0
+        ref_angular_velocity[2] = 0 
 
 
 
 # Main simulation loop ------------------------------------------------------------------
-with mujoco.viewer.launch_passive(m, d, show_left_ui=False, show_right_ui=False) as viewer:
+with mujoco.viewer.launch_passive(m, d, show_left_ui=False, show_right_ui=False, key_callback=key_callback) as viewer:
     mujoco.mjv_defaultFreeCamera(m, viewer.cam)
     viewer.user_scn.flags[mujoco.mjtRndFlag.mjRND_SHADOW] = 0
     viewer.user_scn.flags[mujoco.mjtRndFlag.mjRND_REFLECTION] = 0
@@ -498,7 +478,12 @@ with mujoco.viewer.launch_passive(m, d, show_left_ui=False, show_right_ui=False)
             # We can recompute the inertia of the single rigid body model
             # or use the fixed one in config.py
             if(config.simulation_params['use_inertia_recomputation']):
-                inertia = srb_inertia_computation.compute_inertia(d.qpos)
+                #inertia = srb_inertia_computation.compute_inertia(d.qpos)
+                # Initialize the full mass matrix
+                mass_matrix = np.zeros((m.nv, m.nv))
+                mujoco.mj_fullM(m, mass_matrix, d.qM)
+                inertia = mass_matrix[3:6, 3:6]
+                
 
             optimize_swing = 0 #1 for always, 0 for apex
             if((config.mpc_params['optimize_step_freq'])):
