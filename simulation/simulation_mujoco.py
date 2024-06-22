@@ -18,7 +18,7 @@ from helpers.srb_inertia_computation import SrbInertiaComputation
 from helpers.swing_trajectory_controller import SwingTrajectoryController
 from simulation.quadruped_env import QuadrupedEnv
 from utils.math_utils import skew
-from utils.mujoco_utils.visual import plot_swing_mujoco
+from utils.mujoco_utils.visual import plot_swing_mujoco, render_vector
 from utils.quadruped_utils import GaitType, LegsAttr, estimate_terrain_slope
 
 # TODO: Why is this here?
@@ -96,7 +96,7 @@ if __name__ == '__main__':
                        scene=scene_name,
                        base_lin_vel_range=(2.0 * hip_height, 2.0 * hip_height),
                        sim_dt=simulation_dt,
-                       base_vel_command_type="forward+rotate",  # "forward", "random", "forward+rotate", "random+rotate"
+                       base_vel_command_type="random",  # "forward", "random", "forward+rotate",
                        feet_geom_name=LegsAttr(**robot_feet_geom_names),  # Geom/Frame id of feet
                        )
     env.reset()
@@ -169,7 +169,6 @@ if __name__ == '__main__':
 
         index_shift = 0
 
-
     # Periodic gait generator
     gait_name = cfg.simulation_params['gait']
     gait_type, duty_factor, step_frequency = get_gait_params(gait_name)
@@ -214,11 +213,6 @@ if __name__ == '__main__':
     # # SET REFERENCE AS DICTIONARY
     # TODO: I would suggest to create a DataClass for "BaseConfig" used in the PotatoModel controllers.
     ref_state = {}
-    # ref_state = {'ref_position':         ref_pose,
-    #              'ref_linear_velocity':  ref_base_lin_vel,
-    #              'ref_angular_velocity': ref_base_ang_vel,
-    #              'ref_orientation':      ref_orientation,
-    #              }
 
     # Starting contact sequence
     previous_contact = np.array([1, 1, 1, 1])
@@ -237,7 +231,7 @@ if __name__ == '__main__':
     # State
     state_current, state_prev = {}, {}
     feet_pos = None
-    feet_traj_geom_ids = None
+    feet_traj_geom_ids, feet_GRF_geom_ids = None, LegsAttr(FL=-1, FR=-1, RL=-1, RR=-1)
     legs_order = ["FL", "FR", "RL", "RR"]
 
     RENDER_FREQ = 30  # Hz
@@ -529,10 +523,12 @@ if __name__ == '__main__':
         action[env.legs_tau_idx.FR] = tau.FR
         action[env.legs_tau_idx.RL] = tau.RL
         action[env.legs_tau_idx.RR] = tau.RR
+        action_noise = np.random.normal(0, 1, size=env.mjModel.nu)
 
-        state, reward, is_terminated, is_truncated, info = env.step(action=action)
+        state, reward, is_terminated, is_truncated, info = env.step(action=action + action_noise)
 
         state_obs = env.extract_obs_from_state(state)
+        feet_contact_state, _, feet_GRF = env.feet_contact_state(ground_reaction_forces=True)
 
         # Render only at a certain frequency
         if time.time() - last_render_time > 1.0 / RENDER_FREQ or env.step_num == 1:
@@ -547,6 +543,14 @@ if __name__ == '__main__':
                                                    nmpc_footholds=nmpc_footholds,
                                                    ref_feet_pos=ref_feet_pos,
                                                    geom_ids=feet_traj_geom_ids)
+            for leg_id, leg_name in enumerate(legs_order):
+                feet_GRF_geom_ids[leg_name] = render_vector(env.viewer,
+                                                            vector=feet_GRF[leg_name],
+                                                            pos=feet_pos[leg_name],
+                                                            scale=np.linalg.norm(feet_GRF[leg_name]) * 0.005,
+                                                            color=np.array([0, 1, 0, .5]),
+                                                            geom_id=feet_GRF_geom_ids[leg_name])
+
             env.render()
             last_render_time = time.time()
 

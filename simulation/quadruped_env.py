@@ -201,14 +201,14 @@ class QuadrupedEnv(gym.Env):
         if qpos is None and qvel is None:  # Random initialization around xml keyframe 0
             mujoco.mj_resetDataKeyframe(self.mjModel, self.mjData, 0)
             # Add white noise to the joint-space position and velocity
-            q_pos_amp = 20 * np.pi / 180
+            q_pos_amp = 25 * np.pi / 180
             q_vel_amp = 0.1
             self.mjData.qpos[7:] += np.random.uniform(-q_pos_amp, q_pos_amp, self.mjModel.nq - 7)
             self.mjData.qvel[6:] += np.random.uniform(-q_vel_amp, q_vel_amp, self.mjModel.nv - 6)
             # Random orientation
             ori_xyzw = Rotation.from_euler('xyz',
-                                           [np.random.uniform(-5 * np.pi / 180, 5 * np.pi / 180),
-                                            np.random.uniform(-5 * np.pi / 180, 5 * np.pi / 180),
+                                           [np.random.uniform(-10 * np.pi / 180, 10 * np.pi / 180),
+                                            np.random.uniform(-10 * np.pi / 180, 10 * np.pi / 180),
                                             np.random.uniform(-np.pi, np.pi)]).as_quat(canonical=True)
             ori_wxyz = np.roll(ori_xyzw, 1)
             self.mjData.qpos[3:7] = ori_wxyz
@@ -218,13 +218,13 @@ class QuadrupedEnv(gym.Env):
             # Perform a forward dynamics computation to update the contact information
             mujoco.mj_step1(self.mjModel, self.mjData)
             # Check if the robot is in contact with the ground
-            contact_state, contacts = self.feet_contact_state
+            contact_state, contacts = self.feet_contact_state()
             while np.any(contact_state.to_list()):
                 all_contacts = list(itertools.chain(*contacts.to_list()))
                 max_penetration_distance = np.max([np.abs(contact.dist) for contact in all_contacts])
                 self.mjData.qpos[2] += max_penetration_distance * 1.1
                 mujoco.mj_step1(self.mjModel, self.mjData)
-                contact_state, contacts = self.feet_contact_state
+                contact_state, contacts = self.feet_contact_state()
         else:
             self.mjData.qpos = qpos
             self.mjData.qvel = qvel
@@ -254,6 +254,8 @@ class QuadrupedEnv(gym.Env):
 
         self._ref_base_lin_vel_H = base_vel_norm * base_heading_vel_vec
 
+        # TODO: Reset the ground friction
+        # self._set_ground_friction()
         return self._get_obs()
 
     def render(self, mode='human', key_callback: mujoco.viewer.KeyCallbackType = None):
@@ -462,11 +464,15 @@ class QuadrupedEnv(gym.Env):
 
         return feet_trans_jac if not return_rot_jac else (feet_trans_jac, feet_rot_jac)
 
-    @property
-    def feet_contact_state(self) -> [LegsAttr, LegsAttr]:
+    def feet_contact_state(self, frame='world', ground_reaction_forces=False) -> [LegsAttr, LegsAttr]:
         """Returns the boolean contact state of the feet.
 
         This function considers only contacts between the feet and the ground.
+
+        Args:
+        ----
+            frame: (str) The reference frame in which the contact forces are computed. Either 'world' or 'base'.
+            ground_reaction_forces: (bool) Whether to compute the total ground reaction forces for each foot.
 
         Returns
         -------
@@ -480,23 +486,53 @@ class QuadrupedEnv(gym.Env):
                 - FR: list[MjContact] A list of contact objects associated with the FR foot.
                 - RL: list[MjContact] A list of contact objects associated with the RL foot.
                 - RR: list[MjContact] A list of contact objects associated with the RR foot.
+            if ground_reaction_forces is True:
+                LegsAttr: A dictionary-like object with:
+                    - FL: (3,) The total ground reaction force acting on the FL foot in the specified frame.
+                    - FR: (3,) The total ground reaction force acting on the FR foot in the specified frame.
+                    - RL: (3,) The total ground reaction force acting on the RL foot in the specified frame.
+                    - RR: (3,) The total ground reaction force acting on the RR foot in the specified frame.
         """
         contact_state = LegsAttr(FL=False, FR=False, RL=False, RR=False)
-        legs_contacts = LegsAttr(FL=[], FR=[], RL=[], RR=[])
-        for contact in self.mjData.contact:
+        feet_contacts = LegsAttr(FL=[], FR=[], RL=[], RR=[])
+        feet_contact_forces = LegsAttr(FL=[], FR=[], RL=[], RR=[])
+        for contact_id, contact in enumerate(self.mjData.contact):
             # Get body IDs from geom IDs
             body1_id = self.mjModel.geom_bodyid[contact.geom1]
             body2_id = self.mjModel.geom_bodyid[contact.geom2]
 
             if 0 in [body1_id, body2_id]:  # World body ID is 0
                 second_id = body2_id if body1_id == 0 else body1_id
-                if second_id in self._feet_body_id.to_list():  # Check if contact occurs with anything but the feet
+                if second_id in self._feet_body_id.to_list():  # Check if contact occurs with the feet
                     for leg_name in ["FL", "FR", "RL", "RR"]:
                         if second_id == self._feet_body_id[leg_name]:
                             contact_state[leg_name] = True
-                            legs_contacts[leg_name].append(contact)
+                            feet_contacts[leg_name].append(contact)
+                            if ground_reaction_forces:  # Store the contact forces
+                                # Contact normal is R_c[:,0], that is the x-axis of the contact frame
+                                R_c = contact.frame.reshape(3, 3)
+                                force_c = np.zeros(6)  # 6D wrench vector
+                                mujoco.mj_contactForce(self.mjModel, self.mjData, id=contact_id, result=force_c)
+                                # Transform the contact force to the world frame
+                                force_w = R_c.T @ force_c[:3]
+                                feet_contact_forces[leg_name].append(force_w)
 
-        return contact_state, legs_contacts
+        if ground_reaction_forces:
+            if frame == 'world':
+                R = np.eye(3)
+            elif frame == 'base':
+                R = self.base_configuration[0:3, 0:3]
+            else:
+                raise ValueError(f"Invalid frame: {frame} != 'world' or 'base'")
+            # Compute the total ground reaction force for each foot
+            for leg_name in ["FL", "FR", "RL", "RR"]:
+                if contact_state[leg_name]:
+                    feet_contact_forces[leg_name] = R.T @ np.sum(feet_contact_forces[leg_name], axis=0)
+                else:
+                    feet_contact_forces[leg_name] = np.zeros(3)
+            return contact_state, feet_contacts, feet_contact_forces
+
+        return contact_state, feet_contacts
 
     @property
     def base_configuration(self):
@@ -637,6 +673,13 @@ class QuadrupedEnv(gym.Env):
         # Potentially do other fancy stuff.
         pass
 
+    def _set_ground_friction(self, friction_coff: float = 1.0):
+        """Initialize ground friction coefficients using a specified distribution."""
+        pass
+        # TODO: Change the feet and ground friction coefficients (the mujoco used one will be the max of the two, so
+        #  we should set both to the same value). Define a distribution of tangential and torsional friction as a class
+        #  constructor parameter. Then, sample from this distribution at each reset.
+
     def _get_obs(self):
         """Returns the state observation based on the specified state observation names."""
         obs = []
@@ -674,7 +717,7 @@ class QuadrupedEnv(gym.Env):
                 frame = 'world' if 'base' not in obs_name else 'base'
                 obs.append(np.concatenate(self.feet_vel(frame).to_list(order=self.legs_order), axis=0))
             elif obs_name == 'contact_state':
-                contact_state, _ = self.feet_contact_state
+                contact_state, _ = self.feet_contact_state()
                 obs.append(np.array(contact_state.to_list()))
             else:
                 raise ValueError(f"Invalid observation name: {obs_name}, available obs: {ALL_OBS}")
