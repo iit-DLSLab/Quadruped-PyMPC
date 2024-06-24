@@ -46,14 +46,14 @@ elif (robot == 'mini_cheetah'):
                         [1.21660000e-04, 4.68645637e-01, -3.12000000e-05],
                         [-1.55444692e-02, -3.12000000e-05, 5.24474661e-01]])
     urdf_filename = "mini_cheetah.urdf"
-    hip_height = 0.25
+    hip_height = 0.225
 
 mpc_params = {
     # 'nominal' optimized directly the GRF
     # 'input_rates' optimizes the delta GRF
     # 'sampling' is a gpu-based mpc that samples the GRF
     # 'collaborative' optimized directly the GRF and has a passive arm model inside
-    'type':                                    'input_rates',
+    'type':                                    'nominal',
 
     # horizon is the number of timesteps in the future that the mpc will optimize
     # dt is the discretization time used in the mpc

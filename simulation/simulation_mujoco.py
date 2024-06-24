@@ -60,7 +60,7 @@ def update_contact_sequence(pgg, horizon, mpc_dt, simulation_dt):
 
 def get_gait_params(gait_type: str) -> [GaitType, float, float]:
     if gait_type == "trot":
-        step_frequency = 1.8
+        step_frequency = 2.5
         duty_factor = 0.65
         gait_type = GaitType.TROT
     elif gait_type == "crawl":
@@ -72,7 +72,7 @@ def get_gait_params(gait_type: str) -> [GaitType, float, float]:
         duty_factor = 0.7
         gait_type = GaitType.PACE
     elif gait_type == "bound":
-        step_frequency = 2
+        step_frequency = 4
         duty_factor = 0.65
         gait_type = GaitType.BOUNDING
     else:
@@ -98,6 +98,7 @@ if __name__ == '__main__':
 
     # Create the quadruped robot environment. _______________________________________________________________________
     env = QuadrupedEnv(robot=robot_name,
+                       hip_height=hip_height,
                        legs_joint_names=LegsAttr(**robot_leg_joints),
                        scene=scene_name,
                        base_lin_vel_range=(2.0 * hip_height, 3.0 * hip_height),
@@ -280,7 +281,7 @@ if __name__ == '__main__':
 
         # Compute the reference for the footholds ---------------------------------------------------
         ref_feet_pos = frg.compute_footholds_reference(
-            com_position=env.com,
+            com_position=env.base_pos,
             base_ori_euler_xyz=env.base_ori_euler_xyz,
             base_xy_lin_vel=env.base_lin_vel[0:2],
             ref_base_xy_lin_vel=ref_base_lin_vel[0:2],
@@ -303,6 +304,7 @@ if __name__ == '__main__':
             z_foot_mean = z_foot_mean_temp * 0.4 + z_foot_mean * 0.6
         ref_pos = np.array([0, 0, cfg.hip_height])
         ref_pos[2] = cfg.simulation_params['ref_z'] + z_foot_mean
+
         # Update state reference ------------------------------------------------------------------------
         ref_state |= dict(ref_foot_FL=ref_feet_pos.FL.reshape((1, 3)),
                           ref_foot_FR=ref_feet_pos.FR.reshape((1, 3)),
@@ -551,13 +553,13 @@ if __name__ == '__main__':
                                                    nmpc_footholds=nmpc_footholds,
                                                    ref_feet_pos=ref_feet_pos,
                                                    geom_ids=feet_traj_geom_ids)
-            for leg_id, leg_name in enumerate(legs_order):
-                feet_GRF_geom_ids[leg_name] = render_vector(env.viewer,
-                                                            vector=feet_GRF[leg_name],
-                                                            pos=feet_pos[leg_name],
-                                                            scale=np.linalg.norm(feet_GRF[leg_name]) * 0.005,
-                                                            color=np.array([0, 1, 0, .5]),
-                                                            geom_id=feet_GRF_geom_ids[leg_name])
+            # for leg_id, leg_name in enumerate(legs_order):
+            #     feet_GRF_geom_ids[leg_name] = render_vector(env.viewer,
+            #                                                 vector=feet_GRF[leg_name],
+            #                                                 pos=feet_pos[leg_name],
+            #                                                 scale=np.linalg.norm(feet_GRF[leg_name]) * 0.005,
+            #                                                 color=np.array([0, 1, 0, .5]),
+            #                                                 geom_id=feet_GRF_geom_ids[leg_name])
 
             env.render()
             last_render_time = time.time()

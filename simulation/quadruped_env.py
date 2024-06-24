@@ -39,6 +39,7 @@ class QuadrupedEnv(gym.Env):
 
     def __init__(self,
                  robot: str,
+                 hip_height: float,   # Used to scale the velocity commands
                  legs_joint_names: LegsAttr,  # Joint names associated to each of the four legs
                  scene='flat',
                  sim_dt=0.002,
@@ -66,6 +67,7 @@ class QuadrupedEnv(gym.Env):
         """
         super(QuadrupedEnv, self).__init__()
 
+        self.hip_height = hip_height
         self.base_vel_command_type = base_vel_command_type
         self.base_lin_vel_range, self.base_ang_vel_range = base_lin_vel_range, base_ang_vel_range
         self.ground_friction_coeff_range = ground_friction_coeff_range
@@ -715,9 +717,9 @@ class QuadrupedEnv(gym.Env):
     def _key_callback(self, keycode):
         print(f"\n\n ********************* Key pressed: {keycode}\n\n\n")
         if keycode == 262:  # arrow right
-            self._ref_base_ang_yaw_dot -= 0.1
+            self._ref_base_ang_yaw_dot -= 0.1 * self.hip_height  # 10% of (hip_height / s)
         elif keycode == 263:  # arrow left
-            self._ref_base_ang_yaw_dot += 0.1
+            self._ref_base_ang_yaw_dot += 0.1 * self.hip_height  # 10% of (hip_height / s)
         elif keycode == 265:  # arrow up
             self._ref_base_lin_vel_H[0] += 0.1
         elif keycode == 264:  # arrow down

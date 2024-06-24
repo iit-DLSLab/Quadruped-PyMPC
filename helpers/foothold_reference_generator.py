@@ -1,3 +1,4 @@
+import collections
 
 import mujoco
 import numpy as np
@@ -9,7 +10,7 @@ from utils.quadruped_utils import LegsAttr
 # TODO: @Giulio Should we convert this to a single function instead of a class? Stance time, can be passed as argument
 class FootholdReferenceGenerator:
 
-    def __init__(self, stance_time: float) -> None:
+    def __init__(self, stance_time: float, vel_moving_average_length=20) -> None:
         """
         This method initializes the foothold generator class, which computes
         the reference foothold for the nonlinear MPC.
@@ -17,7 +18,7 @@ class FootholdReferenceGenerator:
         Args:
             stance_time: The user-defined time of the stance phase.
         """
-
+        self.base_vel_hist = collections.deque(maxlen=vel_moving_average_length)
         self.stance_time = stance_time
 
     def compute_footholds_reference(self,
@@ -35,6 +36,7 @@ class FootholdReferenceGenerator:
            2. Use the desired base angular (yaw_dot) velocity to compensate for the error in the velocity.
             Similar to the linear velocity compensation.
 
+        TODO: This function should be vectorized so operations are not done for each leg separately.
         Args:
             com_position: (3,) The position of the center of mass of the robot.
             base_ori_euler_xyz: (3,) The orientation of the base in euler angles.
@@ -59,12 +61,16 @@ class FootholdReferenceGenerator:
         # Compute desired and error velocity compensation values for all legs
         base_lin_vel_H = R_W2H @ base_xy_lin_vel
         ref_base_lin_vel_H = R_W2H @ ref_base_xy_lin_vel
-        # TODO: Threshold values should not be hardcoded. Perhaps computed from the hip height?
-        compensation_H = np.sqrt(com_height / 9.81) * (base_lin_vel_H - ref_base_lin_vel_H)
-        compensation_H = np.where(compensation_H > 0.05, 0.05, compensation_H)
-        compensation_H = np.where(compensation_H < -0.05, -0.05, compensation_H)
-        # We want to move the feet in the direction of the desired velocity
-        delta_vel_H = (self.stance_time / 2.) * ref_base_lin_vel_H
+
+        # Moving average of the base velocity
+        self.base_vel_hist.append(base_lin_vel_H)
+        base_vel_mvg = np.mean(list(self.base_vel_hist), axis=0)
+        # Compensation due to average velocity
+        delta_ref_H = (self.stance_time / 2.) * base_vel_mvg
+        # Compensation due to desired velocity
+        max_vel_offset = (self.stance_time / 2.) * ref_base_lin_vel_H
+        delta_ref_H = np.clip(delta_ref_H, -max_vel_offset, max_vel_offset)
+        vel_offset = np.concatenate((delta_ref_H, np.zeros(1)))
 
         # Reference footholds in the horizontal frame
         ref_feet = LegsAttr(*[np.zeros(3) for _ in range(4)])
@@ -84,8 +90,7 @@ class FootholdReferenceGenerator:
         ref_feet.RL[1] += 0.1
         ref_feet.RR[1] -= 0.1
 
-        # Shift the x,y position accounting for the desired velocity and the compensation
-        vel_offset = np.concatenate((delta_vel_H + compensation_H, np.zeros(1)))
+        # Add the velocity compensation and desired velocity to the feet positions
         ref_feet += vel_offset  # Add offset to all feet
 
         # Reference footholds in world frame
