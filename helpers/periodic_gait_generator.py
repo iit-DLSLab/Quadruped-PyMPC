@@ -80,7 +80,7 @@ class PeriodicGaitGenerator:
     def get_t(self):
         return self.phase_signal
 
-    def compute_contact_sequence(self, resolution_contact_dt):
+    def compute_contact_sequence(self):
 
         if(self.gait_type == GaitType.FULL_STANCE):
             contact_sequence = np.ones((4, self.horizon * 2))
@@ -94,7 +94,6 @@ class PeriodicGaitGenerator:
             for i in range(self.horizon):
                 contact_sequence[:, i] = self.run(self.contact_sequence_dt, self.step_freq)
             self.set(t_init, init_init)
-            self.time_before_switch_freq += resolution_contact_dt
             return contact_sequence
         
     

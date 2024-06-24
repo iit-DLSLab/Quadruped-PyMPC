@@ -225,7 +225,7 @@ gait_type, duty_factor, step_frequency = get_gait_params(gait_name)
 # we generate a contact sequence two times longer
 pgg = PeriodicGaitGenerator(duty_factor=duty_factor, step_freq=step_frequency, gait_type=gait_type, 
                             horizon=horizon*2, contact_sequence_dt=mpc_dt/2.)
-contact_sequence = pgg.compute_contact_sequence(resolution_contact_dt=simulation_dt)
+contact_sequence = pgg.compute_contact_sequence()
 nominal_sample_freq = step_frequency
 
 
@@ -401,7 +401,7 @@ with mujoco.viewer.launch_passive(m, d, show_left_ui=False, show_right_ui=False,
         # -------------------------------------------------------
 
         # Update the contact sequence ---------------------------
-        contact_sequence = pgg.compute_contact_sequence(resolution_contact_dt=simulation_dt)
+        contact_sequence = pgg.compute_contact_sequence()
 
         # in the case of nonuniform discretization, we need to subsample the contact sequence
         if (config.mpc_params['use_nonuniform_discretization']):
@@ -582,12 +582,12 @@ with mujoco.viewer.launch_passive(m, d, show_left_ui=False, show_right_ui=False,
                         pgg_temp = PeriodicGaitGenerator(duty_factor=duty_factor, step_freq=config.mpc_params['step_freq_available'][j], p_gait=gait_type, horizon=horizon*2)
                         pgg_temp.t = copy.deepcopy(pgg.t)
                         pgg_temp.init = copy.deepcopy(pgg.init)
-                        contact_sequence_temp[j] = pgg_temp.compute_contact_sequence(mpc_dt=mpc_dt, simulation_dt=simulation_dt)
+                        contact_sequence_temp[j] = pgg_temp.compute_contact_sequence()
 
                         # in the case of nonuniform discretization, we need to subsample the contact sequence
                         if (config.mpc_params['use_nonuniform_discretization']):
-                            dt_fine_grained = cfg.mpc_params['dt_fine_grained']
-                            horizon_fine_grained = cfg.mpc_params['horizon_fine_grained']
+                            dt_fine_grained = config.mpc_params['dt_fine_grained']
+                            horizon_fine_grained = config.mpc_params['horizon_fine_grained']
                             contact_sequence_temp[j] = pgg.sample_contact_sequence(contact_sequence, mpc_dt, dt_fine_grained, horizon_fine_grained)
 
                     costs, best_sample_freq = batched_controller.compute_batch_control(state_current, reference_state, contact_sequence_temp)

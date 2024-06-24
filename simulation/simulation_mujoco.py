@@ -165,7 +165,7 @@ if __name__ == '__main__':
     # we generate a contact sequence two times longer and with a dt half of the one of the mpc
     pgg = PeriodicGaitGenerator(duty_factor=duty_factor, step_freq=step_frequency, gait_type=gait_type,
                                 horizon=horizon * 2, contact_sequence_dt=mpc_dt/2.)
-    contact_sequence = pgg.compute_contact_sequence(resolution_contact_dt=simulation_dt)
+    contact_sequence = pgg.compute_contact_sequence()
     nominal_sample_freq = step_frequency
     # Create the foothold reference generator
     stance_time = (1 / step_frequency) * duty_factor
@@ -249,7 +249,7 @@ if __name__ == '__main__':
 
         # Update the desired contact sequence ---------------------------
         pgg.run(simulation_dt, pgg.step_freq)
-        contact_sequence = pgg.compute_contact_sequence(resolution_contact_dt=simulation_dt)
+        contact_sequence = pgg.compute_contact_sequence()
 
         # in the case of nonuniform discretization, we need to subsample the contact sequence
         if (cfg.mpc_params['use_nonuniform_discretization']):
@@ -411,7 +411,7 @@ if __name__ == '__main__':
                                                          horizon=horizon * 2)
                         pgg_temp.phase_signal = pgg.phase_signal
                         pgg_temp.init = pgg.init
-                        contact_sequence_temp[j] = pgg_temp.compute_contact_sequence(resolution_contact_dt=simulation_dt)
+                        contact_sequence_temp[j] = pgg_temp.compute_contact_sequence()
                         
                         # in the case of nonuniform discretization, we need to subsample the contact sequence
                         if (cfg.mpc_params['use_nonuniform_discretization']):
