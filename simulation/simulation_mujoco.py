@@ -23,6 +23,7 @@ from helpers.foothold_reference_generator import FootholdReferenceGenerator
 from helpers.periodic_gait_generator import PeriodicGaitGenerator
 from helpers.srb_inertia_computation import SrbInertiaComputation
 from helpers.swing_trajectory_controller import SwingTrajectoryController
+from helpers.terrain_estimator import TerrainEstimator
 from simulation.quadruped_env import QuadrupedEnv
 from utils.math_utils import skew
 from utils.mujoco_utils.visual import plot_swing_mujoco, render_vector
@@ -206,8 +207,9 @@ if __name__ == '__main__':
     swing_time = [0, 0, 0, 0]
     lift_off_positions = env.feet_pos(frame='world')
 
+
     # Terrain estimator
-    z_foot_mean = 0.0
+    terrain_computation = TerrainEstimator()
 
     # Online computation of the inertia parameter
     srb_inertia_computation = SrbInertiaComputation()  # TODO: This seems to be unsused.
@@ -290,20 +292,16 @@ if __name__ == '__main__':
             lift_off_positions=lift_off_positions)
 
         # Estimate the terrain slope and elevation -------------------------------------------------------
-        roll, pitch = estimate_terrain_slope(
-            base_position=env.base_pos,
-            yaw=env.base_ori_euler_xyz[2],
-            feet_pos=lift_off_positions)
+        terrain_roll, \
+        terrain_pitch, \
+        terrain_height = terrain_computation.compute_terrain_estimation(
+                                                base_position=env.base_pos,
+                                                yaw=env.base_ori_euler_xyz[2],
+                                                feet_pos=lift_off_positions, 
+                                                current_contact=current_contact)
 
-        # Update the reference height given the foot in contact
-        num_feet_in_contact = np.sum(current_contact)
-        feet_pos_z = np.asarray(feet_pos.to_list(order=legs_order))[:, 2]
-        if num_feet_in_contact != 0:
-            # TODO: Is this a moving average ?
-            z_foot_mean_temp = np.sum(feet_pos_z * current_contact) / num_feet_in_contact
-            z_foot_mean = z_foot_mean_temp * 0.4 + z_foot_mean * 0.6
         ref_pos = np.array([0, 0, cfg.hip_height])
-        ref_pos[2] = cfg.simulation_params['ref_z'] + z_foot_mean
+        ref_pos[2] = cfg.simulation_params['ref_z'] + terrain_height
 
         # Update state reference ------------------------------------------------------------------------
         ref_state |= dict(ref_foot_FL=ref_feet_pos.FL.reshape((1, 3)),
@@ -313,7 +311,7 @@ if __name__ == '__main__':
                           # Also update the reference base linear velocity and
                           ref_linear_velocity=ref_base_lin_vel,
                           ref_angular_velocity=ref_base_ang_vel,
-                          ref_orientation=np.array([roll, pitch, 0.0]),
+                          ref_orientation=np.array([terrain_roll, terrain_pitch, 0.0]),
                           ref_position=ref_pos
                           )
         # -------------------------------------------------------------------------------------------------
