@@ -2,14 +2,21 @@
 
 # Authors:
 # - Giulio Turrisi
-# - Daniel Ordoñez Apraez
+
 import os
 import time
+
+# TODO: Ugly hack so people dont have to run the python command specifying the working directory.
+#  we should remove this before the final release.
+import sys
+# Add the parent directory of this script to the Python path
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 import mujoco
 import numpy as np
 
 import config as cfg
+
 
 # Parameters for both MPC and simulation
 from helpers.foothold_reference_generator import FootholdReferenceGenerator
@@ -94,7 +101,7 @@ if __name__ == '__main__':
     env = QuadrupedEnv(robot=robot_name,
                        legs_joint_names=LegsAttr(**robot_leg_joints),
                        scene=scene_name,
-                       base_lin_vel_range=(2.0 * hip_height, 2.0 * hip_height),
+                       base_lin_vel_range=(2.0 * hip_height, 3.0 * hip_height),
                        sim_dt=simulation_dt,
                        base_vel_command_type="random",  # "forward", "random", "forward+rotate",
                        feet_geom_name=LegsAttr(**robot_feet_geom_names),  # Geom/Frame id of feet
@@ -272,10 +279,10 @@ if __name__ == '__main__':
 
         # Compute the reference for the footholds ---------------------------------------------------
         ref_feet_pos = frg.compute_footholds_reference(
-            com_position=env.base_pos,
-            rpy_angles=env.base_ori_euler_xyz,
-            linear_com_velocity=env.base_lin_vel[0:2],
-            desired_linear_com_velocity=ref_base_lin_vel[0:2],
+            com_position=env.com,
+            base_ori_euler_xyz=env.base_ori_euler_xyz,
+            base_xy_lin_vel=env.base_lin_vel[0:2],
+            ref_base_xy_lin_vel=ref_base_lin_vel[0:2],
             hips_position=hip_pos,
             com_height=state_current["position"][2],
             lift_off_positions=lift_off_positions)
@@ -400,7 +407,7 @@ if __name__ == '__main__':
                     ref_state,
                     contact_sequence,
                     # inertia=cfg.inertia.flatten(),
-                    inertia=env.get_base_inertia().flatten()
+                    inertia=env.get_base_inertia().flatten()   # Reflected inertia of base at qpos, in world frame
                     )
                 # TODO functions should output this class instance.
                 nmpc_footholds = LegsAttr(FL=nmpc_footholds[0],

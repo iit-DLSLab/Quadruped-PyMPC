@@ -71,6 +71,8 @@ class LegsAttr:
         """Add the attributes of the legs with the attributes of the other LegsAttr object."""
         if isinstance(other, LegsAttr):
             return LegsAttr(FR=self.FR + other.FR, FL=self.FL + other.FL, RR=self.RR + other.RR, RL=self.RL + other.RL)
+        elif isinstance(other, type(self.FR)):
+            return LegsAttr(FR=self.FR + other, FL=self.FL + other, RR=self.RR + other, RL=self.RL + other)
         else:
             raise TypeError("Unsupported operand type for +: 'LegsAttr' and '{}'".format(type(other)))
 
@@ -78,12 +80,14 @@ class LegsAttr:
         """Subtract the attributes of the legs with the attributes of the other LegsAttr object."""
         if isinstance(other, LegsAttr):
             return LegsAttr(FR=self.FR - other.FR, FL=self.FL - other.FL, RR=self.RR - other.RR, RL=self.RL - other.RL)
+        elif isinstance(other, type(self.FR)):
+            return LegsAttr(FR=self.FR - other, FL=self.FL - other, RR=self.RR - other, RL=self.RL - other)
         else:
             raise TypeError("Unsupported operand type for -: 'LegsAttr' and '{}'".format(type(other)))
 
     def __truediv__(self, other):
         """Divide the attributes of the legs with the attributes of the other LegsAttr object."""
-        if isinstance(other, (int, float)):
+        if isinstance(other, type(self.FR)) or isinstance(other, (int, float)):
             return LegsAttr(FR=self.FR / other, FL=self.FL / other, RR=self.RR / other, RL=self.RL / other)
         else:
             raise TypeError("Unsupported operand type for /: 'LegsAttr' and '{}'".format(type(other)))
@@ -92,6 +96,8 @@ class LegsAttr:
         """Matrix multiplication of the attributes of the legs with the attributes of the other LegsAttr object."""
         if isinstance(other, LegsAttr):
             return LegsAttr(FR=self.FR @ other.FR, FL=self.FL @ other.FL, RR=self.RR @ other.RR, RL=self.RL @ other.RL)
+        elif isinstance(other, type(self.FR)):
+            return LegsAttr(FR=self.FR @ other, FL=self.FL @ other, RR=self.RR @ other, RL=self.RL @ other)
         else:
             raise TypeError("Unsupported operand type for @: 'LegsAttr' and '{}'".format(type(other)))
 

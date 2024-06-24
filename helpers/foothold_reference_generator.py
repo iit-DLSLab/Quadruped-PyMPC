@@ -1,26 +1,15 @@
-import numpy as np
-# import example_robot_data as robex
+
 import mujoco
-
-# from pinocchio import casadi as cpin
-
-import os
+import numpy as np
 
 from utils.quadruped_utils import LegsAttr
 
-dir_path = os.path.dirname(os.path.realpath(__file__))
-
-import sys
-
-sys.path.append(dir_path + '/../')
-
-# Parameters for both MPC and simulation
-import config
-
 
 # Class for the generation of the reference footholds
+# TODO: @Giulio Should we convert this to a single function instead of a class? Stance time, can be passed as argument
 class FootholdReferenceGenerator:
-    def __init__(self, stance_time: np.float64) -> None:
+
+    def __init__(self, stance_time: float) -> None:
         """
         This method initializes the foothold generator class, which computes
         the reference foothold for the nonlinear MPC.
@@ -32,87 +21,86 @@ class FootholdReferenceGenerator:
         self.stance_time = stance_time
 
     def compute_footholds_reference(self,
-                                    com_position,
-                                    rpy_angles,
-                                    linear_com_velocity,
-                                    desired_linear_com_velocity,
+                                    com_position: np.ndarray,
+                                    base_ori_euler_xyz: np.ndarray,
+                                    base_xy_lin_vel: np.ndarray,
+                                    ref_base_xy_lin_vel: np.ndarray,
                                     hips_position: LegsAttr,
-                                    com_height: np.float64,
+                                    com_height: float,
                                     lift_off_positions: LegsAttr) -> LegsAttr:
-        """
-        Starting from the robot hips position, com actual and desired velocities, this method
-        computes the reference footholds for the nonlinear MPC.
+        """ Compute the reference footholds for a quadruped robot, using simple geometric heuristics.
 
-        TODO: Docstring of assumed order of legs, Expected frames of reference, dimensions of the expected arguments
+        TODO: This function should be adapted to:
+           1. Use the terrain slope estimation
+           2. Use the desired base angular (yaw_dot) velocity to compensate for the error in the velocity.
+            Similar to the linear velocity compensation.
+
         Args:
-            linear_com_velocity: The linear velocity of the center of mass.
-            desired_linear_com_velocity: The desired linear velocity of the center of mass.
-            hips_position: The position of the hips in the WORLD frame. The order of the legs is assumed to be
-                [FL, FR, RL, RR].
-            com_height: The height of the center of mass.
+            com_position: (3,) The position of the center of mass of the robot.
+            base_ori_euler_xyz: (3,) The orientation of the base in euler angles.
+            base_xy_lin_vel: (2,) The [x,y] linear velocity of the base in world frame.
+            ref_base_xy_lin_vel: (2,) The desired [x,y] linear velocity of the base in world frame.
+            hips_position: (LegsAttr) The position of the hips of the robot in world frame.
+            com_height: (float) The height of the center of mass of the robot. # TODO: isnt this com_position[2]?
+            lift_off_positions: (LegsAttr) The position of the feet when they are lifted off the ground in world frame
+
+        Returns:
+            ref_feet: (LegsAttr) The reference footholds for the robot in world frame.
         """
+        assert base_xy_lin_vel.shape == (2,) and ref_base_xy_lin_vel.shape == (2,), \
+            f"Expected shape (2,):=[x_dot, y_dot], got {base_xy_lin_vel.shape} and {ref_base_xy_lin_vel.shape}."
 
-        # we want to move the feet in the direction of the desired velocity 
-        delta_vel = (self.stance_time / 2.) * desired_linear_com_velocity
-        # delta_vel = (self.stance_time/2.)*linear_com_velocity
-
-        # we perform a hip-centric step in the horizontal frame
-        hip_pos_FL, hip_pos_FR, hip_pos_RL, hip_pos_RR = hips_position.to_list(order=['FL', 'FR', 'RL', 'RR'])
-
-        yaw = rpy_angles[2]
-        h_R_w = np.array([np.cos(yaw), np.sin(yaw),
+        # Get the rotation matrix to transform from world to horizontal frame (hip-centric)
+        yaw = base_ori_euler_xyz[2]
+        R_W2H = np.array([np.cos(yaw), np.sin(yaw),
                           -np.sin(yaw), np.cos(yaw)])
-        h_R_w = h_R_w.reshape((2, 2))
+        R_W2H = R_W2H.reshape((2, 2))
 
-        hip_pos_FL[0:2] = h_R_w @ (hip_pos_FL[0:2] - com_position[0:2])
-        hip_pos_FR[0:2] = h_R_w @ (hip_pos_FR[0:2] - com_position[0:2])
-        hip_pos_RL[0:2] = h_R_w @ (hip_pos_RL[0:2] - com_position[0:2])
-        hip_pos_RR[0:2] = h_R_w @ (hip_pos_RR[0:2] - com_position[0:2])
+        # Compute desired and error velocity compensation values for all legs
+        base_lin_vel_H = R_W2H @ base_xy_lin_vel
+        ref_base_lin_vel_H = R_W2H @ ref_base_xy_lin_vel
+        # TODO: Threshold values should not be hardcoded. Perhaps computed from the hip height?
+        compensation_H = np.sqrt(com_height / 9.81) * (base_lin_vel_H - ref_base_lin_vel_H)
+        compensation_H = np.where(compensation_H > 0.05, 0.05, compensation_H)
+        compensation_H = np.where(compensation_H < -0.05, -0.05, compensation_H)
+        # We want to move the feet in the direction of the desired velocity
+        delta_vel_H = (self.stance_time / 2.) * ref_base_lin_vel_H
 
-        # enlarging the posture depending on the robot
-        # TODO: Should avoid relying on access to config. This seems to be a generic function.
-        if (config.robot == 'mini_cheetah'):
-            hip_pos_FL[1] += 0.07
-            hip_pos_FR[1] -= 0.07
-            hip_pos_RL[1] += 0.07
-            hip_pos_RR[1] -= 0.07
-        else:
-            hip_pos_FL[1] += 0.1
-            hip_pos_FR[1] -= 0.1
-            hip_pos_RL[1] += 0.1
-            hip_pos_RR[1] -= 0.1
+        # Reference footholds in the horizontal frame
+        ref_feet = LegsAttr(*[np.zeros(3) for _ in range(4)])
 
-        # we want to compensate for the error in the velocity
-        linear_com_velocity_horizontal_frame = h_R_w @ linear_com_velocity
-        compensation = np.sqrt(com_height / 9.81) * (linear_com_velocity_horizontal_frame - desired_linear_com_velocity)
-        compensation = np.where(compensation > 0.05, 0.05, compensation)
-        compensation = np.where(compensation < -0.05, -0.05, compensation)
+        # Reference feet positions are computed from the hips x,y position in the hip-centric/Horizontal frame
+        ref_feet.FL[0:2] = R_W2H @ (hips_position.FL[0:2] - com_position[0:2])
+        ref_feet.FR[0:2] = R_W2H @ (hips_position.FR[0:2] - com_position[0:2])
+        ref_feet.RL[0:2] = R_W2H @ (hips_position.RL[0:2] - com_position[0:2])
+        ref_feet.RR[0:2] = R_W2H @ (hips_position.RR[0:2] - com_position[0:2])
+        # Offsets are introduced to account for x,y offsets from nominal hip and feet positions. 
+        # Offsets to the Y axis result in wider/narrower stance (+y values lead to wider stance in left/right)
+        # Offsets to the X axis result in spread/crossed legs (+x values lead to spread legs in front/back)
+        # TODO: This should not be hardcoded, should be a property of the robot cofiguration and passed as argment
+        #  to this function, not loaded from the config file.
+        ref_feet.FL[1] += 0.1
+        ref_feet.FR[1] -= 0.1
+        ref_feet.RL[1] += 0.1
+        ref_feet.RR[1] -= 0.1
 
-        # we compute the reference footholds
-        footholds_reference_FL = hip_pos_FL[0:2] + delta_vel + compensation
-        footholds_reference_FR = hip_pos_FR[0:2] + delta_vel + compensation
-        footholds_reference_RL = hip_pos_RL[0:2] + delta_vel + compensation
-        footholds_reference_RR = hip_pos_RR[0:2] + delta_vel + compensation
+        # Shift the x,y position accounting for the desired velocity and the compensation
+        vel_offset = np.concatenate((delta_vel_H + compensation_H, np.zeros(1)))
+        ref_feet += vel_offset  # Add offset to all feet
 
-        # we rotate them back in the world frame
-        footholds_reference_FL[0:2] = h_R_w.T @ footholds_reference_FL[0:2] + com_position[0:2]
-        footholds_reference_FR[0:2] = h_R_w.T @ footholds_reference_FR[0:2] + com_position[0:2]
-        footholds_reference_RL[0:2] = h_R_w.T @ footholds_reference_RL[0:2] + com_position[0:2]
-        footholds_reference_RR[0:2] = h_R_w.T @ footholds_reference_RR[0:2] + com_position[0:2]
+        # Reference footholds in world frame
+        ref_feet.FL[0:2] = R_W2H.T @ ref_feet.FL[:2] + com_position[0:2]
+        ref_feet.FR[0:2] = R_W2H.T @ ref_feet.FR[:2] + com_position[0:2]
+        ref_feet.RL[0:2] = R_W2H.T @ ref_feet.RL[:2] + com_position[0:2]
+        ref_feet.RR[0:2] = R_W2H.T @ ref_feet.RR[:2] + com_position[0:2]
 
-        # we should rotate them considering the terrain estimator maybe
-        # or we can just do exteroceptive height adjustement...
-        # for now we substract 0.02cm to have a clear touch down
-        reference_foot_FL = np.array(
-            [footholds_reference_FL[0], footholds_reference_FL[1], lift_off_positions.FL[2] - 0.02])
-        reference_foot_FR = np.array(
-            [footholds_reference_FR[0], footholds_reference_FR[1], lift_off_positions.FR[2] - 0.02])
-        reference_foot_RL = np.array(
-            [footholds_reference_RL[0], footholds_reference_RL[1], lift_off_positions.RL[2] - 0.02])
-        reference_foot_RR = np.array(
-            [footholds_reference_RR[0], footholds_reference_RR[1], lift_off_positions.RR[2] - 0.02])
+        # TODO: we should rotate them considering the terrain estimator maybe
+        #   or we can just do exteroceptive height adjustement...
+        #   for now we substract 0.02cm to have a clear touch down
+        for leg_id in ['FL', 'FR', 'RL', 'RR']:
+            ref_feet[leg_id][2] = lift_off_positions[leg_id][2] - 0.02
 
-        return LegsAttr(FR=reference_foot_FR, FL=reference_foot_FL, RR=reference_foot_RR, RL=reference_foot_RL)
+        return ref_feet
 
 
 if __name__ == "__main__":

@@ -539,6 +539,19 @@ class QuadrupedEnv(gym.Env):
         return contact_state, feet_contacts
 
     @property
+    def com(self):
+        """Calculate the center of mass (CoM) of the entire robot in world frame."""
+        total_mass = 0.0
+        com = np.zeros(3)
+        for i in range(self.mjModel.nbody):
+            body_mass = self.mjModel.body_mass[i]
+            body_com = self.mjData.subtree_com[i]
+            com += body_mass * body_com
+            total_mass += body_mass
+        com /= total_mass
+        return com
+
+    @property
     def base_configuration(self):
         """Robot base configuration (homogenous transformation matrix) in world reference frame."""
         com_pos = self.mjData.qpos[0:3]  # world frame
