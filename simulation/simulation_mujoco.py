@@ -82,8 +82,7 @@ def get_gait_params(gait_type: str) -> [GaitType, float, float]:
     return gait_type, duty_factor, step_frequency
 
 
-def key_callback(env, x):
-    pass
+
 
 
 if __name__ == '__main__':
