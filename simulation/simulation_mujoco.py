@@ -313,11 +313,6 @@ if __name__ == '__main__':
                           )
         # -------------------------------------------------------------------------------------------------
 
-        # TODO: WTF is this ? Need documentation
-        if cfg.mpc_params['type'] == 'sampling':
-            if cfg.mpc_params['shift_solution']:
-                index_shift += 0.05
-                best_control_parameters = controller.shift_solution(best_control_parameters, index_shift)
 
         # TODO: this should be hidden inside the controller forward/get_action method
         # Solve OCP ---------------------------------------------------------------------------------------
@@ -347,6 +342,12 @@ if __name__ == '__main__':
             if (cfg.mpc_params['type'] == 'sampling'):
 
                 time_start = time.time()
+
+                # Shift the previous solution ahead
+                if (cfg.mpc_params['shift_solution']):
+                    index_shift = 1./mpc_frequency
+                    best_control_parameters = controller.shift_solution(best_control_parameters, index_shift)
+                
                 # Convert data to jax
                 state_current_jax, \
                     reference_state_jax, \

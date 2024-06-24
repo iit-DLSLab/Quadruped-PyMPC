@@ -474,8 +474,6 @@ with mujoco.viewer.launch_passive(m, d, show_left_ui=False, show_right_ui=False,
         reference_state["ref_orientation"] = np.array([terrain_roll, terrain_pitch, 0])        
         reference_state["ref_position"][2] = config.simulation_params['ref_z'] + terrain_height
         # -------------------------------------------------------------------------------------------------
-        
-
 
 
         # Solve OCP ---------------------------------------------------------------------------------------
@@ -507,6 +505,12 @@ with mujoco.viewer.launch_passive(m, d, show_left_ui=False, show_right_ui=False,
             if(config.mpc_params['type'] == 'sampling'):
 
                 time_start = time.time()
+
+                # Shift the previous solution ahead
+                if (config.mpc_params['shift_solution']):
+                    index_shift = 1./mpc_frequency
+                    best_control_parameters = controller.shift_solution(best_control_parameters, index_shift)
+                
                 # Convert data to jax
                 state_current_jax, \
                 reference_state_jax, \
