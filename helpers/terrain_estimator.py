@@ -1,13 +1,7 @@
 import numpy as np
 from numpy.linalg import norm
-import time
-import unittest
-import casadi as cs
-#import example_robot_data as robex
-import mujoco
 
-import pinocchio as pin
-#from pinocchio import casadi as cpin
+from utils.quadruped_utils import LegsAttr
 
 class TerrainEstimator:
     def __init__(self, ) -> None:
@@ -18,44 +12,64 @@ class TerrainEstimator:
 
 
 
-    def compute_terrain_estimation(self, base_position, yaw, lift_foot_position, current_contact) -> np.ndarray:
+    def compute_terrain_estimation(self, 
+                                   base_position: np.ndarray,
+                                   yaw: float,
+                                   feet_pos: LegsAttr,
+                                   current_contact: np.ndarray) -> [float, float]:
+        """Compute the estimated roll and pitch of the terrain based on the positions of the robot's feet.
 
+        Parameters
+        ----------
+            base_position : (np.ndarray) The position of the robot's base in the world frame.
+            yaw : (float) The yaw angle of the robot in radians.
+            lifted_foot_positions : (LegsAttr) The positions of the robot's feet in the world frame. This is an instance of
+            the LegsAttr class, which has attributes for the positions of the front left (FL), front right (FR), rear left
+            (RL),and rear right (RR) feet.
+            current_contact: (np.ndarray) The contact state of the feet. This is a 4-element array
+
+        Returns
+        -------
+        roll : (float) The estimated roll of the terrain in radians.
+        pitch : (float) The estimated pitch of the terrain in radians.
+
+        Notes
+        -----
+        This function assumes that the robot is on a planar terrain and that the feet positions are measured in the
+        world frame.
+        """
+        
         
         # Compute roll and pitch for each foot position
-        roll = 0
-        pitch = 0
-        
         # Rotation matrix R_yaw
-        h_R_w = np.array([
+        R_W2H = np.array([
             [np.cos(yaw), np.sin(yaw), 0],
             [-np.sin(yaw), np.cos(yaw), 0],
             [0, 0, 1]
-        ])
+            ])
 
         # Extracting 3-element segments from liftoff_position_z_ and x_op_
-        seg0 = lift_foot_position[0]
-        seg3 = lift_foot_position[1]
-        seg6 = lift_foot_position[2]
-        seg9 = lift_foot_position[3]
-        
-        
+        seg0 = feet_pos.FL
+        seg3 = feet_pos.FR
+        seg6 = feet_pos.RL
+        seg9 = feet_pos.RR
+
         # Calculating differences
-        front_difference = h_R_w @ (seg0 - base_position) - h_R_w @ (seg3 - base_position)
-        back_difference = h_R_w @ (seg6 - base_position) - h_R_w @ (seg9 - base_position)
-        left_difference = h_R_w @ (seg0 - base_position) - h_R_w @ (seg6 - base_position)
-        right_difference = h_R_w @ (seg3 - base_position) - h_R_w @ (seg9 - base_position)
-
-
+        # TODO: Feet position in base frame?
+        front_difference = R_W2H @ (seg0 - base_position) - R_W2H @ (seg3 - base_position)
+        back_difference = R_W2H @ (seg6 - base_position) - R_W2H @ (seg9 - base_position)
+        left_difference = R_W2H @ (seg0 - base_position) - R_W2H @ (seg6 - base_position)
+        right_difference = R_W2H @ (seg3 - base_position) - R_W2H @ (seg9 - base_position)
 
         # Calculating pitch and roll
-        pitch = (np.arctan(np.abs(left_difference[2]) / np.abs(left_difference[0] + 0.001)) + 
+        # TODO: Docstring
+        pitch = (np.arctan(np.abs(left_difference[2]) / np.abs(left_difference[0] + 0.001)) +
                 np.arctan(np.abs(right_difference[2]) / np.abs(right_difference[0] + 0.001))) * 0.5
 
-        roll = (np.arctan(np.abs(front_difference[2]) / np.abs(front_difference[1] + 0.001)) + 
-                np.arctan(np.abs(back_difference[2]) / np.abs(back_difference[1] + 0.001 ))) * 0.5
+        roll = (np.arctan(np.abs(front_difference[2]) / np.abs(front_difference[1] + 0.001)) +
+                np.arctan(np.abs(back_difference[2]) / np.abs(back_difference[1] + 0.001))) * 0.5
 
-
-        # Adjusting signs of pitch and roll
+        # Adjusting signs of pitch and roll TODO: Adjusting what and for what?
         if (front_difference[2] * 0.5 + back_difference[2] * 0.5) < 0:
             roll = -roll
         if (left_difference[2] * 0.5 + right_difference[2] * 0.5) > 0:
@@ -67,10 +81,10 @@ class TerrainEstimator:
 
 
         # Update the reference height given the foot in contact 
-        z_foot_FL = lift_foot_position[0][2]
-        z_foot_FR = lift_foot_position[1][2]
-        z_foot_RL = lift_foot_position[2][2]
-        z_foot_RR = lift_foot_position[3][2]
+        z_foot_FL = feet_pos.FL[2]
+        z_foot_FR = feet_pos.FR[2]
+        z_foot_RL = feet_pos.RL[2]
+        z_foot_RR = feet_pos.RR[2]
         number_foot_in_contact = current_contact[0] + \
                                 current_contact[1] + \
                                 current_contact[2] + \

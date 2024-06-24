@@ -472,7 +472,7 @@ with mujoco.viewer.launch_passive(m, d, show_left_ui=False, show_right_ui=False,
 
         # Compute the terrain estimation and reference height ---------------------------------------------
         terrain_roll, terrain_pitch, terrain_height = terrain_computation.compute_terrain_estimation(state_current["position"], state_current["orientation"][2], 
-                                                                     lift_off_positions, current_contact)
+                                                                     lift_off_positions_legattr, current_contact)
         
         reference_state["ref_orientation"] = np.array([terrain_roll, terrain_pitch, 0])        
         reference_state["ref_position"][2] = config.simulation_params['ref_z'] + terrain_height
