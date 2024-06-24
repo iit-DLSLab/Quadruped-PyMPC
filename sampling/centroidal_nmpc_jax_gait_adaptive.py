@@ -1,12 +1,13 @@
-import jax
-import jax.numpy as jnp
-from jax import jit, random
-
 import numpy as np
 np.set_printoptions(precision=3, suppress = True)
 
 import os 
 dir_path = os.path.dirname(os.path.realpath(__file__))
+
+os.environ['XLA_FLAGS'] = ('--xla_gpu_triton_gemm_any=True')
+import jax
+import jax.numpy as jnp
+from jax import jit, random
 
 import sys
 sys.path.append(dir_path)

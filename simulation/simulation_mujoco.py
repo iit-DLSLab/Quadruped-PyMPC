@@ -29,8 +29,6 @@ from utils.math_utils import skew
 from utils.mujoco_utils.visual import plot_swing_mujoco, render_vector
 from utils.quadruped_utils import GaitType, LegsAttr, estimate_terrain_slope
 
-# TODO: Why is this here?
-os.environ['XLA_FLAGS'] = ('--xla_gpu_triton_gemm_any=True')
 
 np.set_printoptions(precision=3, suppress=True)
 
