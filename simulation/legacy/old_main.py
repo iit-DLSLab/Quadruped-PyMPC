@@ -441,8 +441,8 @@ with mujoco.viewer.launch_passive(m, d, show_left_ui=False, show_right_ui=False,
         
 
 
-        ref_feet_pos = frg.compute_footholds_reference(com_pos, rpy_angles, linear_vel[0:2], ref_linear_velocity[0:2], hip_pos_legattr, 
-                                                            state_current["position"][2], lift_off_positions_legattr)
+        ref_feet_pos = frg.compute_footholds_reference(com_pos, rpy_angles, state_current["linear_velocity"][0:2], reference_state["ref_linear_velocity"][0:2], hip_pos_legattr, 
+                                                        state_current["position"][2], lift_off_positions_legattr)
         reference_foot_FL = ref_feet_pos.FL
         reference_foot_FR = ref_feet_pos.FR
         reference_foot_RL = ref_feet_pos.RL
