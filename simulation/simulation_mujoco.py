@@ -99,12 +99,7 @@ if __name__ == '__main__':
     #       controller = ControlerB(**cfg.controller)
     #   ... __________________________________________________________________________________________________
     mpc_frequency = cfg.simulation_params['mpc_frequency']
-    # MPC Magic - i took the minimum value of the dt
-    # used along the horizon of the MPC
-    if cfg.mpc_params['use_nonuniform_discretization']:
-        mpc_dt = cfg.mpc_params['dt_fine_grained']
-    else:
-        mpc_dt = cfg.mpc_params['dt']
+    mpc_dt = cfg.mpc_params['dt']
     horizon = cfg.mpc_params['horizon']
 
     # input_rates optimize the delta_GRF (smoooth!)
@@ -155,12 +150,9 @@ if __name__ == '__main__':
 
         index_shift = 0
 
-    # Periodic gait generator
+    # Periodic gait generator _________________________________________________________________________
     gait_name = cfg.simulation_params['gait']
     gait_type, duty_factor, step_frequency = get_gait_params(gait_name)
-    # __________________________________________________________________________________________________
-
-    # Periodic gait generator _________________________________________________________________________
     # Given the possibility to use nonuniform discretization, 
     # we generate a contact sequence two times longer and with a dt half of the one of the mpc
     pgg = PeriodicGaitGenerator(duty_factor=duty_factor, step_freq=step_frequency, gait_type=gait_type,

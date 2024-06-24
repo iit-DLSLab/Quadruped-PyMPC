@@ -99,10 +99,8 @@ mass = np.sum(m.body_mass)
 
 # MPC Magic - i took the minimum value of the dt 
 # used along the horizon of the MPC
-if(config.mpc_params['use_nonuniform_discretization']):
-    mpc_dt = config.mpc_params['dt_fine_grained']
-else:
-    mpc_dt = config.mpc_params['dt']
+mpc_frequency = config.simulation_params['mpc_frequency']
+mpc_dt = config.mpc_params['dt']
 horizon = config.mpc_params['horizon']
 
 # input_rates optimize the delta_GRF (smoooth!)
@@ -214,7 +212,6 @@ state_old = np.zeros(shape=(controller.states_dim,))
 # Simulation dt
 m.opt.timestep = config.simulation_params['dt']
 simulation_dt = config.simulation_params['dt']
-mpc_frequency = config.simulation_params['mpc_frequency']
 
 
 
