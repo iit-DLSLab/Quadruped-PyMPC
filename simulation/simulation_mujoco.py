@@ -37,10 +37,8 @@ np.set_printoptions(precision=3, suppress=True)
 
 # Main simulation loop ------------------------------------------------------------------
 def update_contact_sequence(pgg, horizon, mpc_dt, simulation_dt):
-    if gait_name == "full_stance":
-        contact_sequence = np.ones((4, horizon * 2))
-    else:
-        contact_sequence = pgg.compute_contact_sequence(mpc_dt=mpc_dt, simulation_dt=simulation_dt)
+
+    contact_sequence = pgg.compute_contact_sequence(mpc_dt=mpc_dt, simulation_dt=simulation_dt)
 
     # in the case of nonuniform discretization, we need to subsample the contact sequence
     if (cfg.mpc_params['use_nonuniform_discretization']):

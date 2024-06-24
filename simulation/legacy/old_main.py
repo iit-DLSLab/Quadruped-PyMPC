@@ -400,10 +400,7 @@ with mujoco.viewer.launch_passive(m, d, show_left_ui=False, show_right_ui=False,
         # -------------------------------------------------------
 
         # Update the contact sequence ---------------------------
-        if(gait_type == "full_stance"):
-            contact_sequence = np.ones((4, horizon*2)) 
-        else:
-            contact_sequence = pgg.compute_contact_sequence(mpc_dt=mpc_dt, simulation_dt=simulation_dt)
+        contact_sequence = pgg.compute_contact_sequence(mpc_dt=mpc_dt, simulation_dt=simulation_dt)
             
         # in the case of nonuniform discretization, we need
         # to subsample the contact sequence

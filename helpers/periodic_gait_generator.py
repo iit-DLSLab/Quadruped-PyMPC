@@ -80,12 +80,18 @@ class PeriodicGaitGenerator:
         return self.phase_signal
 
     def compute_contact_sequence(self, mpc_dt, simulation_dt):
-        t_init = copy.deepcopy(self.phase_signal)
-        init_init = copy.deepcopy(self.init)
 
-        contact_sequence = np.zeros((self.n_contact, self.horizon))
-        for i in range(self.horizon):
-            contact_sequence[:, i] = self.run(mpc_dt, self.step_freq)
-        self.set(t_init, init_init)
-        self.time_before_switch_freq += simulation_dt
-        return contact_sequence
+        if(self.gait_type == GaitType.FULL_STANCE):
+            contact_sequence = np.ones((4, self.horizon * 2))
+            return contact_sequence
+        
+        else:
+            t_init = copy.deepcopy(self.phase_signal)
+            init_init = copy.deepcopy(self.init)
+
+            contact_sequence = np.zeros((self.n_contact, self.horizon))
+            for i in range(self.horizon):
+                contact_sequence[:, i] = self.run(mpc_dt, self.step_freq)
+            self.set(t_init, init_init)
+            self.time_before_switch_freq += simulation_dt
+            return contact_sequence
