@@ -45,7 +45,7 @@ class QuadrupedEnv(gym.Env):
                  base_vel_command_type: str = 'forward',
                  base_lin_vel_range: tuple[float, float] = (0.28, 0.3),
                  base_ang_vel_range: tuple[float, float] = (-np.pi * 3 / 4, np.pi * 3 / 4),
-                 ground_friction_coeff_range: tuple[float, float] = (0.4, 1.5),
+                 ground_friction_coeff_range: tuple[float, float] = (0.8, 1.2),
                  feet_geom_name: LegsAttr = LegsAttr(FL='FL', FR='FR', RL='RL', RR='RR'),
                  state_obs_names: list[str] = ('qpos', 'qvel', 'tau_applied', 'feet_pos_base', 'feet_vel_base'),
                  legs_order: tuple[str] = ('FL', 'FR', 'RL', 'RR'),
@@ -134,7 +134,7 @@ class QuadrupedEnv(gym.Env):
         self.viewer = None
         self.step_num = 0
         # Reference base velocity in "Horizontal" frame (see heading_orientation_SO3)
-        self._ref_base_lin_vel_H, self._base_ang_yaw_dot = None, None
+        self._ref_base_lin_vel_H, self._ref_base_ang_yaw_dot = None, None
         # Store the ids of visual aid geometries
         self._geom_ids = {}
 
@@ -246,13 +246,17 @@ class QuadrupedEnv(gym.Env):
             base_vel_norm = np.random.uniform(*self.base_lin_vel_range)
             heading_angle = np.random.uniform(-np.pi, np.pi)
             base_heading_vel_vec = np.array([np.cos(heading_angle), np.sin(heading_angle), 0])
+        elif 'human' in self.base_vel_command_type:
+            base_vel_norm = 0.0
+            base_heading_vel_vec = np.array([1, 0, 0])
+            self._ref_base_ang_yaw_dot = 0.0
         else:
             raise ValueError(f"Invalid base linear velocity command type: {self.base_vel_command_type}")
 
         if 'rotate' in self.base_vel_command_type:
-            self._base_ang_yaw_dot = np.random.uniform(*self.base_ang_vel_range)
+            self._ref_base_ang_yaw_dot = np.random.uniform(*self.base_ang_vel_range)
         else:
-            self._base_ang_yaw_dot = 0.0
+            self._ref_base_ang_yaw_dot = 0.0
 
         self._ref_base_lin_vel_H = base_vel_norm * base_heading_vel_vec
 
@@ -262,7 +266,7 @@ class QuadrupedEnv(gym.Env):
 
         return self._get_obs()
 
-    def render(self, mode='human', key_callback: mujoco.viewer.KeyCallbackType = None):
+    def render(self, mode='human'):
         X_B = self.base_configuration
         r_B = X_B[:3, 3]
         dr_B = self.mjData.qvel[0:3]
@@ -273,7 +277,8 @@ class QuadrupedEnv(gym.Env):
 
         if self.viewer is None:
             self.viewer = mujoco.viewer.launch_passive(
-                self.mjModel, self.mjData, show_left_ui=False, show_right_ui=False, key_callback=key_callback,
+                self.mjModel, self.mjData, show_left_ui=False, show_right_ui=False,
+                key_callback=lambda x: self._key_callback(x)
                 )
             mujoco.mjv_defaultFreeCamera(self.mjModel, self.viewer.cam)
             # self.viewer.user_scn.flags[mujoco.mjtRndFlag.mjRND_SHADOW] = 0
@@ -286,7 +291,7 @@ class QuadrupedEnv(gym.Env):
                 self.viewer, vector=dr_B, pos=vec_pos, scale=vec_scale, color=vel_vec_color,
                 )
         else:
-            # Update the reference and current base velocity markers
+            # Update the reference and current base linear velocity markers
             render_vector(self.viewer, ref_base_lin_vel_B, ref_vec_pos, ref_vec_scale, ref_vel_vec_color,
                           geom_id=self._geom_ids['ref_dr_B_vec'])
             render_vector(self.viewer, dr_B, vec_pos, vec_scale, vel_vec_color,
@@ -340,7 +345,7 @@ class QuadrupedEnv(gym.Env):
             raise RuntimeError("Please call env.reset() before accessing the target base velocity.")
         R_B_heading = self.heading_orientation_SO3
         ref_base_lin_vel = (R_B_heading @ self._ref_base_lin_vel_H.reshape(3, 1)).squeeze()
-        ref_base_ang_vel = np.array([0., 0., self._base_ang_yaw_dot])
+        ref_base_ang_vel = np.array([0., 0., self._ref_base_ang_yaw_dot])
         return ref_base_lin_vel, ref_base_ang_vel
 
     def get_base_inertia(self) -> np.ndarray:
@@ -707,6 +712,19 @@ class QuadrupedEnv(gym.Env):
             else:
                 pass
 
+    def _key_callback(self, keycode):
+        print(f"\n\n ********************* Key pressed: {keycode}\n\n\n")
+        if keycode == 262:  # arrow right
+            self._ref_base_ang_yaw_dot -= 0.1
+        elif keycode == 263:  # arrow left
+            self._ref_base_ang_yaw_dot += 0.1
+        elif keycode == 265:  # arrow up
+            self._ref_base_lin_vel_H[0] += 0.1
+        elif keycode == 264:  # arrow down
+            self._ref_base_lin_vel_H[0] -= 0.1
+        elif keycode == 345:  # ctrl
+            self._ref_base_lin_vel_H *= 0.0
+            self._ref_base_ang_yaw_dot = 0.0
 
     def _get_obs(self):
         """Returns the state observation based on the specified state observation names."""

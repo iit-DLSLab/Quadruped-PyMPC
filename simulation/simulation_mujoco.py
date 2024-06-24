@@ -96,19 +96,20 @@ if __name__ == '__main__':
     scene_name = cfg.simulation_params['scene']
     simulation_dt = cfg.simulation_params['dt']
 
-    MAX_STEPS = 3000
     # Create the quadruped robot environment. _______________________________________________________________________
     env = QuadrupedEnv(robot=robot_name,
                        legs_joint_names=LegsAttr(**robot_leg_joints),
                        scene=scene_name,
                        base_lin_vel_range=(2.0 * hip_height, 3.0 * hip_height),
                        sim_dt=simulation_dt,
-                       base_vel_command_type="random",  # "forward", "random", "forward+rotate",
+                       base_vel_command_type="human",  # "forward", "random", "forward+rotate", "human"
                        feet_geom_name=LegsAttr(**robot_feet_geom_names),  # Geom/Frame id of feet
                        )
     env.reset()
-    env.render(key_callback=None)  # Pass in the first render call any mujoco.viewer.KeyCallbackType
+    env.render()  # Pass in the first render call any mujoco.viewer.KeyCallbackType
     mass = np.sum(env.mjModel.body_mass)
+
+    MAX_STEPS = 3000 if env.base_vel_command_type != "human" else 20000
 
     # _______________________________________________________________________________________________________________
 
