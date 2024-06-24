@@ -633,23 +633,7 @@ with mujoco.viewer.launch_passive(m, d, show_left_ui=False, show_right_ui=False,
             nmpc_GRFs[3:6] = nmpc_GRFs[3:6]*current_contact[1]
             nmpc_GRFs[6:9] = nmpc_GRFs[6:9]*current_contact[2]
             nmpc_GRFs[9:12] = nmpc_GRFs[9:12]*current_contact[3]
-
-            
-            # Compute wrench. This goes to the estimator!
-            wrench_linear = nmpc_GRFs[0:3] + \
-                            nmpc_GRFs[3:6] + \
-                            nmpc_GRFs[6:9] + \
-                            nmpc_GRFs[9:12]
-            
-            wrench_angular = cs.skew(state_current["foot_FL"] - state_current["position"])@nmpc_GRFs[0:3] + \
-                            cs.skew(state_current["foot_FR"] - state_current["position"])@nmpc_GRFs[3:6] + \
-                            cs.skew(state_current["foot_RL"] - state_current["position"])@nmpc_GRFs[6:9] + \
-                            cs.skew(state_current["foot_RR"] - state_current["position"])@nmpc_GRFs[9:12]
-            wrench_angular = np.array(wrench_angular)
-            
-            nmpc_wrenches = np.concatenate((wrench_linear, wrench_angular.flatten()), axis=0)
-        
-            
+                    
 
 
         if(use_print_debug): 

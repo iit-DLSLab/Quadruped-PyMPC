@@ -444,12 +444,6 @@ if __name__ == '__main__':
                                  RL=nmpc_GRFs[6:9] * current_contact[2],
                                  RR=nmpc_GRFs[9:12] * current_contact[3])
 
-            # Compute the linear and angular components of the wrench. This goes to the estimator!
-            wrench_lin = np.sum(nmpc_GRFs.to_list(), axis=0)
-            feet_pos_base = env.feet_pos(frame='base')
-            wrench_ang = np.sum([skew(feet_pos_base[leg_name]) @ nmpc_GRFs[leg_name] for leg_name in legs_order],
-                                axis=0)
-            nmpc_wrenches = np.concatenate((wrench_lin, wrench_ang.flatten()), axis=0)
         # -------------------------------------------------------------------------------------------------
 
         # Compute Stance Torque ---------------------------------------------------------------------------
