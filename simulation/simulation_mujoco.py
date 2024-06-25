@@ -9,6 +9,7 @@ import time
 # TODO: Ugly hack so people dont have to run the python command specifying the working directory.
 #  we should remove this before the final release.
 import sys
+
 # Add the parent directory of this script to the Python path
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
@@ -16,7 +17,6 @@ import mujoco
 import numpy as np
 
 import config as cfg
-
 
 # Parameters for both MPC and simulation
 from helpers.foothold_reference_generator import FootholdReferenceGenerator
@@ -97,21 +97,28 @@ if __name__ == '__main__':
     scene_name = cfg.simulation_params['scene']
     simulation_dt = cfg.simulation_params['dt']
 
+    state_observables = ('base_pos', 'base_lin_vel', 'base_ori_quat_wxyz', 'base_ang_vel',
+                         'qpos_js', 'qvel_js', 'tau_applied',
+                         'feet_pos_base', 'feet_vel_base', 'contact_state', 'contact_forces_base',)
+
     # Create the quadruped robot environment. _______________________________________________________________________
     env = QuadrupedEnv(robot=robot_name,
                        hip_height=hip_height,
                        legs_joint_names=LegsAttr(**robot_leg_joints),
                        scene=scene_name,
-                       base_lin_vel_range=(2.0 * hip_height, 3.0 * hip_height),
                        sim_dt=simulation_dt,
-                       base_vel_command_type="human",  # "forward", "random", "forward+rotate", "human"
+                       base_lin_vel_range=(-4.0 * hip_height, 4.0 * hip_height),
+                       base_ang_vel_range=(-np.pi * 3 / 4, np.pi * 3 / 4),
+                       ground_friction_coeff_range=(0.3, 1.5),
+                       base_vel_command_type="random",  # "forward", "random", "forward+rotate", "human"
                        feet_geom_name=LegsAttr(**robot_feet_geom_names),  # Geom/Frame id of feet
+                       state_obs_names=state_observables,
                        )
     env.reset()
     env.render()  # Pass in the first render call any mujoco.viewer.KeyCallbackType
     mass = np.sum(env.mjModel.body_mass)
 
-    MAX_STEPS = 3000 if env.base_vel_command_type != "human" else 20000
+    MAX_STEPS = 2000 if env.base_vel_command_type != "human" else 20000
 
     # _______________________________________________________________________________________________________________
 
@@ -192,7 +199,7 @@ if __name__ == '__main__':
     nominal_sample_freq = step_frequency
     # Create the foothold reference generator
     stance_time = (1 / step_frequency) * duty_factor
-    frg = FootholdReferenceGenerator(stance_time=stance_time)
+    frg = FootholdReferenceGenerator(stance_time=stance_time, hip_height=cfg.hip_height)
 
     # Create swing trajectory generator
     step_height = cfg.simulation_params['step_height']
@@ -206,7 +213,6 @@ if __name__ == '__main__':
     # Swing controller variables
     swing_time = [0, 0, 0, 0]
     lift_off_positions = env.feet_pos(frame='world')
-
 
     # Terrain estimator
     terrain_computation = TerrainEstimator()
@@ -293,12 +299,12 @@ if __name__ == '__main__':
 
         # Estimate the terrain slope and elevation -------------------------------------------------------
         terrain_roll, \
-        terrain_pitch, \
-        terrain_height = terrain_computation.compute_terrain_estimation(
-                                                base_position=env.base_pos,
-                                                yaw=env.base_ori_euler_xyz[2],
-                                                feet_pos=lift_off_positions, 
-                                                current_contact=current_contact)
+            terrain_pitch, \
+            terrain_height = terrain_computation.compute_terrain_estimation(
+            base_position=env.base_pos,
+            yaw=env.base_ori_euler_xyz[2],
+            feet_pos=lift_off_positions,
+            current_contact=current_contact)
 
         ref_pos = np.array([0, 0, cfg.hip_height])
         ref_pos[2] = cfg.simulation_params['ref_z'] + terrain_height
@@ -408,7 +414,7 @@ if __name__ == '__main__':
                     ref_state,
                     contact_sequence,
                     # inertia=cfg.inertia.flatten(),
-                    inertia=env.get_base_inertia().flatten()   # Reflected inertia of base at qpos, in world frame
+                    inertia=env.get_base_inertia().flatten()  # Reflected inertia of base at qpos, in world frame
                     )
                 # TODO functions should output this class instance.
                 nmpc_footholds = LegsAttr(FL=nmpc_footholds[0],
@@ -531,7 +537,7 @@ if __name__ == '__main__':
         action[env.legs_tau_idx.FR] = tau.FR
         action[env.legs_tau_idx.RL] = tau.RL
         action[env.legs_tau_idx.RR] = tau.RR
-        action_noise = np.random.normal(0, 1, size=env.mjModel.nu)
+        action_noise = np.random.normal(0, 2, size=env.mjModel.nu)
 
         state, reward, is_terminated, is_truncated, info = env.step(action=action + action_noise)
 
@@ -551,13 +557,13 @@ if __name__ == '__main__':
                                                    nmpc_footholds=nmpc_footholds,
                                                    ref_feet_pos=ref_feet_pos,
                                                    geom_ids=feet_traj_geom_ids)
-            # for leg_id, leg_name in enumerate(legs_order):
-            #     feet_GRF_geom_ids[leg_name] = render_vector(env.viewer,
-            #                                                 vector=feet_GRF[leg_name],
-            #                                                 pos=feet_pos[leg_name],
-            #                                                 scale=np.linalg.norm(feet_GRF[leg_name]) * 0.005,
-            #                                                 color=np.array([0, 1, 0, .5]),
-            #                                                 geom_id=feet_GRF_geom_ids[leg_name])
+            for leg_id, leg_name in enumerate(legs_order):
+                feet_GRF_geom_ids[leg_name] = render_vector(env.viewer,
+                                                            vector=feet_GRF[leg_name],
+                                                            pos=feet_pos[leg_name],
+                                                            scale=np.linalg.norm(feet_GRF[leg_name]) * 0.005,
+                                                            color=np.array([0, 1, 0, .5]),
+                                                            geom_id=feet_GRF_geom_ids[leg_name])
 
             env.render()
             last_render_time = time.time()

@@ -22,7 +22,8 @@ from utils.quadruped_utils import LegsAttr, extract_mj_joint_info
 
 BASE_OBS = ['base_pos', 'base_lin_vel', 'base_ang_vel', 'base_ori_euler_xyz', 'base_ori_quat_wxyz', 'base_ori_SO3']
 GEN_CORDS_OBS = ['qpos', 'qvel', 'tau_applied', 'qpos_js', 'qvel_js']
-FEET_OBS = ['feet_pos', 'feet_pos_base', 'feet_vel', 'feet_vel_base']
+FEET_OBS = ['feet_pos', 'feet_pos_base', 'feet_vel', 'feet_vel_base', 'contact_state', 'contact_forces',
+            'contact_forces_base']
 ALL_OBS = BASE_OBS + GEN_CORDS_OBS + FEET_OBS
 
 
@@ -48,7 +49,7 @@ class QuadrupedEnv(gym.Env):
                  base_ang_vel_range: tuple[float, float] = (-np.pi * 3 / 4, np.pi * 3 / 4),
                  ground_friction_coeff_range: tuple[float, float] = (0.8, 1.2),
                  feet_geom_name: LegsAttr = LegsAttr(FL='FL', FR='FR', RL='RL', RR='RR'),
-                 state_obs_names: list[str] = ('qpos', 'qvel', 'tau_applied', 'feet_pos_base', 'feet_vel_base'),
+                 state_obs_names: tuple[str, ...] = ('qpos', 'qvel', 'tau_applied', 'feet_pos_base', 'feet_vel_base'),
                  legs_order: tuple[str] = ('FL', 'FR', 'RL', 'RR'),
                  ):
         """Initialize the quadruped environment.
@@ -299,7 +300,9 @@ class QuadrupedEnv(gym.Env):
             render_vector(self.viewer, dr_B, vec_pos, vec_scale, vel_vec_color,
                           geom_id=self._geom_ids['dr_B_vec'])
 
-        self._update_camera_target(self.viewer.cam, r_B)
+        cam_pos = max(self.hip_height * 0.1, r_B[2])
+
+        self._update_camera_target(self.viewer.cam, np.concatenate((r_B[:2], [cam_pos])))
         self.viewer.sync()
 
     def close(self):
@@ -767,6 +770,10 @@ class QuadrupedEnv(gym.Env):
             elif obs_name == 'contact_state':
                 contact_state, _ = self.feet_contact_state()
                 obs.append(np.array(contact_state.to_list()))
+            elif 'contact_forces' in obs_name:
+                frame = 'world' if 'base' not in obs_name else 'base'
+                _, _, contact_forces = self.feet_contact_state(ground_reaction_forces=True, frame=frame)
+                obs.append(np.concatenate(contact_forces.to_list(order=self.legs_order), axis=0))
             else:
                 raise ValueError(f"Invalid observation name: {obs_name}, available obs: {ALL_OBS}")
 
@@ -795,6 +802,7 @@ class QuadrupedEnv(gym.Env):
         obs_idx = {k: None for k in state_obs_names}
         for obs_name in state_obs_names:
             # Generalized position, velocity, and force (torque) spaces
+
             if obs_name == 'qpos':
                 obs_dim += self.mjModel.nq
                 obs_lim_max.extend([np.inf] * 7 + qpos_lim_max[1:].tolist())  # Ignore the base position
@@ -810,8 +818,8 @@ class QuadrupedEnv(gym.Env):
             # Joint-space position and velocity spaces
             elif obs_name == 'qpos_js':  # Joint space position configuration
                 obs_dim += self.mjModel.nq - 7
-                obs_lim_max.extend(qpos_lim_max)
-                obs_lim_min.extend(qpos_lim_min)
+                obs_lim_max.extend(qpos_lim_max[1:])
+                obs_lim_min.extend(qpos_lim_min[1:])
             elif obs_name == 'qvel_js':  # Joint space velocity configuration
                 obs_dim += self.mjModel.nv - 6
                 obs_lim_max.extend([np.inf] * (self.mjModel.nv - 6))
@@ -821,40 +829,40 @@ class QuadrupedEnv(gym.Env):
                 if "qpos" in state_obs_names:
                     warnings.warn("base_pos is redundant with additional obs qpos. base_pos = qpos[0:3]")
                 obs_dim += 3
-                obs_lim_max = [np.inf] * 3
-                obs_lim_min = [-np.inf] * 3
+                obs_lim_max.extend([np.inf] * 3)
+                obs_lim_min.extend([-np.inf] * 3)
             elif obs_name == 'base_lin_vel':
                 if "qvel" in state_obs_names:
                     warnings.warn("base_lin_vel is redundant with additional obs qvel. base_lin_vel = qvel[0:3]")
                 obs_dim += 3
-                obs_lim_max = [np.inf] * 3
-                obs_lim_min = [-np.inf] * 3
+                obs_lim_max.extend([np.inf] * 3)
+                obs_lim_min.extend([-np.inf] * 3)
             elif obs_name == 'base_ang_vel':
                 if "qvel" in state_obs_names:
                     warnings.warn("base_ang_vel is redundant with additional obs qvel. base_ang_vel = qvel[3:6]")
                 obs_dim += 3
-                obs_lim_max = [np.inf] * 3
-                obs_lim_min = [-np.inf] * 3
+                obs_lim_max.extend([np.inf] * 3)
+                obs_lim_min.extend([-np.inf] * 3)
             elif obs_name == 'base_ori_euler_xyz':
                 if "qpos" in state_obs_names:
                     warnings.warn(
                         "base_ori_euler_xyz is redundant with additional obs qpos. base_ori_euler_xyz = qpos[3:6]")
                 obs_dim += 3
-                obs_lim_max = [np.inf] * 3
-                obs_lim_min = [-np.inf] * 3
+                obs_lim_max.extend([np.inf] * 3)
+                obs_lim_min.extend([-np.inf] * 3)
             elif obs_name == 'base_ori_quat_wxyz':
                 if "qpos" in state_obs_names:
                     warnings.warn(
                         "base_ori_quat_wxyz is redundant with additional obs qpos. base_ori_quat_wxyz = qpos[3:7]")
                 obs_dim += 4
-                obs_lim_max = [np.inf] * 4
-                obs_lim_min = [-np.inf] * 4
+                obs_lim_max.extend([np.inf] * 4)
+                obs_lim_min.extend([-np.inf] * 4)
             elif obs_name == 'base_ori_SO3':
                 if "qpos" in state_obs_names:
                     warnings.warn("base_ori_SO3 is redundant with additional obs qpos. base_ori_SO3 = qpos[3:7]")
                 obs_dim += 9
-                obs_lim_max = [np.inf] * 9
-                obs_lim_min = [-np.inf] * 9
+                obs_lim_max.extend([np.inf] * 9)
+                obs_lim_min.extend([-np.inf] * 9)
             # Feet positions and velocities
             elif 'feet_pos' in obs_name:  # feet_pos:frame := feet_pos:world or feet_pos:base
                 obs_dim += 12
@@ -868,11 +876,20 @@ class QuadrupedEnv(gym.Env):
                 obs_dim += 4
                 obs_lim_max.extend([1] * 4)
                 obs_lim_min.extend([0] * 4)
+            elif 'contact_forces' in obs_name:
+                obs_dim += 12
+                obs_lim_max.extend([np.inf] * 12)
+                obs_lim_min.extend([-np.inf] * 12)
             else:
                 raise ValueError(f"Invalid observation name: {obs_name}, available obs: {ALL_OBS}")
-
             obs_idx[obs_name] = range(last_idx, obs_dim)
             last_idx = obs_dim
+
+            if obs_dim != len(obs_lim_max) or obs_dim != len(obs_lim_min):
+                raise ValueError(
+                    f"Invalid configuration of observation {obs_name}: \n - obs_dim: {obs_dim} \n"
+                    f" - lower_lim_dim: {len(obs_lim_max)} \t - upper_lim_dim: {len(obs_lim_min)}"
+                    )
 
         obs_lim_min = np.array(obs_lim_min)
         obs_lim_max = np.array(obs_lim_max)

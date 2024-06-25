@@ -232,7 +232,7 @@ nominal_sample_freq = step_frequency
 
 # Create the foothold reference generator
 stance_time = (1/step_frequency) * duty_factor
-frg = FootholdReferenceGenerator(stance_time=stance_time)
+frg = FootholdReferenceGenerator(stance_time=stance_time, hip_height=config.hip_height)
 
 
 
