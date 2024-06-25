@@ -720,9 +720,9 @@ class QuadrupedEnv(gym.Env):
     def _key_callback(self, keycode):
         print(f"\n\n ********************* Key pressed: {keycode}\n\n\n")
         if keycode == 262:  # arrow right
-            self._ref_base_ang_yaw_dot -= 0.1 * self.hip_height  # 10% of (hip_height / s)
+            self._ref_base_ang_yaw_dot -= 0.1
         elif keycode == 263:  # arrow left
-            self._ref_base_ang_yaw_dot += 0.1 * self.hip_height  # 10% of (hip_height / s)
+            self._ref_base_ang_yaw_dot += 0.1
         elif keycode == 265:  # arrow up
             self._ref_base_lin_vel_H[0] += 0.1
         elif keycode == 264:  # arrow down
