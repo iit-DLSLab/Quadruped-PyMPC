@@ -84,7 +84,7 @@ if __name__ == '__main__':
                        base_lin_vel_range=(-4.0 * hip_height, 4.0 * hip_height),
                        base_ang_vel_range=(-np.pi * 3 / 4, np.pi * 3 / 4),
                        ground_friction_coeff_range=(0.3, 1.5),
-                       base_vel_command_type="random",  # "forward", "random", "forward+rotate", "human"
+                       base_vel_command_type="human",  # "forward", "random", "human"
                        feet_geom_name=LegsAttr(**robot_feet_geom_names),  # Geom/Frame id of feet
                        state_obs_names=state_observables,
                        )

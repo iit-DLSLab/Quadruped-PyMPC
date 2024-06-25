@@ -5,7 +5,7 @@ import numpy as np
 
 # These are used both for a real experiment and a simulation -----------
 # These are the only attributes needed per quadruped, the rest can be computed automatically ----------------------
-robot = 'mini_cheetah'  # 'go2', 'aliengo', 'hyqreal', 'mini_cheetah'  # TODO: Load from robot_descriptions.py
+robot = 'aliengo'  # 'go2', 'aliengo', 'hyqreal', 'mini_cheetah'  # TODO: Load from robot_descriptions.py
 robot_leg_joints = dict(FL=['FL_hip_joint', 'FL_thigh_joint', 'FL_calf_joint',],  # TODO: Make configs per robot.
                         FR=['FR_hip_joint', 'FR_thigh_joint', 'FR_calf_joint',],
                         RL=['RL_hip_joint', 'RL_thigh_joint', 'RL_calf_joint',],
@@ -168,13 +168,11 @@ simulation_params = {
 
     'gait':                        'trot',  # 'trot', 'pace', 'crawl', 'bound', 'full_stance'
 
-    # ref_x_dot, ref_y_dot, ref_yaw_dot are in the horizontal frame
-    'ref_x_dot':                   .3,
-    'ref_y_dot':                   0.,
-    'ref_yaw_dot':                 0.0,
+    # velocity mode: human will give you the possibility to use the keyboard, the other are
+    # forward only random linear-velocity, random will give you random linear-velocity and yaw-velocity
+    'mode':                        'human',  # 'human', 'forward', 'random'
     'ref_z':                       hip_height,
-    # 'ref_pitch':                   0.0,
-    # 'ref_roll':                    0,
+
 
     # the MPC will be called every 1/(mpc_frequency*dt) timesteps
     # this helps to evaluate more realistically the performance of the controller
@@ -191,7 +189,7 @@ simulation_params = {
 
     'use_kind_of_real_time':       True,
 
-    'scene':                       'perlin',  # flat, rough, stairs, suspend_stairs, slope, perlin, image
+    'scene':                       'flat',  # flat, rough, stairs, suspend_stairs, slope, perlin, image
 
     }
 # -----------------------------------------------------------------------
