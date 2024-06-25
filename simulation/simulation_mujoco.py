@@ -185,7 +185,6 @@ if __name__ == '__main__':
 
     # Online computation of the inertia parameter
     srb_inertia_computation = SrbInertiaComputation()  # TODO: This seems to be unsused.
-    inertia = cfg.inertia
 
     # Initialization of variables used in the main control loop
     # ____________________________________________________________
@@ -302,9 +301,12 @@ if __name__ == '__main__':
             # We can recompute the inertia of the single rigid body model
 
             # or use the fixed one in cfg.py
-            if (cfg.simulation_params['use_inertia_recomputation']):
+            if(cfg.simulation_params['use_inertia_recomputation']):
                 # TODO: d.qpos is not defined
-                inertia = srb_inertia_computation.compute_inertia(d.qpos)
+                #inertia = srb_inertia_computation.compute_inertia(d.qpos)
+                inertia = env.get_base_inertia().flatten()  # Reflected inertia of base at qpos, in world frame
+            else:
+                inertia = cfg.inertia.flatten()
 
             if ((cfg.mpc_params['optimize_step_freq'])):
                 # we can always optimize the step freq, or just at the apex of the swing
@@ -388,8 +390,8 @@ if __name__ == '__main__':
                     ref_state,
                     contact_sequence,
                     # inertia=cfg.inertia.flatten(),
-                    inertia=env.get_base_inertia().flatten()  # Reflected inertia of base at qpos, in world frame
-                    )
+                    inertia=inertia)
+                
                 # TODO functions should output this class instance.
                 nmpc_footholds = LegsAttr(FL=nmpc_footholds[0],
                                           FR=nmpc_footholds[1],
