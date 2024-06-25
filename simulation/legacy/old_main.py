@@ -14,7 +14,6 @@ np.set_printoptions(precision=3, suppress = True)
 
 import os 
 dir_path = os.path.dirname(os.path.realpath(__file__))
-os.environ['XLA_FLAGS'] = ('--xla_gpu_triton_gemm_any=True')
 
 import sys
 sys.path.append(dir_path + '/../../')
@@ -99,10 +98,8 @@ mass = np.sum(m.body_mass)
 
 # MPC Magic - i took the minimum value of the dt 
 # used along the horizon of the MPC
-if(config.mpc_params['use_nonuniform_discretization']):
-    mpc_dt = config.mpc_params['dt_fine_grained']
-else:
-    mpc_dt = config.mpc_params['dt']
+mpc_frequency = config.simulation_params['mpc_frequency']
+mpc_dt = config.mpc_params['dt']
 horizon = config.mpc_params['horizon']
 
 # input_rates optimize the delta_GRF (smoooth!)
@@ -214,7 +211,6 @@ state_old = np.zeros(shape=(controller.states_dim,))
 # Simulation dt
 m.opt.timestep = config.simulation_params['dt']
 simulation_dt = config.simulation_params['dt']
-mpc_frequency = config.simulation_params['mpc_frequency']
 
 
 
@@ -223,8 +219,9 @@ gait_name = config.simulation_params['gait']
 gait_type, duty_factor, step_frequency = get_gait_params(gait_name)
 # Given the possibility to use nonuniform discretization, 
 # we generate a contact sequence two times longer
-pgg = PeriodicGaitGenerator(duty_factor=duty_factor, step_freq=step_frequency, gait_type=gait_type, horizon=horizon*2)
-contact_sequence = pgg.compute_contact_sequence(mpc_dt=mpc_dt, simulation_dt=simulation_dt)
+pgg = PeriodicGaitGenerator(duty_factor=duty_factor, step_freq=step_frequency, gait_type=gait_type, 
+                            horizon=horizon*2, contact_sequence_dt=mpc_dt/2.)
+contact_sequence = pgg.compute_contact_sequence()
 nominal_sample_freq = step_frequency
 
 
@@ -400,25 +397,15 @@ with mujoco.viewer.launch_passive(m, d, show_left_ui=False, show_right_ui=False,
         # -------------------------------------------------------
 
         # Update the contact sequence ---------------------------
-        if(gait_type == "full_stance"):
-            contact_sequence = np.ones((4, horizon*2)) 
-        else:
-            contact_sequence = pgg.compute_contact_sequence(mpc_dt=mpc_dt, simulation_dt=simulation_dt)
-            
-        # in the case of nonuniform discretization, we need
-        # to subsample the contact sequence
-        if(config.mpc_params['use_nonuniform_discretization']):
-            subsample_step_contact_sequence = int(config.mpc_params['dt_fine_grained']/mpc_dt)
-            if(subsample_step_contact_sequence > 1):
-                contact_sequence_fine_grained = contact_sequence[:, ::subsample_step_contact_sequence][:, 0:config.mpc_params['horizon_fine_grained']]
-            else:
-                contact_sequence_fine_grained = contact_sequence[:, 0:config.mpc_params['horizon_fine_grained']]
-            
-            subsample_step_contact_sequence = int(config.mpc_params['dt']/mpc_dt)
-            if(subsample_step_contact_sequence > 1):
-                contact_sequence = contact_sequence[:, ::subsample_step_contact_sequence]
-            contact_sequence = contact_sequence[:, 0:horizon]
-            contact_sequence[:, 0:config.mpc_params['horizon_fine_grained']] = contact_sequence_fine_grained
+        contact_sequence = pgg.compute_contact_sequence()
+
+        # in the case of nonuniform discretization, we need to subsample the contact sequence
+        if (config.mpc_params['use_nonuniform_discretization']):
+            dt_fine_grained = config.mpc_params['dt_fine_grained']
+            horizon_fine_grained = config.mpc_params['horizon_fine_grained']
+            contact_sequence = pgg.sample_contact_sequence(contact_sequence, mpc_dt, dt_fine_grained, horizon_fine_grained)
+               
+
         
 
         previous_contact = copy.deepcopy(current_contact)
@@ -441,8 +428,8 @@ with mujoco.viewer.launch_passive(m, d, show_left_ui=False, show_right_ui=False,
         
 
 
-        ref_feet_pos = frg.compute_footholds_reference(com_pos, rpy_angles, linear_vel[0:2], ref_linear_velocity[0:2], hip_pos_legattr, 
-                                                            state_current["position"][2], lift_off_positions_legattr)
+        ref_feet_pos = frg.compute_footholds_reference(com_pos, rpy_angles, state_current["linear_velocity"][0:2], reference_state["ref_linear_velocity"][0:2], hip_pos_legattr, 
+                                                        state_current["position"][2], lift_off_positions_legattr)
         reference_foot_FL = ref_feet_pos.FL
         reference_foot_FR = ref_feet_pos.FR
         reference_foot_RL = ref_feet_pos.RL
@@ -477,8 +464,6 @@ with mujoco.viewer.launch_passive(m, d, show_left_ui=False, show_right_ui=False,
         reference_state["ref_orientation"] = np.array([terrain_roll, terrain_pitch, 0])        
         reference_state["ref_position"][2] = config.simulation_params['ref_z'] + terrain_height
         # -------------------------------------------------------------------------------------------------
-        
-
 
 
         # Solve OCP ---------------------------------------------------------------------------------------
@@ -510,6 +495,12 @@ with mujoco.viewer.launch_passive(m, d, show_left_ui=False, show_right_ui=False,
             if(config.mpc_params['type'] == 'sampling'):
 
                 time_start = time.time()
+
+                # Shift the previous solution ahead
+                if (config.mpc_params['shift_solution']):
+                    index_shift = 1./mpc_frequency
+                    best_control_parameters = controller.shift_solution(best_control_parameters, index_shift)
+                
                 # Convert data to jax
                 state_current_jax, \
                 reference_state_jax, \
@@ -587,7 +578,13 @@ with mujoco.viewer.launch_passive(m, d, show_left_ui=False, show_right_ui=False,
                         pgg_temp = PeriodicGaitGenerator(duty_factor=duty_factor, step_freq=config.mpc_params['step_freq_available'][j], p_gait=gait_type, horizon=horizon*2)
                         pgg_temp.t = copy.deepcopy(pgg.t)
                         pgg_temp.init = copy.deepcopy(pgg.init)
-                        contact_sequence_temp[j] = pgg_temp.compute_contact_sequence(mpc_dt=mpc_dt, simulation_dt=simulation_dt)
+                        contact_sequence_temp[j] = pgg_temp.compute_contact_sequence()
+
+                        # in the case of nonuniform discretization, we need to subsample the contact sequence
+                        if (config.mpc_params['use_nonuniform_discretization']):
+                            dt_fine_grained = config.mpc_params['dt_fine_grained']
+                            horizon_fine_grained = config.mpc_params['horizon_fine_grained']
+                            contact_sequence_temp[j] = pgg.sample_contact_sequence(contact_sequence, mpc_dt, dt_fine_grained, horizon_fine_grained)
 
                     costs, best_sample_freq = batched_controller.compute_batch_control(state_current, reference_state, contact_sequence_temp)
                     
@@ -632,23 +629,7 @@ with mujoco.viewer.launch_passive(m, d, show_left_ui=False, show_right_ui=False,
             nmpc_GRFs[3:6] = nmpc_GRFs[3:6]*current_contact[1]
             nmpc_GRFs[6:9] = nmpc_GRFs[6:9]*current_contact[2]
             nmpc_GRFs[9:12] = nmpc_GRFs[9:12]*current_contact[3]
-
-            
-            # Compute wrench. This goes to the estimator!
-            wrench_linear = nmpc_GRFs[0:3] + \
-                            nmpc_GRFs[3:6] + \
-                            nmpc_GRFs[6:9] + \
-                            nmpc_GRFs[9:12]
-            
-            wrench_angular = cs.skew(state_current["foot_FL"] - state_current["position"])@nmpc_GRFs[0:3] + \
-                            cs.skew(state_current["foot_FR"] - state_current["position"])@nmpc_GRFs[3:6] + \
-                            cs.skew(state_current["foot_RL"] - state_current["position"])@nmpc_GRFs[6:9] + \
-                            cs.skew(state_current["foot_RR"] - state_current["position"])@nmpc_GRFs[9:12]
-            wrench_angular = np.array(wrench_angular)
-            
-            nmpc_wrenches = np.concatenate((wrench_linear, wrench_angular.flatten()), axis=0)
-        
-            
+                    
 
 
         if(use_print_debug): 
