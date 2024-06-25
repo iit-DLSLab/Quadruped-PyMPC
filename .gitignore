@@ -301,10 +301,6 @@ pyrightconfig.json
 .history
 .ionide
 
-# End of https://www.toptal.com/developers/gitignore/api/python,c++,c,visualstudiocode,git,linux
-simulation/control_input.pickle
-
-acados
 
 
 gradient/nominal/c_generated_code_gait_adaptive/
