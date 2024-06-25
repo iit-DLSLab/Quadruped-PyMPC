@@ -1,26 +1,16 @@
-import numpy as np
-from numpy.linalg import norm
-import time
-import unittest
-import casadi as cs
-#import example_robot_data as robex
+import collections
+
 import mujoco
+import numpy as np
 
-import pinocchio as pin
-#from pinocchio import casadi as cpin
+from utils.quadruped_utils import LegsAttr
 
-import os 
-dir_path = os.path.dirname(os.path.realpath(__file__))
-
-import sys
-sys.path.append(dir_path + '/../')
-
-# Parameters for both MPC and simulation
-import config 
 
 # Class for the generation of the reference footholds
+# TODO: @Giulio Should we convert this to a single function instead of a class? Stance time, can be passed as argument
 class FootholdReferenceGenerator:
-    def __init__(self, stance_time: np.float64) -> None:
+
+    def __init__(self, stance_time: float, vel_moving_average_length=20, hip_height: float = None) -> None:
         """
         This method initializes the foothold generator class, which computes
         the reference foothold for the nonlinear MPC.
@@ -28,89 +18,95 @@ class FootholdReferenceGenerator:
         Args:
             stance_time: The user-defined time of the stance phase.
         """
-
+        self.base_vel_hist = collections.deque(maxlen=vel_moving_average_length)
         self.stance_time = stance_time
+        self.hip_height = hip_height
 
+    def compute_footholds_reference(self,
+                                    com_position: np.ndarray,
+                                    base_ori_euler_xyz: np.ndarray,
+                                    base_xy_lin_vel: np.ndarray,
+                                    ref_base_xy_lin_vel: np.ndarray,
+                                    hips_position: LegsAttr,
+                                    com_height: float,
+                                    lift_off_positions: LegsAttr) -> LegsAttr:
+        """ Compute the reference footholds for a quadruped robot, using simple geometric heuristics.
 
-    def compute_footholds_reference(self, com_position, rpy_angles, linear_com_velocity: np.float64, desired_linear_com_velocity: np.float64, 
-                                    hips_position: np.ndarray, com_height: np.float64, lift_off_positions) -> np.ndarray:
-        """
-        Starting from the robot hips position, com actual and desired velocities, this method 
-        computes the reference footholds for the nonlinear MPC.
+        TODO: This function should be adapted to:
+           1. Use the terrain slope estimation
+           2. Use the desired base angular (yaw_dot) velocity to compensate for the error in the velocity.
+            Similar to the linear velocity compensation.
 
+        TODO: This function should be vectorized so operations are not done for each leg separately.
         Args:
-            linear_com_velocity: The linear velocity of the center of mass.
-            desired_linear_com_velocity: The desired linear velocity of the center of mass.
-            hips_position: The position of the hips in the WORLD frame.
-            com_height: The height of the center of mass.
+            com_position: (3,) The position of the center of mass of the robot.
+            base_ori_euler_xyz: (3,) The orientation of the base in euler angles.
+            base_xy_lin_vel: (2,) The [x,y] linear velocity of the base in world frame.
+            ref_base_xy_lin_vel: (2,) The desired [x,y] linear velocity of the base in world frame.
+            hips_position: (LegsAttr) The position of the hips of the robot in world frame.
+            com_height: (float) The height of the center of mass of the robot. # TODO: isnt this com_position[2]?
+            lift_off_positions: (LegsAttr) The position of the feet when they are lifted off the ground in world frame
+
+        Returns:
+            ref_feet: (LegsAttr) The reference footholds for the robot in world frame.
         """
-        
-        
+        assert base_xy_lin_vel.shape == (2,) and ref_base_xy_lin_vel.shape == (2,), \
+            f"Expected shape (2,):=[x_dot, y_dot], got {base_xy_lin_vel.shape} and {ref_base_xy_lin_vel.shape}."
 
-        # we want to move the feet in the direction of the desired velocity 
-        delta_vel = (self.stance_time/2.)*desired_linear_com_velocity 
-        #delta_vel = (self.stance_time/2.)*linear_com_velocity
-        
-
-        # we perform a hip-centric step in the horizontal frame
-        hip_pos_FL = hips_position[0]
-        hip_pos_FR = hips_position[1]
-        hip_pos_RL = hips_position[2]
-        hip_pos_RR = hips_position[3]
-
-        yaw = rpy_angles[2]
-        h_R_w = np.array([np.cos(yaw), np.sin(yaw),
+        # Get the rotation matrix to transform from world to horizontal frame (hip-centric)
+        yaw = base_ori_euler_xyz[2]
+        R_W2H = np.array([np.cos(yaw), np.sin(yaw),
                           -np.sin(yaw), np.cos(yaw)])
-        h_R_w = h_R_w.reshape((2,2))
-        
-        hip_pos_FL[0:2] = h_R_w@(hip_pos_FL[0:2] - com_position[0:2])
-        hip_pos_FR[0:2] = h_R_w@(hip_pos_FR[0:2] - com_position[0:2])
-        hip_pos_RL[0:2] = h_R_w@(hip_pos_RL[0:2] - com_position[0:2])
-        hip_pos_RR[0:2] = h_R_w@(hip_pos_RR[0:2] - com_position[0:2]) 
+        R_W2H = R_W2H.reshape((2, 2))
 
-        # enlarging the posture depending on the robot
-        if(config.robot == 'mini_cheetah'):
-            hip_pos_FL[1] += 0.07
-            hip_pos_FR[1] -= 0.07
-            hip_pos_RL[1] += 0.07
-            hip_pos_RR[1] -= 0.07
-        else:
-            hip_pos_FL[1] += 0.1
-            hip_pos_FR[1] -= 0.1
-            hip_pos_RL[1] += 0.1
-            hip_pos_RR[1] -= 0.1
+        # Compute desired and error velocity compensation values for all legs
+        base_lin_vel_H = R_W2H @ base_xy_lin_vel
+        ref_base_lin_vel_H = R_W2H @ ref_base_xy_lin_vel
 
-        # we want to compensate for the error in the velocity
-        linear_com_velocity_horizontal_frame = h_R_w@linear_com_velocity
-        compensation = np.sqrt(com_height/9.81)*(linear_com_velocity_horizontal_frame - desired_linear_com_velocity) 
-        compensation = np.where(compensation > 0.05, 0.05, compensation)
-        compensation = np.where(compensation < -0.05, -0.05, compensation)
+        # Moving average of the base velocity
+        self.base_vel_hist.append(base_lin_vel_H)
+        base_vel_mvg = np.mean(list(self.base_vel_hist), axis=0)
+        # Compensation due to average velocity
+        delta_ref_H = (self.stance_time / 2.) * base_vel_mvg
+        # Compensation due to desired velocity
+        # max_vel_offset = (self.stance_time / 2.) * ref_base_lin_vel_H
+        delta_ref_H = np.clip(delta_ref_H, -self.hip_height * 1.5, self.hip_height * 1.5)
+        vel_offset = np.concatenate((delta_ref_H, np.zeros(1)))
 
+        # Reference footholds in the horizontal frame
+        ref_feet = LegsAttr(*[np.zeros(3) for _ in range(4)])
 
-        # we compute the reference footholds
-        footholds_reference_FL = hip_pos_FL[0:2] + delta_vel + compensation
-        footholds_reference_FR = hip_pos_FR[0:2] + delta_vel + compensation
-        footholds_reference_RL = hip_pos_RL[0:2] + delta_vel + compensation
-        footholds_reference_RR = hip_pos_RR[0:2] + delta_vel + compensation
+        # Reference feet positions are computed from the hips x,y position in the hip-centric/Horizontal frame
+        ref_feet.FL[0:2] = R_W2H @ (hips_position.FL[0:2] - com_position[0:2])
+        ref_feet.FR[0:2] = R_W2H @ (hips_position.FR[0:2] - com_position[0:2])
+        ref_feet.RL[0:2] = R_W2H @ (hips_position.RL[0:2] - com_position[0:2])
+        ref_feet.RR[0:2] = R_W2H @ (hips_position.RR[0:2] - com_position[0:2])
+        # Offsets are introduced to account for x,y offsets from nominal hip and feet positions. 
+        # Offsets to the Y axis result in wider/narrower stance (+y values lead to wider stance in left/right)
+        # Offsets to the X axis result in spread/crossed legs (+x values lead to spread legs in front/back)
+        # TODO: This should not be hardcoded, should be a property of the robot cofiguration and passed as argment
+        #  to this function, not loaded from the config file.
+        ref_feet.FL[1] += 0.1
+        ref_feet.FR[1] -= 0.1
+        ref_feet.RL[1] += 0.1
+        ref_feet.RR[1] -= 0.1
 
+        # Add the velocity compensation and desired velocity to the feet positions
+        ref_feet += vel_offset  # Add offset to all feet
 
-        # we rotate them back in the world frame
-        footholds_reference_FL[0:2] = h_R_w.T@footholds_reference_FL[0:2] + com_position[0:2]
-        footholds_reference_FR[0:2] = h_R_w.T@footholds_reference_FR[0:2] + com_position[0:2]
-        footholds_reference_RL[0:2] = h_R_w.T@footholds_reference_RL[0:2] + com_position[0:2]
-        footholds_reference_RR[0:2] = h_R_w.T@footholds_reference_RR[0:2] + com_position[0:2]
-        
+        # Reference footholds in world frame
+        ref_feet.FL[0:2] = R_W2H.T @ ref_feet.FL[:2] + com_position[0:2]
+        ref_feet.FR[0:2] = R_W2H.T @ ref_feet.FR[:2] + com_position[0:2]
+        ref_feet.RL[0:2] = R_W2H.T @ ref_feet.RL[:2] + com_position[0:2]
+        ref_feet.RR[0:2] = R_W2H.T @ ref_feet.RR[:2] + com_position[0:2]
 
-        # we should rotate them considering the terrain estimator maybe
-        # or we can just do exteroceptive height adjustement...
-        # for now we substract 0.02cm to have a clear touch down
-        reference_foot_FL = np.array([footholds_reference_FL[0], footholds_reference_FL[1], lift_off_positions[0][2] - 0.02])
-        reference_foot_FR = np.array([footholds_reference_FR[0], footholds_reference_FR[1], lift_off_positions[1][2] - 0.02])
-        reference_foot_RL = np.array([footholds_reference_RL[0], footholds_reference_RL[1], lift_off_positions[2][2] - 0.02])
-        reference_foot_RR = np.array([footholds_reference_RR[0], footholds_reference_RR[1], lift_off_positions[3][2] - 0.02])
-        
-        return reference_foot_FL, reference_foot_FR, reference_foot_RL, reference_foot_RR
+        # TODO: we should rotate them considering the terrain estimator maybe
+        #   or we can just do exteroceptive height adjustement...
+        #   for now we substract 0.02cm to have a clear touch down
+        for leg_id in ['FL', 'FR', 'RL', 'RR']:
+            ref_feet[leg_id][2] = lift_off_positions[leg_id][2] - 0.02
 
+        return ref_feet
 
 
 if __name__ == "__main__":
@@ -127,7 +123,7 @@ if __name__ == "__main__":
                         [d.body(FR_hip_id).xpos],
                         [d.body(RL_hip_id).xpos],
                         [d.body(RR_hip_id).xpos]))
-    
+
     print("hip_pos", hip_pos)
 
     stance_time = 0.5
@@ -136,8 +132,8 @@ if __name__ == "__main__":
     com_height = d.qpos[2]
 
     foothold_generator = FootholdReferenceGenerator(stance_time)
-    footholds_reference = foothold_generator.compute_footholds_reference(linear_com_velocity[0:2], desired_linear_com_velocity[0:2], 
+    footholds_reference = foothold_generator.compute_footholds_reference(linear_com_velocity[0:2],
+                                                                         desired_linear_com_velocity[0:2],
                                                                          hip_pos, com_height)
     print("iniztial hip_pos: ", hip_pos)
     print("footholds_reference: ", footholds_reference)
-  

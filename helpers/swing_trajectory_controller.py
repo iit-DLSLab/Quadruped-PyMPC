@@ -59,26 +59,47 @@ class SwingTrajectoryController:
                               lift_off,
                               touch_down,
                               swing_time,
-                              foot_position,
-                              foot_velocity,
+                              foot_pos,
+                              foot_vel,
                               h,
                               mass_matrix):
+        """ TODO: Docstring.
+
+        Args:
+            model:
+            q:
+            q_dot:
+            J:
+            J_dot:
+            lift_off:
+            touch_down:
+            swing_time:
+            foot_pos:
+            foot_vel:
+            h:
+            mass_matrix:
+
+        Returns:
+
+        """
         # Compute trajectory references
-        desired_foot_position, \
-        desired_foot_velocity, \
-        desired_foot_acceleration = self.swing_generator.compute_trajectory_references(swing_time, lift_off, touch_down)
+        des_foot_pos, des_foot_vel, des_foot_acc = self.swing_generator.compute_trajectory_references(
+            swing_time,
+            lift_off,
+            touch_down
+            )
 
 
-        error_position = desired_foot_position - foot_position
-        error_position = error_position.reshape((3, ))
+        err_pos = des_foot_pos - foot_pos
+        err_pos = err_pos.reshape((3, ))
         
 
-        error_velocity = desired_foot_velocity - foot_velocity
-        error_velocity = error_velocity.reshape((3, ))
+        err_vel = des_foot_vel - foot_vel
+        err_vel = err_vel.reshape((3, ))
 
-        accelleration = desired_foot_acceleration + \
-                        self.position_gain_fb * (error_position) + \
-                        self.velocity_gain_fb * (error_velocity)
+        accelleration = des_foot_acc + \
+                        self.position_gain_fb * (err_pos) + \
+                        self.velocity_gain_fb * (err_vel)
         
         accelleration = accelleration.reshape((3,))
         
@@ -86,10 +107,8 @@ class SwingTrajectoryController:
         # Mass Matrix and centrifugal missing
         #tau_swing = J.T @ (accelleration - J_dot @ q_dot) + h
         tau_swing = mass_matrix@ np.linalg.pinv(J) @ (accelleration - J_dot @ q_dot) + h
-        
-        
 
-        return tau_swing, desired_foot_position, desired_foot_velocity
+        return tau_swing, des_foot_pos, des_foot_vel
 
 
 # Example:
@@ -98,8 +117,7 @@ if __name__ == "__main__":
     import mujoco
     import mujoco.viewer
     import copy
-    from other import euler_from_quaternion, plot_swing_mujoco
-
+    from utils.mujoco_utils.visual import plot_swing_mujoco
 
     # Mujoco model and data
     m = mujoco.MjModel.from_xml_path('./../external/mujoco_menagerie/unitree_go2/scene.xml')
