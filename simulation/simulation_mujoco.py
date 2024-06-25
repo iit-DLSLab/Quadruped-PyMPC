@@ -128,7 +128,6 @@ if __name__ == '__main__':
 
         if cfg.mpc_params['optimize_step_freq']:
             from gradient.nominal.centroidal_nmpc_gait_adaptive import Acados_NMPC_GaitAdaptive
-
             batched_controller = Acados_NMPC_GaitAdaptive()
 
     elif cfg.mpc_params['type'] == 'sampling':
@@ -301,6 +300,7 @@ if __name__ == '__main__':
         if env.step_num % round(1 / (mpc_frequency * simulation_dt)) == 0:
 
             # We can recompute the inertia of the single rigid body model
+
             # or use the fixed one in cfg.py
             if (cfg.simulation_params['use_inertia_recomputation']):
                 # TODO: d.qpos is not defined
