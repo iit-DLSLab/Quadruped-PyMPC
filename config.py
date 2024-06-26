@@ -5,12 +5,14 @@ import numpy as np
 
 # These are used both for a real experiment and a simulation -----------
 # These are the only attributes needed per quadruped, the rest can be computed automatically ----------------------
-robot = 'mini_cheetah'  # 'go2', 'aliengo', 'hyqreal', 'mini_cheetah'  # TODO: Load from robot_descriptions.py
+robot = 'aliengo'  # 'go2', 'aliengo', 'hyqreal', 'mini_cheetah'  # TODO: Load from robot_descriptions.py
 robot_leg_joints = dict(FL=['FL_hip_joint', 'FL_thigh_joint', 'FL_calf_joint',],  # TODO: Make configs per robot.
                         FR=['FR_hip_joint', 'FR_thigh_joint', 'FR_calf_joint',],
                         RL=['RL_hip_joint', 'RL_thigh_joint', 'RL_calf_joint',],
                         RR=['RR_hip_joint', 'RR_thigh_joint', 'RR_calf_joint',])
 robot_feet_geom_names = dict(FL='FL', FR='FR', RL='RL', RR='RR')
+qpos0_js = None  # Zero joint-space configuration. If None it will be extracted from the URDF.
+
 # ----------------------------------------------------------------------------------------------------------------
 if (robot == 'go2'):
     mass = 15.019
@@ -47,6 +49,7 @@ elif (robot == 'mini_cheetah'):
                         [-1.55444692e-02, -3.12000000e-05, 5.24474661e-01]])
     urdf_filename = "mini_cheetah.urdf"
     hip_height = 0.225
+    qpos0_js = np.concatenate((np.array([0, -np.pi/2, 0] * 2), np.array([0, np.pi/2, 0] * 2)))
 
 mpc_params = {
     # 'nominal' optimized directly the GRF
@@ -191,7 +194,7 @@ simulation_params = {
 
     'use_kind_of_real_time':       True,
 
-    'scene':                       'perlin',  # flat, rough, stairs, suspend_stairs, slope, perlin, image
+    'scene':                       'flat',  # flat, rough, stairs, suspend_stairs, slope, perlin, image
 
     }
 # -----------------------------------------------------------------------

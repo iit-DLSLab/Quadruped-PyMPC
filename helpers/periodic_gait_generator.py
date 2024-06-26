@@ -36,7 +36,8 @@ class PeriodicGaitGenerator:
         else:
             self.phase_offset = [0.0, 0.5, 0.5, 0.0]
 
-        self.phase_signal = self.phase_offset
+        # Set random gait_signal respecting the gait phase offset between legs
+        self.phase_signal = (np.asarray(self.phase_offset) + np.random.rand()) % 1.0
         self.init = [False] * len(self.phase_offset)
         self.n_contact = len(self.phase_offset)
         self.time_before_switch_freq = 0
@@ -45,13 +46,13 @@ class PeriodicGaitGenerator:
         contact = np.zeros(self.n_contact)
         for leg in range(self.n_contact):
 
-            # Phase signal is between 0 and 1
-            if self.phase_signal[leg] >= 1.0:
-                self.phase_signal[leg] = 0
-
             # Increase time by dt
             # self.t[leg] += dt*self.step_freq
             self.phase_signal[leg] += dt * new_step_freq
+
+            # Phase signal is between 0 and 1
+            if self.phase_signal[leg] >= 1.0:
+                self.phase_signal[leg] = 0
 
             # If we are still in init, we check if the delay of the leg
             # is not surpassed. If not, the contact needs to be still 1
@@ -82,10 +83,10 @@ class PeriodicGaitGenerator:
 
     def compute_contact_sequence(self):
 
-        if(self.gait_type == GaitType.FULL_STANCE):
+        if (self.gait_type == GaitType.FULL_STANCE):
             contact_sequence = np.ones((4, self.horizon * 2))
             return contact_sequence
-        
+
         else:
             t_init = copy.deepcopy(self.phase_signal)
             init_init = copy.deepcopy(self.init)
@@ -95,10 +96,9 @@ class PeriodicGaitGenerator:
                 contact_sequence[:, i] = self.run(self.contact_sequence_dt, self.step_freq)
             self.set(t_init, init_init)
             return contact_sequence
-        
-    
+
     def sample_contact_sequence(self, contact_sequence, mpc_dt, dt_fine_grained, horizon_fine_grained):
-        
+
         subsample_step_contact_sequence = int(dt_fine_grained / self.contact_sequence_dt)
         if (subsample_step_contact_sequence > 1):
             contact_sequence_fine_grained = contact_sequence[:, ::subsample_step_contact_sequence][:,

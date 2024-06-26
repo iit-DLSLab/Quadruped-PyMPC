@@ -4,11 +4,11 @@
 # - Giulio Turrisi
 
 import os
-import time
 
 # TODO: Ugly hack so people dont have to run the python command specifying the working directory.
 #  we should remove this before the final release.
 import sys
+import time
 
 # Add the parent directory of this script to the Python path
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -25,10 +25,8 @@ from helpers.srb_inertia_computation import SrbInertiaComputation
 from helpers.swing_trajectory_controller import SwingTrajectoryController
 from helpers.terrain_estimator import TerrainEstimator
 from simulation.quadruped_env import QuadrupedEnv
-from utils.math_utils import skew
 from utils.mujoco_utils.visual import plot_swing_mujoco, render_vector
-from utils.quadruped_utils import GaitType, LegsAttr, estimate_terrain_slope
-
+from utils.quadruped_utils import GaitType, LegsAttr
 
 np.set_printoptions(precision=3, suppress=True)
 
@@ -59,9 +57,6 @@ def get_gait_params(gait_type: str) -> [GaitType, float, float]:
     return gait_type, duty_factor, step_frequency
 
 
-
-
-
 if __name__ == '__main__':
 
     robot_name = cfg.robot
@@ -71,28 +66,30 @@ if __name__ == '__main__':
     scene_name = cfg.simulation_params['scene']
     simulation_dt = cfg.simulation_params['dt']
 
-    state_observables = ('base_pos', 'base_lin_vel', 'base_ori_quat_wxyz', 'base_ang_vel',
-                         'qpos_js', 'qvel_js', 'tau_applied',
-                         'feet_pos_base', 'feet_vel_base', 'contact_state', 'contact_forces_base',)
+    state_observables_names = ('base_pos', 'base_lin_vel', 'base_ori_quat_wxyz', 'base_ang_vel',
+                               'qpos_js', 'qvel_js', 'tau_ctrl_setpoint',
+                               'feet_pos_base', 'feet_vel_base', 'contact_state', 'contact_forces_base',)
 
     # Create the quadruped robot environment. _______________________________________________________________________
     env = QuadrupedEnv(robot=robot_name,
                        hip_height=hip_height,
-                       legs_joint_names=LegsAttr(**robot_leg_joints),
+                       legs_joint_names=LegsAttr(**robot_leg_joints),  # Joint names of the legs DoF
+                       feet_geom_name=LegsAttr(**robot_feet_geom_names),  # Geom/Frame id of feet
                        scene=scene_name,
                        sim_dt=simulation_dt,
-                       base_lin_vel_range=(-4.0 * hip_height, 4.0 * hip_height),
-                       base_ang_vel_range=(-np.pi * 3 / 4, np.pi * 3 / 4),
-                       ground_friction_coeff_range=(0.3, 1.5),
+                       ref_base_lin_vel=(-4.0 * hip_height, 4.0 * hip_height),  # pass a float for a fixed value
+                       ref_base_ang_vel=(-np.pi * 3 / 4, np.pi * 3 / 4),  # pass a float for a fixed value
+                       ground_friction_coeff=(0.3, 1.5),  # pass a float for a fixed value
                        base_vel_command_type="random",  # "forward", "random", "forward+rotate", "human"
-                       feet_geom_name=LegsAttr(**robot_feet_geom_names),  # Geom/Frame id of feet
-                       state_obs_names=state_observables,
+                       state_obs_names=state_observables_names,  # Desired quantities in the 'state' vec
                        )
+    # Some robots require a change in the zero joint-space configuration. If provided apply it
+    if cfg.qpos0_js is not None:
+        env.mjModel.qpos0 = np.concatenate((env.mjModel.qpos0[:7], cfg.qpos0_js))
+
     env.reset()
     env.render()  # Pass in the first render call any mujoco.viewer.KeyCallbackType
     mass = np.sum(env.mjModel.body_mass)
-
-    MAX_STEPS = 2000 if env.base_vel_command_type != "human" else 20000
 
     # _______________________________________________________________________________________________________________
 
@@ -128,6 +125,7 @@ if __name__ == '__main__':
 
         if cfg.mpc_params['optimize_step_freq']:
             from gradient.nominal.centroidal_nmpc_gait_adaptive import Acados_NMPC_GaitAdaptive
+
             batched_controller = Acados_NMPC_GaitAdaptive()
 
     elif cfg.mpc_params['type'] == 'sampling':
@@ -157,10 +155,10 @@ if __name__ == '__main__':
     # Periodic gait generator _________________________________________________________________________
     gait_name = cfg.simulation_params['gait']
     gait_type, duty_factor, step_frequency = get_gait_params(gait_name)
-    # Given the possibility to use nonuniform discretization, 
+    # Given the possibility to use nonuniform discretization,
     # we generate a contact sequence two times longer and with a dt half of the one of the mpc
     pgg = PeriodicGaitGenerator(duty_factor=duty_factor, step_freq=step_frequency, gait_type=gait_type,
-                                horizon=horizon * 2, contact_sequence_dt=mpc_dt/2.)
+                                horizon=horizon * 2, contact_sequence_dt=mpc_dt / 2.)
     contact_sequence = pgg.compute_contact_sequence()
     nominal_sample_freq = step_frequency
     # Create the foothold reference generator
@@ -220,6 +218,7 @@ if __name__ == '__main__':
     RENDER_FREQ = 30  # Hz
     last_render_time = time.time()
 
+    MAX_STEPS = 2000 if env.base_vel_command_type != "human" else 10000
     while True:
         step_start = time.time()
 

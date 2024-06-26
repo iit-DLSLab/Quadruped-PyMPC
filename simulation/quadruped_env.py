@@ -6,7 +6,7 @@ import time
 import warnings
 from collections import namedtuple
 from pathlib import Path
-from typing import Any
+from typing import Any, Union
 
 import gymnasium as gym
 import mujoco
@@ -17,14 +17,13 @@ from mujoco import MjData, MjModel
 from scipy.spatial.transform import Rotation
 
 from utils.math_utils import homogenous_transform
-from utils.mujoco_utils.visual import render_vector
+from utils.mujoco_utils.visual import change_robot_appearance, render_vector
 from utils.quadruped_utils import LegsAttr, extract_mj_joint_info
 
 BASE_OBS = ['base_pos', 'base_lin_vel', 'base_ang_vel', 'base_ori_euler_xyz', 'base_ori_quat_wxyz', 'base_ori_SO3']
-GEN_CORDS_OBS = ['qpos', 'qvel', 'tau_applied', 'qpos_js', 'qvel_js']
+GEN_CORDS_OBS = ['qpos', 'qvel', 'tau_ctrl_setpoint', 'qpos_js', 'qvel_js']
 FEET_OBS = ['feet_pos', 'feet_pos_base', 'feet_vel', 'feet_vel_base', 'contact_state', 'contact_forces',
             'contact_forces_base']
-ALL_OBS = BASE_OBS + GEN_CORDS_OBS + FEET_OBS
 
 
 class QuadrupedEnv(gym.Env):
@@ -36,45 +35,71 @@ class QuadrupedEnv(gym.Env):
     Rear-Left legs, respectively.
     """
 
+    _DEFAULT_OBS = ('qpos', 'qvel', 'tau_ctrl_setpoint', 'feet_pos_base', 'feet_vel_base')
+    ALL_OBS = BASE_OBS + GEN_CORDS_OBS + FEET_OBS
+
     metadata = {'render.modes': ['human'], 'version': 0}
 
     def __init__(self,
                  robot: str,
-                 hip_height: float,   # Used to scale the velocity commands
-                 legs_joint_names: LegsAttr,  # Joint names associated to each of the four legs
-                 scene='flat',
-                 sim_dt=0.002,
+                 hip_height: float,
+                 legs_joint_names: dict,
+                 feet_geom_name: dict,
+                 state_obs_names: tuple[str, ...] = _DEFAULT_OBS,
+                 scene: str = 'flat',
+                 sim_dt: float = 0.002,
                  base_vel_command_type: str = 'forward',
-                 base_lin_vel_range: tuple[float, float] = (0.28, 0.3),
-                 base_ang_vel_range: tuple[float, float] = (-np.pi * 3 / 4, np.pi * 3 / 4),
-                 ground_friction_coeff_range: tuple[float, float] = (0.8, 1.2),
-                 feet_geom_name: LegsAttr = LegsAttr(FL='FL', FR='FR', RL='RL', RR='RR'),
-                 state_obs_names: tuple[str, ...] = ('qpos', 'qvel', 'tau_applied', 'feet_pos_base', 'feet_vel_base'),
-                 legs_order: tuple[str] = ('FL', 'FR', 'RL', 'RR'),
+                 ref_base_lin_vel: Union[tuple[float, float], float] = 0.5,  # [m/s]
+                 ref_base_ang_vel: Union[tuple[float, float], float] = 0.0,  # [rad/s]
+                 ground_friction_coeff: Union[tuple[float, float], float] = 1.0,
+                 legs_order: tuple[str, str, str, str] = ('FL', 'FR', 'RL', 'RR'),
                  ):
         """Initialize the quadruped environment.
 
         Args:
         ----
-            robot: (str) The name of the robot model to be used.
-            legs_joint_names: (LegsAttr) The joint names associated with each of the four legs.
-            scene: (str) The scene to be used in the simulation.
-            sim_dt: (float) The simulation time step.
-            base_vel_command_type: (str) The type of base velocity command. Either 'forward' or 'random_orientation'.
-            base_vel_range: (tuple) The range of the base velocity command.
-            feet_geom_name: (LegsAttr) The name of the geometry associated with each of the four feet.
-            feet_body_name: (LegsAttr) The name of the body associated with each of the four feet.
-            state_obs_names: (list) The names of the state observations to be included in the observation space.
+            robot: Robot model name.
+            hip_height: Nominal height of the robot's hip from the ground.
+            legs_joint_names: (dict) Dict with keys FL, FR, RL, RR; and as values a list of joint names associated with
+                each of the four legs.
+            feet_geom_name: (dict) Dict with keys FL, FR, RL, RR; and as values the name of the Mujoco geometry (Geom)
+                associated with the feet/contact-point of each leg. Used to compute the ground contact forces.
+            state_obs_names: (tuple) Names of the state observations to include in the observation space.
+            scene: Name of the ground terrain, available are 'flat', 'perlin', TODO: more
+            sim_dt: Time step of the mujoco simulation.
+            base_vel_command_type: Type of base velocity command, options are:
+                - 'forward': The velocity commands are in the "forward" direction of the robot.
+                - 'random': The velocity commands are in random "heading" directions.
+                - 'human': The velocity commands are defined by the arrow keys of the keyboard.
+                    - Up arrow: increase forward velocity.
+                    - Down arrow: decrease forward velocity.
+                    - Left arrow: increase base angular (d yaw / dt) velocity.
+                    - Right arrow: decrease base angular (d yaw / dt) velocity.
+            ref_base_lin_vel: Magnitude of the desired/reference base linear velocity command. If a float, the
+                velocity command is fixed. If a tuple, (min, max) the velocity command is uniformly sampled from this
+            ref_base_ang_vel: Magnitude of the desired/reference base angular velocity (d yaw / dt) command.
+                If a float, the velocity command is fixed. If a tuple, (min, max) the velocity command is uniformly
+            ground_friction_coeff: Magnitude of the ground lateral friction coefficient. If a float, the friction
+                coefficient is fixed. If a tuple, (min, max) the friction coefficient is uniformly sampled from this
+            legs_order: (tuple) Default order of the legs in the state observation and action space. This order defines
+                how state observations of legs observables (e.g., feet positions) are ordered in the state vector.
         """
         super(QuadrupedEnv, self).__init__()
 
+        # Store all initialization arguments in a dictionary. Useful if we want to reconstruct this environment.
+        self._save_hyperparameters(constructor_params=locals().copy())
+
         self.hip_height = hip_height
         self.base_vel_command_type = base_vel_command_type
-        self.base_lin_vel_range, self.base_ang_vel_range = base_lin_vel_range, base_ang_vel_range
-        self.ground_friction_coeff_range = ground_friction_coeff_range
+        self.base_lin_vel_range = ref_base_lin_vel if isinstance(ref_base_lin_vel, tuple) else (ref_base_lin_vel,
+                                                                                                ref_base_lin_vel)
+        self.base_ang_vel_range = ref_base_ang_vel if isinstance(ref_base_ang_vel, tuple) else (ref_base_ang_vel,
+                                                                                                ref_base_ang_vel)
+        self.ground_friction_coeff_range = ground_friction_coeff if isinstance(ground_friction_coeff, tuple) else (
+            ground_friction_coeff, ground_friction_coeff)
         self.legs_order = legs_order
 
-        # Define the model and data
+        # Define the model and data _______________________________________________________________
         dir_path = os.path.dirname(os.path.realpath(__file__))
         base_path = Path(dir_path) / 'robot_model' / robot
         model_file_path = base_path / f'scene_{scene}.xml'
@@ -86,6 +111,8 @@ class QuadrupedEnv(gym.Env):
         except ValueError as e:
             raise ValueError(f"Error loading the scene {model_file_path}:") from e
         self.mjData: MjData = mujoco.MjData(self.mjModel)
+        # self.ghost_mjData: MjData = mujoco.MjData(self.mjModel)
+
         # Set the simulation step size (dt)
         self.mjModel.opt.timestep = sim_dt
 
@@ -269,7 +296,7 @@ class QuadrupedEnv(gym.Env):
 
         return self._get_obs()
 
-    def render(self, mode='human'):
+    def render(self, mode='human', ghost_configs=None, tint_robot=False):
         X_B = self.base_configuration
         r_B = X_B[:3, 3]
         dr_B = self.mjData.qvel[0:3]
@@ -283,8 +310,10 @@ class QuadrupedEnv(gym.Env):
                 self.mjModel, self.mjData, show_left_ui=False, show_right_ui=False,
                 key_callback=lambda x: self._key_callback(x)
                 )
+            if tint_robot: change_robot_appearance(self.mjModel, alpha=1.0)
+
             mujoco.mjv_defaultFreeCamera(self.mjModel, self.viewer.cam)
-            # self.viewer.user_scn.flags[mujoco.mjtRndFlag.mjRND_SHADOW] = 0
+            self.viewer.user_scn.flags[mujoco.mjtRndFlag.mjRND_SHADOW] = 0
             # self.viewer.user_scn.flags[mujoco.mjtRndFlag.mjRND_REFLECTION] = 0
             # Define markers for visualization of desired and current base velocity
             self._geom_ids['ref_dr_B_vec'] = render_vector(
@@ -293,6 +322,7 @@ class QuadrupedEnv(gym.Env):
             self._geom_ids['dr_B_vec'] = render_vector(
                 self.viewer, vector=dr_B, pos=vec_pos, scale=vec_scale, color=vel_vec_color,
                 )
+
         else:
             # Update the reference and current base linear velocity markers
             render_vector(self.viewer, ref_base_lin_vel_B, ref_vec_pos, ref_vec_scale, ref_vel_vec_color,
@@ -300,10 +330,18 @@ class QuadrupedEnv(gym.Env):
             render_vector(self.viewer, dr_B, vec_pos, vec_scale, vel_vec_color,
                           geom_id=self._geom_ids['dr_B_vec'])
 
-        cam_pos = max(self.hip_height * 0.1, r_B[2])
+        # # Ghost robot rendering
+        # if ghost_configs is not None:
+        #     self.ghost_mjData.qpos, self.ghost_mjData.qvel = ghost_configs
+        #     mujoco.mj_forward(self.mjModel, self.ghost_mjData)
+        #     self._geom_ids |= render_ghost_robot(self.viewer, self.mjModel, self.ghost_mjData, alpha=0.5,
+        #                                          ghost_geom_ids=self._geom_ids)
 
+        cam_pos = max(self.hip_height * 0.1, r_B[2])
         self._update_camera_target(self.viewer.cam, np.concatenate((r_B[:2], [cam_pos])))
         self.viewer.sync()
+
+        print("Rendered")
 
     def close(self):
         """Close the viewer."""
@@ -408,6 +446,7 @@ class QuadrupedEnv(gym.Env):
         """Get the feet velocities in the specified frame.
 
         The feet velocities are computed using the Jacobians of the feet positions and the joint velocities.
+
         Args:
         ----
             frame: Either 'world' or 'base'. The reference frame in which the feet velocities are computed.
@@ -488,7 +527,7 @@ class QuadrupedEnv(gym.Env):
             frame: (str) The reference frame in which the contact forces are computed. Either 'world' or 'base'.
             ground_reaction_forces: (bool) Whether to compute the total ground reaction forces for each foot.
 
-        Returns
+        Returns:
         -------
             LegsAttr: A dictionary-like object with:
                 - FL: (bool) True if the FL foot is in contact with the ground.
@@ -610,12 +649,12 @@ class QuadrupedEnv(gym.Env):
         return R_B_horizontal
 
     @property
-    def applied_joint_torques(self):
-        """Returns the true joint torques (self.mjModel.nu) used in evolving the physics simulation.
+    def torque_ctrl_setpoint(self):
+        """Returns the true joint torques (self.mjModel.nu) commanded to the robot actuators.
 
-        Differs from action if actuator hasnon-ideal dynamics.
+        Differs from the generalized forces used to evolve the simulation when actuators are non-ideal models.
         """
-        return self.mjData.qfrc_applied[6:]
+        return np.array(self.mjData.ctrl)
 
     @property
     def simulation_dt(self):
@@ -628,7 +667,7 @@ class QuadrupedEnv(gym.Env):
         return self.mjData.time
 
     def extract_obs_from_state(self, state_like_array: np.ndarray) -> namedtuple:
-        """ Extracts the state observation from a state-like array.
+        """Extracts the state observation from a state-like array.
 
         Parameters
         ----------
@@ -720,16 +759,19 @@ class QuadrupedEnv(gym.Env):
     def _key_callback(self, keycode):
         print(f"\n\n ********************* Key pressed: {keycode}\n\n\n")
         if keycode == 262:  # arrow right
-            self._ref_base_ang_yaw_dot -= 0.1 * self.hip_height  # 10% of (hip_height / s)
+            self._ref_base_ang_yaw_dot -= np.pi / 6
         elif keycode == 263:  # arrow left
-            self._ref_base_ang_yaw_dot += 0.1 * self.hip_height  # 10% of (hip_height / s)
+            self._ref_base_ang_yaw_dot += np.pi / 6
         elif keycode == 265:  # arrow up
-            self._ref_base_lin_vel_H[0] += 0.1
+            self._ref_base_lin_vel_H[0] += 0.25 * self.hip_height  # % of (hip_height / second)
         elif keycode == 264:  # arrow down
-            self._ref_base_lin_vel_H[0] -= 0.1
+            self._ref_base_lin_vel_H[0] -= 0.25 * self.hip_height  # % of (hip_height / second)
         elif keycode == 345:  # ctrl
             self._ref_base_lin_vel_H *= 0.0
             self._ref_base_ang_yaw_dot = 0.0
+
+        self._ref_base_ang_yaw_dot = np.clip(self._ref_base_ang_yaw_dot, -2 * np.pi, 2 * np.pi)
+        self._ref_base_lin_vel_H[0] = np.clip(self._ref_base_lin_vel_H[0], -6 * self.hip_height, 6 * self.hip_height)
 
     def _get_obs(self):
         """Returns the state observation based on the specified state observation names."""
@@ -740,8 +782,8 @@ class QuadrupedEnv(gym.Env):
                 obs.append(self.mjData.qpos)
             elif obs_name == 'qvel':
                 obs.append(self.mjData.qvel)
-            elif obs_name == 'tau_applied':
-                obs.append(self.applied_joint_torques)
+            elif obs_name == 'tau_ctrl_setpoint':
+                obs.append(self.torque_ctrl_setpoint)
             # Joint-space position and velocity spaces
             elif obs_name == 'qpos_js':
                 obs.append(self.mjData.qpos[7:])
@@ -775,7 +817,7 @@ class QuadrupedEnv(gym.Env):
                 _, _, contact_forces = self.feet_contact_state(ground_reaction_forces=True, frame=frame)
                 obs.append(np.concatenate(contact_forces.to_list(order=self.legs_order), axis=0))
             else:
-                raise ValueError(f"Invalid observation name: {obs_name}, available obs: {ALL_OBS}")
+                raise ValueError(f"Invalid observation name: {obs_name}, available obs: {self.ALL_OBS}")
 
         state_obs = np.concatenate(obs, axis=0)
         assert state_obs.shape == self.observation_space.shape, \
@@ -783,16 +825,18 @@ class QuadrupedEnv(gym.Env):
         return state_obs
 
     def _configure_observation_space(self, state_obs_names: list[str]) -> [spaces.Space, dict[str, slice]]:
-        """ Configures the observation space for the environment based on the provided state observation names.
+        """Configures the observation space for the environment based on the provided state observation names.
 
-           Args:
-               state_obs_names (list[str]): A list of state observation names based on which the observation space is
-               configured.
+        Args:
+        ----
+        state_obs_names (list[str]): A list of state observation names based on which the observation space is
+        configured.
 
-           Returns:
-               gym.Space: The environment state observation space.
-               dict: A dictionary mapping each state observation name to its indices in the observation space.
-       """
+        Returns:
+        -------
+        gym.Space: The environment state observation space.
+        dict: A dictionary mapping each state observation name to its indices in the observation space.
+        """
         obs_dim, last_idx = 0, 0
 
         obs_lim_min, obs_lim_max = [], []
@@ -811,7 +855,7 @@ class QuadrupedEnv(gym.Env):
                 obs_dim += self.mjModel.nv
                 obs_lim_max.extend([np.inf] * self.mjModel.nv)
                 obs_lim_min.extend([-np.inf] * self.mjModel.nv)
-            elif obs_name == 'tau_applied':
+            elif obs_name == 'tau_ctrl_setpoint':
                 obs_dim += self.mjModel.nu
                 obs_lim_max.extend(tau_lim_max)
                 obs_lim_min.extend(tau_lim_min)
@@ -881,7 +925,7 @@ class QuadrupedEnv(gym.Env):
                 obs_lim_max.extend([np.inf] * 12)
                 obs_lim_min.extend([-np.inf] * 12)
             else:
-                raise ValueError(f"Invalid observation name: {obs_name}, available obs: {ALL_OBS}")
+                raise ValueError(f"Invalid observation name: {obs_name}, available obs: {self.ALL_OBS}")
             obs_idx[obs_name] = range(last_idx, obs_dim)
             last_idx = obs_dim
 
@@ -895,6 +939,22 @@ class QuadrupedEnv(gym.Env):
         obs_lim_max = np.array(obs_lim_max)
         observation_space = spaces.Box(low=obs_lim_min, high=obs_lim_max, shape=(obs_dim,), dtype=np.float32)
         return observation_space, obs_idx
+
+    def __str__(self):
+        """Returns a description of the environment task configuration."""
+        msg = f"robot={self._init_args['robot']} terrain={self._init_args['scene']} task={self.base_vel_command_type}"
+        if self.base_vel_command_type == 'human':
+            pass
+        else:
+            msg += (f" lin_vel_range=({self.base_lin_vel_range[0]:.3f}, {self.base_lin_vel_range[1]:.3f})"
+                    f" ang_vel_range=({self.base_ang_vel_range[0]:.3f}, {self.base_ang_vel_range[1]:.3f})"
+                    f" lat_friction_range=({self.ground_friction_coeff_range[0]:.1e}, "
+                    f"{self.ground_friction_coeff_range[1]:.1e})")
+        return msg
+
+    def _save_hyperparameters(self, constructor_params):
+        self._init_args = constructor_params
+        [self._init_args.pop(k) for k in ['self', '__class__']]  # Remove 'self' and '__class__
 
 
 # Example usage:

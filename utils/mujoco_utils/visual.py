@@ -218,3 +218,102 @@ def plot_swing_mujoco(viewer: Handle,
                       geom_id=geom_ids[leg_name][-1]
                       )
     return geom_ids
+
+def change_robot_appearance(mjModel: mujoco.MjModel, alpha=1.0):
+    """Tint the robot in MuJoCo to get a similar visualization of symmetric robots."""
+    # Define colors
+    robot_color = [0.054, 0.415, 0.505, alpha]  # Teal
+    FL_leg_color = [0.698, 0.376, 0.082, alpha]  # Orange
+    FR_leg_color = [0.260, 0.263, 0.263, alpha]  # Grey
+    HL_leg_color = [0.800, 0.480, 0.000, alpha]  # Yellow
+    HR_leg_color = [0.710, 0.703, 0.703, alpha]  # Light grey
+
+    for geom_id in range(mjModel.ngeom):
+        geom_name = mujoco.mj_id2name(mjModel, mujoco.mjtObj.mjOBJ_GEOM, geom_id)
+        prev_color = mjModel.geom_rgba[geom_id]
+        body_id = mjModel.geom_bodyid[geom_id]
+        body_name = mujoco.mj_id2name(mjModel, mujoco.mjtObj.mjOBJ_BODY, body_id)
+        if geom_name in ['floor', 'plane', 'world', 'ground']: continue
+        if prev_color[-1] == 0.0: continue # Skip transparent geoms
+        if body_name:
+            # Determine the color based on the geom_name
+            if any(s in body_name.lower() for s in ["fl_", "lf_", "left", "_0"]):
+                color = FL_leg_color
+            elif any(s in body_name.lower() for s in ["fr_", "rf_", "right", "_120"]):
+                color = FR_leg_color
+            elif any(s in body_name.lower() for s in ["rl_", "hl_", "lh_", "left"]):
+                color = HL_leg_color
+            elif any(s in body_name.lower() for s in ["rr_", "hr_", "rh_", "right"]):
+                color = HR_leg_color
+            else:
+                color = robot_color
+
+            # Change the visual appearance of the geom
+            mjModel.geom_rgba[geom_id] = color
+
+
+def render_ghost_robot(viewer, mjModel, mjData, alpha=0.5, ghost_geom_ids=None):
+    """Render a ghost robot in the MuJoCo viewer."""
+    if ghost_geom_ids is None:
+        ghost_geom_ids = {}
+
+    # Iterate through all geometries in the model
+    for model_geom_id in range(mjModel.ngeom):
+        geom_name = mujoco.mj_id2name(mjModel, mujoco.mjtObj.mjOBJ_GEOM, model_geom_id)
+        body_id = mjModel.geom_bodyid[model_geom_id]
+        body_name = mujoco.mj_id2name(mjModel, mujoco.mjtObj.mjOBJ_BODY, body_id)
+        geom_rgba = mjModel.geom_rgba[model_geom_id]
+
+        # Rules to ignore some geometries we are not interested in rendering for visualization
+        # Skip collision geometries (alpha == 0)
+        if geom_name in ['floor', 'plane', 'world', 'ground']: continue
+        if geom_rgba[3] == 0:
+            continue
+
+        # Create a name for the geometry (use body name if geom_name is None)
+        ghost_geom_name = f"{model_geom_id}:{geom_name if geom_name is not None else body_name}"
+
+        if ghost_geom_name not in ghost_geom_ids:
+            # Create a new geometry if it doesn't exist
+            viewer.user_scn.ngeom += 1
+            model_geom_id = viewer.user_scn.ngeom - 1
+            ghost_geom_ids[ghost_geom_name] = model_geom_id
+
+        # Update the geometry with the current position and orientation
+        ghost_geom = viewer.user_scn.geoms[ghost_geom_ids[ghost_geom_name]]
+        pos = mjData.geom_xpos[model_geom_id]
+        mat = mjData.geom_xmat[model_geom_id].reshape(3, 3)
+        size = mjModel.geom_size[model_geom_id]
+
+        # Define the color with transparency
+        color = geom_rgba.copy()
+        color[3] = alpha
+
+        i = mjModel.geom_dataid[model_geom_id]
+        if i == -1: continue
+        model = mjModel
+        path_start = model.mesh_pathadr[i]
+        path_end = model.mesh_pathadr[i + 1] if i + 1 < model.mesh_pathadr.shape[0] else len(model.mesh_paths)
+        mesh_path = model.names[path_start:path_end].decode('utf-8')
+        print(f"Mesh {i}: {mesh_path}")
+
+        geom_type = mjModel.geom_type[model_geom_id]
+        mujoco.mjv_initGeom(
+            ghost_geom,
+            type=geom_type,
+            size=size,
+            pos=pos,
+            mat=mat.flatten(),
+            rgba=color
+            )
+
+        # Set additional properties. TODO: Here I should be able to set texture, and mesh as in original geeom.
+        ghost_geom.dataid = mjModel.geom_dataid[model_geom_id]
+        ghost_geom.objtype = mujoco.mjtObj.mjOBJ_GEOM
+        ghost_geom.objid = -1   # For decoration
+        ghost_geom.category = mujoco.mjtCatBit.mjCAT_DECOR
+        ghost_geom.segid = -1   # Not shown
+
+        print(f"Rendering ghost robot: {ghost_geom_name} at position {pos} with color {color}")
+
+    return ghost_geom_ids
