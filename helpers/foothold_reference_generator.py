@@ -10,7 +10,7 @@ from utils.quadruped_utils import LegsAttr
 # TODO: @Giulio Should we convert this to a single function instead of a class? Stance time, can be passed as argument
 class FootholdReferenceGenerator:
 
-    def __init__(self, stance_time: float, vel_moving_average_length=20, hip_height: float = None) -> None:
+    def __init__(self, stance_time: float, lift_off_positions: LegsAttr, vel_moving_average_length=20, hip_height: float = None) -> None:
         """
         This method initializes the foothold generator class, which computes
         the reference foothold for the nonlinear MPC.
@@ -21,6 +21,7 @@ class FootholdReferenceGenerator:
         self.base_vel_hist = collections.deque(maxlen=vel_moving_average_length)
         self.stance_time = stance_time
         self.hip_height = hip_height
+        self.lift_off_positions = lift_off_positions
 
     def compute_footholds_reference(self,
                                     com_position: np.ndarray,
@@ -107,6 +108,13 @@ class FootholdReferenceGenerator:
             ref_feet[leg_id][2] = lift_off_positions[leg_id][2] - 0.02
 
         return ref_feet
+    
+
+    def update_lift_off_positions(self, previous_contact, current_contact, feet_pos, legs_order):
+        for leg_id, leg_name in enumerate(legs_order):
+            # Set lif-offs
+            if previous_contact[leg_id] == 1 and current_contact[leg_id] == 0:
+                self.lift_off_positions[leg_name] = feet_pos[leg_name]
 
 
 if __name__ == "__main__":

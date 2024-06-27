@@ -163,9 +163,11 @@ if __name__ == '__main__':
                                 horizon=horizon * 2, contact_sequence_dt=mpc_dt/2.)
     contact_sequence = pgg.compute_contact_sequence()
     nominal_sample_freq = step_frequency
+    
     # Create the foothold reference generator
     stance_time = (1 / step_frequency) * duty_factor
-    frg = FootholdReferenceGenerator(stance_time=stance_time, hip_height=cfg.hip_height)
+    frg = FootholdReferenceGenerator(stance_time=stance_time, hip_height=cfg.hip_height, lift_off_positions=env.feet_pos(frame='world'))
+
 
     # Create swing trajectory generator
     step_height = cfg.simulation_params['step_height']
@@ -178,7 +180,7 @@ if __name__ == '__main__':
                                     generator=swing_generator)
     # Swing controller variables
     swing_time = [0, 0, 0, 0]
-    lift_off_positions = env.feet_pos(frame='world')
+    
 
     # Terrain estimator
     terrain_computation = TerrainEstimator()
@@ -259,6 +261,7 @@ if __name__ == '__main__':
                                     contact_sequence[3][0]])
 
         # Compute the reference for the footholds ---------------------------------------------------
+        frg.update_lift_off_positions(previous_contact, current_contact, feet_pos, legs_order)
         ref_feet_pos = frg.compute_footholds_reference(
             com_position=env.base_pos,
             base_ori_euler_xyz=env.base_ori_euler_xyz,
@@ -266,7 +269,7 @@ if __name__ == '__main__':
             ref_base_xy_lin_vel=ref_base_lin_vel[0:2],
             hips_position=hip_pos,
             com_height=state_current["position"][2],
-            lift_off_positions=lift_off_positions)
+            lift_off_positions=frg.lift_off_positions)
 
         # Estimate the terrain slope and elevation -------------------------------------------------------
         terrain_roll, \
@@ -274,7 +277,7 @@ if __name__ == '__main__':
             terrain_height = terrain_computation.compute_terrain_estimation(
             base_position=env.base_pos,
             yaw=env.base_ori_euler_xyz[2],
-            feet_pos=lift_off_positions,
+            feet_pos=frg.lift_off_positions,
             current_contact=current_contact)
 
         ref_pos = np.array([0, 0, cfg.hip_height])
@@ -389,7 +392,6 @@ if __name__ == '__main__':
                     state_current,
                     ref_state,
                     contact_sequence,
-                    # inertia=cfg.inertia.flatten(),
                     inertia=inertia)
                 
                 # TODO functions should output this class instance.
@@ -461,6 +463,7 @@ if __name__ == '__main__':
         # Compute Swing Torque ------------------------------------------------------------------------------
         # TODO: Move contact sequence to labels FL, FR, RL, RR instead of a fixed indexing.
         # TOOD: Should Swing time be returned by the "ppg?"
+
         for leg_id, leg_name in enumerate(legs_order):
             # Swing time reset
             if current_contact[leg_id] == 0:
@@ -468,9 +471,7 @@ if __name__ == '__main__':
                     swing_time[leg_id] = swing_time[leg_id] + simulation_dt
             else:
                 swing_time[leg_id] = 0
-            # Set lif-offs
-            if previous_contact[leg_id] == 1 and current_contact[leg_id] == 0:
-                lift_off_positions[leg_name] = feet_pos[leg_name]
+
 
         # The swing controller is in the end-effector space. For its computation,
         # we save for simplicity joints position and velocities
@@ -497,7 +498,7 @@ if __name__ == '__main__':
                     q_dot=qvel[env.legs_qvel_idx[leg_name]],
                     J=feet_jac[leg_name][:, env.legs_qvel_idx[leg_name]],
                     J_dot=jac_feet_dot[leg_name][:, env.legs_qvel_idx[leg_name]],
-                    lift_off=lift_off_positions[leg_name],
+                    lift_off=frg.lift_off_positions[leg_name],
                     touch_down=nmpc_footholds[leg_name],
                     swing_time=swing_time[leg_id],
                     foot_pos=feet_pos[leg_name],
@@ -528,7 +529,7 @@ if __name__ == '__main__':
                                                                        FR=swing_time[1],
                                                                        RL=swing_time[2],
                                                                        RR=swing_time[3]),
-                                                   lift_off_positions=lift_off_positions,
+                                                   lift_off_positions=frg.lift_off_positions,
                                                    nmpc_footholds=nmpc_footholds,
                                                    ref_feet_pos=ref_feet_pos,
                                                    geom_ids=feet_traj_geom_ids)
@@ -548,7 +549,7 @@ if __name__ == '__main__':
                 print("Environment terminated")
             env.reset()
             pgg.reset()
-            lift_off_positions = env.feet_pos(frame='world')
+            frg.lift_off_positions = env.feet_pos(frame='world')
             current_contact = np.array([0, 0, 0, 0])
             previous_contact = np.asarray(current_contact)
             z_foot_mean = 0.0
