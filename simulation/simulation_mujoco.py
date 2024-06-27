@@ -459,23 +459,13 @@ if __name__ == '__main__':
 
         # Compute Swing Torque ------------------------------------------------------------------------------
         # TODO: Move contact sequence to labels FL, FR, RL, RR instead of a fixed indexing.
-        
         # The swing controller is in the end-effector space. For its computation,
         # we save for simplicity joints position and velocities
         qpos, qvel = env.mjData.qpos, env.mjData.qvel
         # centrifugal, coriolis, gravity
-        legs_qfrc_bias = LegsAttr(FL=env.mjData.qfrc_bias[env.legs_qvel_idx.FL],
-                                  FR=env.mjData.qfrc_bias[env.legs_qvel_idx.FR],
-                                  RL=env.mjData.qfrc_bias[env.legs_qvel_idx.RL],
-                                  RR=env.mjData.qfrc_bias[env.legs_qvel_idx.RR])
-        # and inertia matrix
-        mass_matrix = np.zeros((env.mjModel.nv, env.mjModel.nv))
-        mujoco.mj_fullM(env.mjModel, mass_matrix, env.mjData.qM)
-        # Get the mass matrix of the legs
-        legs_mass_matrix = LegsAttr(FL=mass_matrix[np.ix_(env.legs_qvel_idx.FL, env.legs_qvel_idx.FL)],
-                                    FR=mass_matrix[np.ix_(env.legs_qvel_idx.FR, env.legs_qvel_idx.FR)],
-                                    RL=mass_matrix[np.ix_(env.legs_qvel_idx.RL, env.legs_qvel_idx.RL)],
-                                    RR=mass_matrix[np.ix_(env.legs_qvel_idx.RR, env.legs_qvel_idx.RR)])
+        legs_mass_matrix = env.legs_mass_matrix()
+        legs_qfrc_bias = env.legs_qfrc_bias()
+
         
         stc.update_swing_time(current_contact, legs_order, simulation_dt)
 
