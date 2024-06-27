@@ -36,6 +36,8 @@ class SwingTrajectoryController:
 
         self.position_gain_fb = position_gain_fb
         self.velocity_gain_fb = velocity_gain_fb
+        self.swing_period = swing_period
+        self.swing_time = [0, 0, 0, 0]
 
 
     def regenerate_swing_trajectory_generator(self, step_height: float, swing_period: float) -> None:
@@ -51,14 +53,12 @@ class SwingTrajectoryController:
 
 
     def compute_swing_control(self,
-                              model,
-                              q,
+                              leg_id,
                               q_dot,
                               J,
                               J_dot,
                               lift_off,
                               touch_down,
-                              swing_time,
                               foot_pos,
                               foot_vel,
                               h,
@@ -84,7 +84,7 @@ class SwingTrajectoryController:
         """
         # Compute trajectory references
         des_foot_pos, des_foot_vel, des_foot_acc = self.swing_generator.compute_trajectory_references(
-            swing_time,
+            self.swing_time[leg_id],
             lift_off,
             touch_down
             )
@@ -109,6 +109,16 @@ class SwingTrajectoryController:
         tau_swing = mass_matrix@ np.linalg.pinv(J) @ (accelleration - J_dot @ q_dot) + h
 
         return tau_swing, des_foot_pos, des_foot_vel
+    
+
+    def update_swing_time(self, current_contact, legs_order, dt):
+        for leg_id, leg_name in enumerate(legs_order):
+            # Swing time reset
+            if current_contact[leg_id] == 0:
+                if self.swing_time[leg_id] < self.swing_period:
+                    self.swing_time[leg_id] = self.swing_time[leg_id] + dt
+            else:
+                self.swing_time[leg_id] = 0
 
 
 # Example:

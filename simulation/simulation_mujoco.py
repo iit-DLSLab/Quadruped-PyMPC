@@ -178,8 +178,7 @@ if __name__ == '__main__':
     stc = SwingTrajectoryController(step_height=step_height, swing_period=swing_period,
                                     position_gain_fb=position_gain_fb, velocity_gain_fb=velocity_gain_fb,
                                     generator=swing_generator)
-    # Swing controller variables
-    swing_time = [0, 0, 0, 0]
+
     
 
     # Terrain estimator
@@ -318,8 +317,8 @@ if __name__ == '__main__':
                 for leg_id in range(4):
                     # Swing time check
                     if (current_contact[leg_id] == 0):
-                        if ((swing_time[leg_id] > (swing_period / 2.) - 0.02) and \
-                                (swing_time[leg_id] < (swing_period / 2.) + 0.02)):
+                        if ((stc.swing_time[leg_id] > (swing_period / 2.) - 0.02) and \
+                                (stc.swing_time[leg_id] < (swing_period / 2.) + 0.02)):
                             optimize_swing = 1
                             nominal_sample_freq = step_frequency
             else:
@@ -462,17 +461,7 @@ if __name__ == '__main__':
 
         # Compute Swing Torque ------------------------------------------------------------------------------
         # TODO: Move contact sequence to labels FL, FR, RL, RR instead of a fixed indexing.
-        # TOOD: Should Swing time be returned by the "ppg?"
-
-        for leg_id, leg_name in enumerate(legs_order):
-            # Swing time reset
-            if current_contact[leg_id] == 0:
-                if swing_time[leg_id] < swing_period:
-                    swing_time[leg_id] = swing_time[leg_id] + simulation_dt
-            else:
-                swing_time[leg_id] = 0
-
-
+        
         # The swing controller is in the end-effector space. For its computation,
         # we save for simplicity joints position and velocities
         qpos, qvel = env.mjData.qpos, env.mjData.qvel
@@ -489,18 +478,18 @@ if __name__ == '__main__':
                                     FR=mass_matrix[np.ix_(env.legs_qvel_idx.FR, env.legs_qvel_idx.FR)],
                                     RL=mass_matrix[np.ix_(env.legs_qvel_idx.RL, env.legs_qvel_idx.RL)],
                                     RR=mass_matrix[np.ix_(env.legs_qvel_idx.RR, env.legs_qvel_idx.RR)])
+        
+        stc.update_swing_time(current_contact, legs_order, simulation_dt)
 
         for leg_id, leg_name in enumerate(legs_order):
             if current_contact[leg_id] == 0:  # If in swing phase, compute the swing trajectory tracking control.
                 tau[leg_name], _, _ = stc.compute_swing_control(
-                    model=env.mjModel,
-                    q=qpos[env.legs_qpos_idx[leg_name]],
+                    leg_id=leg_id,
                     q_dot=qvel[env.legs_qvel_idx[leg_name]],
                     J=feet_jac[leg_name][:, env.legs_qvel_idx[leg_name]],
                     J_dot=jac_feet_dot[leg_name][:, env.legs_qvel_idx[leg_name]],
                     lift_off=frg.lift_off_positions[leg_name],
                     touch_down=nmpc_footholds[leg_name],
-                    swing_time=swing_time[leg_id],
                     foot_pos=feet_pos[leg_name],
                     foot_vel=feet_vel[leg_name],
                     h=legs_qfrc_bias[leg_name],
@@ -525,10 +514,10 @@ if __name__ == '__main__':
             feet_traj_geom_ids = plot_swing_mujoco(viewer=env.viewer,
                                                    swing_traj_controller=stc,
                                                    swing_period=swing_period,
-                                                   swing_time=LegsAttr(FL=swing_time[0],
-                                                                       FR=swing_time[1],
-                                                                       RL=swing_time[2],
-                                                                       RR=swing_time[3]),
+                                                   swing_time=LegsAttr(FL=stc.swing_time[0],
+                                                                       FR=stc.swing_time[1],
+                                                                       RL=stc.swing_time[2],
+                                                                       RR=stc.swing_time[3]),
                                                    lift_off_positions=frg.lift_off_positions,
                                                    nmpc_footholds=nmpc_footholds,
                                                    ref_feet_pos=ref_feet_pos,
