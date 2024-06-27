@@ -266,9 +266,7 @@ if __name__ == '__main__':
             base_ori_euler_xyz=env.base_ori_euler_xyz,
             base_xy_lin_vel=env.base_lin_vel[0:2],
             ref_base_xy_lin_vel=ref_base_lin_vel[0:2],
-            hips_position=hip_pos,
-            com_height=state_current["position"][2],
-            lift_off_positions=frg.lift_off_positions)
+            hips_position=hip_pos)
 
         # Estimate the terrain slope and elevation -------------------------------------------------------
         terrain_roll, \

@@ -28,9 +28,7 @@ class FootholdReferenceGenerator:
                                     base_ori_euler_xyz: np.ndarray,
                                     base_xy_lin_vel: np.ndarray,
                                     ref_base_xy_lin_vel: np.ndarray,
-                                    hips_position: LegsAttr,
-                                    com_height: float,
-                                    lift_off_positions: LegsAttr) -> LegsAttr:
+                                    hips_position: LegsAttr) -> LegsAttr:
         """ Compute the reference footholds for a quadruped robot, using simple geometric heuristics.
 
         TODO: This function should be adapted to:
@@ -45,8 +43,6 @@ class FootholdReferenceGenerator:
             base_xy_lin_vel: (2,) The [x,y] linear velocity of the base in world frame.
             ref_base_xy_lin_vel: (2,) The desired [x,y] linear velocity of the base in world frame.
             hips_position: (LegsAttr) The position of the hips of the robot in world frame.
-            com_height: (float) The height of the center of mass of the robot. # TODO: isnt this com_position[2]?
-            lift_off_positions: (LegsAttr) The position of the feet when they are lifted off the ground in world frame
 
         Returns:
             ref_feet: (LegsAttr) The reference footholds for the robot in world frame.
@@ -105,7 +101,7 @@ class FootholdReferenceGenerator:
         #   or we can just do exteroceptive height adjustement...
         #   for now we substract 0.02cm to have a clear touch down
         for leg_id in ['FL', 'FR', 'RL', 'RR']:
-            ref_feet[leg_id][2] = lift_off_positions[leg_id][2] - 0.02
+            ref_feet[leg_id][2] = self.lift_off_positions[leg_id][2] - 0.02
 
         return ref_feet
     
