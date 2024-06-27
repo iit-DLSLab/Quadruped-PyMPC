@@ -430,15 +430,15 @@ class QuadrupedEnv(gym.Env):
         if frame == 'world':
             X = np.eye(4)
         elif frame == 'base':
-            X = self.base_configuration
+            X = np.linalg.inv(self.base_configuration)  # X_W2B : World to Base
         else:
             raise ValueError(f"Invalid frame: {frame} != 'world' or 'base'")
 
         return LegsAttr(
-            FR=homogenous_transform(self.mjData.geom_xpos[self._feet_geom_id.FR], X.T),
-            FL=homogenous_transform(self.mjData.geom_xpos[self._feet_geom_id.FL], X.T),
-            RR=homogenous_transform(self.mjData.geom_xpos[self._feet_geom_id.RR], X.T),
-            RL=homogenous_transform(self.mjData.geom_xpos[self._feet_geom_id.RL], X.T),
+            FR=homogenous_transform(self.mjData.geom_xpos[self._feet_geom_id.FR], X),
+            FL=homogenous_transform(self.mjData.geom_xpos[self._feet_geom_id.FL], X),
+            RR=homogenous_transform(self.mjData.geom_xpos[self._feet_geom_id.RR], X),
+            RL=homogenous_transform(self.mjData.geom_xpos[self._feet_geom_id.RL], X),
             )
 
     # LegsAttr(**{leg_name: feet_jac[leg_name] @ env.mjData.qvel for leg_name in legs_order})
