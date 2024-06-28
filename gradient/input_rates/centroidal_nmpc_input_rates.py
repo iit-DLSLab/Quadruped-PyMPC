@@ -643,6 +643,7 @@ class Acados_NMPC_InputRates:
             None
         """
         self.acados_ocp_solver.reset()
+        self.acados_ocp_solver =  AcadosOcpSolver(self.ocp, json_file=self.ocp.code_export_directory + "/centroidal_nmpc" + ".json", build = False, generate = False)
     
 
 
@@ -1685,9 +1686,8 @@ class Acados_NMPC_InputRates:
 
 
             optimal_GRF = self.previous_optimal_GRF
-            self.acados_ocp_solver.reset()
-            self.acados_ocp_solver =  AcadosOcpSolver(self.ocp, json_file=self.ocp.code_export_directory + "/centroidal_nmpc" + ".json", build = False, generate = False)
-      
+            self.reset()
+
 
 
         # Save the previous optimal GRF, the previous status and the previous contact sequence

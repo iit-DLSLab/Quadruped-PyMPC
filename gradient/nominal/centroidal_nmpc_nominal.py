@@ -587,6 +587,7 @@ class Acados_NMPC_Nominal:
 
     def reset(self):
         self.acados_ocp_solver.reset()
+        self.acados_ocp_solver =  AcadosOcpSolver(self.ocp, json_file=self.ocp.code_export_directory + "/centroidal_nmpc" + ".json", build = False, generate = False)
         
     
 
@@ -1607,8 +1608,7 @@ class Acados_NMPC_Nominal:
 
 
             optimal_GRF = self.previous_optimal_GRF
-            self.acados_ocp_solver.reset()
-            self.acados_ocp_solver =  AcadosOcpSolver(self.ocp, json_file=self.ocp.code_export_directory + "/centroidal_nmpc" + ".json", build = False, generate = False)
+            self.reset()
 
       
 
