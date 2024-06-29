@@ -586,6 +586,25 @@ class QuadrupedEnv(gym.Env):
             return contact_state, feet_contacts, feet_contact_forces
 
         return contact_state, feet_contacts
+    
+
+    def legs_mass_matrix(self, ):
+        mass_matrix = np.zeros((self.mjModel.nv, self.mjModel.nv))
+        mujoco.mj_fullM(self.mjModel, mass_matrix, self.mjData.qM)
+        # Get the mass matrix of the legs
+        legs_mass_matrix = LegsAttr(FL=mass_matrix[np.ix_(self.legs_qvel_idx.FL, self.legs_qvel_idx.FL)],
+                                    FR=mass_matrix[np.ix_(self.legs_qvel_idx.FR, self.legs_qvel_idx.FR)],
+                                    RL=mass_matrix[np.ix_(self.legs_qvel_idx.RL, self.legs_qvel_idx.RL)],
+                                    RR=mass_matrix[np.ix_(self.legs_qvel_idx.RR, self.legs_qvel_idx.RR)])
+        return legs_mass_matrix
+
+    def legs_qfrc_bias(self, ):
+        # centrifugal, coriolis, gravity
+        legs_qfrc_bias = LegsAttr(FL=self.mjData.qfrc_bias[self.legs_qvel_idx.FL],
+                                  FR=self.mjData.qfrc_bias[self.legs_qvel_idx.FR],
+                                  RL=self.mjData.qfrc_bias[self.legs_qvel_idx.RL],
+                                  RR=self.mjData.qfrc_bias[self.legs_qvel_idx.RR])
+        return legs_qfrc_bias
 
     @property
     def com(self):

@@ -171,13 +171,11 @@ simulation_params = {
 
     'gait':                        'trot',  # 'trot', 'pace', 'crawl', 'bound', 'full_stance'
 
-    # ref_x_dot, ref_y_dot, ref_yaw_dot are in the horizontal frame
-    'ref_x_dot':                   .3,
-    'ref_y_dot':                   0.,
-    'ref_yaw_dot':                 0.0,
+    # velocity mode: human will give you the possibility to use the keyboard, the other are
+    # forward only random linear-velocity, random will give you random linear-velocity and yaw-velocity
+    'mode':                        'human',  # 'human', 'forward', 'random'
     'ref_z':                       hip_height,
-    # 'ref_pitch':                   0.0,
-    # 'ref_roll':                    0,
+
 
     # the MPC will be called every 1/(mpc_frequency*dt) timesteps
     # this helps to evaluate more realistically the performance of the controller
@@ -187,7 +185,7 @@ simulation_params = {
 
     'external_disturbances_bound': [18, 18, 0, 18, 18, 18],  # fx, fy, fz, mx, my, mz
 
-    'use_inertia_recomputation':   False,
+    'use_inertia_recomputation':   True,
 
     'use_print_debug':             False,
     'use_visualization_debug':     True,

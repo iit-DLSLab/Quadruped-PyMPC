@@ -603,7 +603,7 @@ class Acados_NMPC_InputRates:
         Q_velocity = np.array([200, 200, 200])   #x_vel, y_vel, z_vel
         Q_base_angle = np.array([500, 500, 0])  #roll, pitch, yaw
         Q_base_angle_rates = np.array([20, 20, 600]) #roll_rate, pitch_rate, yaw_rate
-        Q_foot_pos = np.array([1000, 1000, 10000]) #f_x, f_y, f_z (should be 4 times this, once per foot)
+        Q_foot_pos = np.array([300, 300, 300]) #f_x, f_y, f_z (should be 4 times this, once per foot)
         Q_com_position_z_integral = np.array([50]) #integral of z_com
         Q_com_velocity_x_integral = np.array([10]) #integral of x_com
         Q_com_velocity_y_integral = np.array([10]) #integral of y_com
@@ -643,6 +643,7 @@ class Acados_NMPC_InputRates:
             None
         """
         self.acados_ocp_solver.reset()
+        self.acados_ocp_solver =  AcadosOcpSolver(self.ocp, json_file=self.ocp.code_export_directory + "/centroidal_nmpc" + ".json", build = False, generate = False)
     
 
 
@@ -1685,8 +1686,8 @@ class Acados_NMPC_InputRates:
 
 
             optimal_GRF = self.previous_optimal_GRF
-            self.acados_ocp_solver.reset()
-      
+            self.reset()
+
 
 
         # Save the previous optimal GRF, the previous status and the previous contact sequence

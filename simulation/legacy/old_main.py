@@ -256,10 +256,13 @@ lift_off_positions_legattr = LegsAttr(
 
 
 # Set the reference for the state
+ref_x_dot = 0.3
+ref_y_dot = 0.0
+ref_yaw_dot = 0.0
 ref_pose = np.array([0, 0, config.simulation_params['ref_z']])
-ref_linear_velocity = np.array([config.simulation_params['ref_x_dot'], config.simulation_params['ref_y_dot'], 0])
+ref_linear_velocity = np.array([ref_x_dot, ref_y_dot, 0])
 ref_orientation = np.array([0.0, 0.0, 0])
-ref_angular_velocity = np.array([0, 0, config.simulation_params['ref_yaw_dot']])
+ref_angular_velocity = np.array([0, 0, ref_yaw_dot])
 
 ref_feet_pos = frg.compute_footholds_reference(ref_pose,
                                                     ref_orientation,

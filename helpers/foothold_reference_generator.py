@@ -10,7 +10,7 @@ from utils.quadruped_utils import LegsAttr
 # TODO: @Giulio Should we convert this to a single function instead of a class? Stance time, can be passed as argument
 class FootholdReferenceGenerator:
 
-    def __init__(self, stance_time: float, vel_moving_average_length=20, hip_height: float = None) -> None:
+    def __init__(self, stance_time: float, lift_off_positions: LegsAttr, vel_moving_average_length=20, hip_height: float = None) -> None:
         """
         This method initializes the foothold generator class, which computes
         the reference foothold for the nonlinear MPC.
@@ -21,15 +21,14 @@ class FootholdReferenceGenerator:
         self.base_vel_hist = collections.deque(maxlen=vel_moving_average_length)
         self.stance_time = stance_time
         self.hip_height = hip_height
+        self.lift_off_positions = lift_off_positions
 
     def compute_footholds_reference(self,
                                     com_position: np.ndarray,
                                     base_ori_euler_xyz: np.ndarray,
                                     base_xy_lin_vel: np.ndarray,
                                     ref_base_xy_lin_vel: np.ndarray,
-                                    hips_position: LegsAttr,
-                                    com_height: float,
-                                    lift_off_positions: LegsAttr) -> LegsAttr:
+                                    hips_position: LegsAttr) -> LegsAttr:
         """ Compute the reference footholds for a quadruped robot, using simple geometric heuristics.
 
         TODO: This function should be adapted to:
@@ -44,8 +43,6 @@ class FootholdReferenceGenerator:
             base_xy_lin_vel: (2,) The [x,y] linear velocity of the base in world frame.
             ref_base_xy_lin_vel: (2,) The desired [x,y] linear velocity of the base in world frame.
             hips_position: (LegsAttr) The position of the hips of the robot in world frame.
-            com_height: (float) The height of the center of mass of the robot. # TODO: isnt this com_position[2]?
-            lift_off_positions: (LegsAttr) The position of the feet when they are lifted off the ground in world frame
 
         Returns:
             ref_feet: (LegsAttr) The reference footholds for the robot in world frame.
@@ -104,9 +101,16 @@ class FootholdReferenceGenerator:
         #   or we can just do exteroceptive height adjustement...
         #   for now we substract 0.02cm to have a clear touch down
         for leg_id in ['FL', 'FR', 'RL', 'RR']:
-            ref_feet[leg_id][2] = lift_off_positions[leg_id][2] - 0.02
+            ref_feet[leg_id][2] = self.lift_off_positions[leg_id][2] - 0.02
 
         return ref_feet
+    
+
+    def update_lift_off_positions(self, previous_contact, current_contact, feet_pos, legs_order):
+        for leg_id, leg_name in enumerate(legs_order):
+            # Set lif-offs
+            if previous_contact[leg_id] == 1 and current_contact[leg_id] == 0:
+                self.lift_off_positions[leg_name] = feet_pos[leg_name]
 
 
 if __name__ == "__main__":
