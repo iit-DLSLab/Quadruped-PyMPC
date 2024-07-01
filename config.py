@@ -181,11 +181,7 @@ simulation_params = {
     # this helps to evaluate more realistically the performance of the controller
     'mpc_frequency':               200,
 
-    'use_external_disturbances':   True,
-
-    'external_disturbances_bound': [18, 18, 0, 18, 18, 18],  # fx, fy, fz, mx, my, mz
-
-    'use_inertia_recomputation':   True,
+    'use_inertia_recomputation':   False,
 
     'use_print_debug':             False,
     'use_visualization_debug':     True,

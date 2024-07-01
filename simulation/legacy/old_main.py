@@ -4,11 +4,9 @@
 
 import mujoco.viewer
 import mujoco
-import matplotlib.pyplot as plt
 import copy
 import time
 import pprint
-import casadi as cs
 import numpy as np
 np.set_printoptions(precision=3, suppress = True)
 
@@ -25,9 +23,6 @@ sys.path.append(dir_path + '/../../gradient/nominal/')
 sys.path.append(dir_path + '/../../gradient/collaborative/')
 sys.path.append(dir_path + '/../../sampling/')
 
-import threading
-import readchar 
-
 # General magic
 #from foothold_reference_generator import FootholdReferenceGenerator
 #from swing_trajectory_controller import SwingTrajectoryController
@@ -42,10 +37,7 @@ from helpers.foothold_reference_generator import FootholdReferenceGenerator
 from helpers.periodic_gait_generator import PeriodicGaitGenerator
 from helpers.srb_inertia_computation import SrbInertiaComputation
 from helpers.swing_trajectory_controller import SwingTrajectoryController
-from simulation.quadruped_env import QuadrupedEnv
-from utils.math_utils import skew
-from utils.mujoco_utils.visual import plot_swing_mujoco, render_vector
-from utils.quadruped_utils import GaitType, LegsAttr, estimate_terrain_slope
+from utils.quadruped_utils import GaitType, LegsAttr
 
 # Parameters for both MPC and simulation
 import config 

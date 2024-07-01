@@ -189,7 +189,7 @@ class InverseKinematicsPin:
 if __name__ == "__main__":
 
     # Load the urdf model
-    urdf_filename = "./../simulation/robot_model/hyqreal/hyqreal.urdf"
+    urdf_filename = "../../gym-quadruped/gym_quadruped/robot_model/hyqreal/hyqreal.urdf"
     model = pin.buildModelFromUrdf(urdf_filename)
     
     

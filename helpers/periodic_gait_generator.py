@@ -1,5 +1,3 @@
-import copy
-
 import numpy as np
 
 from utils.quadruped_utils import GaitType
@@ -19,7 +17,6 @@ class PeriodicGaitGenerator:
     def reset(self):
         # Choose of the gait, this represent the delay of each leg
         if self.gait_type == GaitType.TROT:
-            # self.delta = [0.0, 0.5, 0.5, 0.0]
             self.phase_offset = [0.5, 1.0, 1.0, 0.5]
         elif self.gait_type == GaitType.PACE:
             self.phase_offset = [0.8, 0.3, 0.8, 0.3]
@@ -51,8 +48,7 @@ class PeriodicGaitGenerator:
             self.phase_signal[leg] += dt * new_step_freq
 
             # Phase signal is between 0 and 1
-            if self.phase_signal[leg] >= 1.0:
-                self.phase_signal[leg] = 0
+            self.phase_signal[leg] = self.phase_signal[leg] % 1.0
 
             # If we are still in init, we check if the delay of the leg
             # is not surpassed. If not, the contact needs to be still 1
@@ -79,17 +75,17 @@ class PeriodicGaitGenerator:
         self.init = init
 
     def get_t(self):
-        return self.phase_signal
+        return np.array(self.phase_signal)
 
     def compute_contact_sequence(self):
-
+        # TODO: This function can be vectorized and computed with numpy vectorized operations
         if (self.gait_type == GaitType.FULL_STANCE):
             contact_sequence = np.ones((4, self.horizon * 2))
             return contact_sequence
 
         else:
-            t_init = copy.deepcopy(self.phase_signal)
-            init_init = copy.deepcopy(self.init)
+            t_init = np.array(self.phase_signal)
+            init_init = np.array(self.init)
 
             contact_sequence = np.zeros((self.n_contact, self.horizon))
             for i in range(self.horizon):

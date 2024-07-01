@@ -4,29 +4,32 @@
 # - Giulio Turrisi
 
 import os
+import pathlib
 
 # TODO: Ugly hack so people dont have to run the python command specifying the working directory.
 #  we should remove this before the final release.
 import sys
 import time
 
+from morpho_symm.utils.rep_theory_utils import group_rep_from_gens
+from tqdm import tqdm
+
 # Add the parent directory of this script to the Python path
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-import mujoco
 import numpy as np
+from gym_quadruped.quadruped_env import QuadrupedEnv
+from gym_quadruped.utils.mujoco.visual import render_vector
+from gym_quadruped.utils.quadruped_utils import GaitType, LegsAttr
 
 import config as cfg
 
 # Parameters for both MPC and simulation
 from helpers.foothold_reference_generator import FootholdReferenceGenerator
 from helpers.periodic_gait_generator import PeriodicGaitGenerator
-from helpers.srb_inertia_computation import SrbInertiaComputation
 from helpers.swing_trajectory_controller import SwingTrajectoryController
 from helpers.terrain_estimator import TerrainEstimator
-from simulation.quadruped_env import QuadrupedEnv
-from utils.mujoco_utils.visual import plot_swing_mujoco, render_vector
-from utils.quadruped_utils import GaitType, LegsAttr
+from utils.quadruped_utils import plot_swing_mujoco
 
 np.set_printoptions(precision=3, suppress=True)
 
@@ -66,23 +69,34 @@ if __name__ == '__main__':
     scene_name = cfg.simulation_params['scene']
     simulation_dt = cfg.simulation_params['dt']
 
-    state_observables_names = ('base_pos', 'base_lin_vel', 'base_ori_quat_wxyz', 'base_ang_vel',
+    state_observables_names = ('base_pos', 'base_lin_vel', 'base_ori_euler_xyz', 'base_ori_quat_wxyz', 'base_ang_vel',
                                'qpos_js', 'qvel_js', 'tau_ctrl_setpoint',
                                'feet_pos_base', 'feet_vel_base', 'contact_state', 'contact_forces_base',)
 
     # Create the quadruped robot environment. _______________________________________________________________________
     env = QuadrupedEnv(robot=robot_name,
                        hip_height=hip_height,
-                       legs_joint_names=LegsAttr(**robot_leg_joints),  # Joint names of the legs DoF
-                       feet_geom_name=LegsAttr(**robot_feet_geom_names),  # Geom/Frame id of feet
+                       legs_joint_names=robot_leg_joints,  # Joint names of the legs DoF
+                       feet_geom_name=robot_feet_geom_names,  # Geom/Frame id of feet
                        scene=scene_name,
                        sim_dt=simulation_dt,
-                       ref_base_lin_vel=(-4.0 * hip_height, 4.0 * hip_height),  # pass a float for a fixed value
-                       ref_base_ang_vel=(-np.pi * 3 / 4, np.pi * 3 / 4),  # pass a float for a fixed value
-                       ground_friction_coeff=(0.3, 1.5),  # pass a float for a fixed value
+                       ref_base_lin_vel=0.0,  # pass a float for a fixed value
+                       ground_friction_coeff=(0.2, 1.5),  # pass a float for a fixed value
                        base_vel_command_type="random",  # "forward", "random", "forward+rotate", "human"
                        state_obs_names=state_observables_names,  # Desired quantities in the 'state' vec
                        )
+    # env = QuadrupedEnv(robot=robot_name,
+    #                    hip_height=hip_height,
+    #                    legs_joint_names=LegsAttr(**robot_leg_joints),  # Joint names of the legs DoF
+    #                    feet_geom_name=LegsAttr(**robot_feet_geom_names),  # Geom/Frame id of feet
+    #                    scene=scene_name,
+    #                    sim_dt=simulation_dt,
+    #                    ref_base_lin_vel=(-4.0 * hip_height, 4.0 * hip_height),  # pass a float for a fixed value
+    #                    ref_base_ang_vel=(-np.pi * 3 / 4, np.pi * 3 / 4),  # pass a float for a fixed value
+    #                    ground_friction_coeff=(0.3, 1.5),  # pass a float for a fixed value
+    #                    base_vel_command_type="random",  # "forward", "random", "forward+rotate", "human"
+    #                    state_obs_names=state_observables_names,  # Desired quantities in the 'state' vec
+    #                    )
     # Some robots require a change in the zero joint-space configuration. If provided apply it
     if cfg.qpos0_js is not None:
         env.mjModel.qpos0 = np.concatenate((env.mjModel.qpos0[:7], cfg.qpos0_js))
@@ -145,7 +159,7 @@ if __name__ == '__main__':
                                   sampling_method=cfg.mpc_params['sampling_method'],
                                   control_parametrization=cfg.mpc_params['control_parametrization'],
                                   device="gpu")
-        best_control_parameters = jnp.zeros((controller.num_control_parameters,))
+        best_ctrl_parameters = jnp.zeros((controller.num_control_parameters,))
         jitted_compute_control = jax.jit(controller.compute_control, device=controller.device)
         # jitted_get_key = jax.jit(controller.get_key, device=controller.device)
         jitted_prepare_state_and_reference = controller.prepare_state_and_reference
@@ -159,13 +173,14 @@ if __name__ == '__main__':
     # we generate a contact sequence two times longer and with a dt half of the one of the mpc
     pgg = PeriodicGaitGenerator(duty_factor=duty_factor, step_freq=step_frequency, gait_type=gait_type,
                                 horizon=horizon * 2, contact_sequence_dt=mpc_dt / 2.)
+
     contact_sequence = pgg.compute_contact_sequence()
     nominal_sample_freq = step_frequency
-    
+
     # Create the foothold reference generator
     stance_time = (1 / step_frequency) * duty_factor
-    frg = FootholdReferenceGenerator(stance_time=stance_time, hip_height=cfg.hip_height, lift_off_positions=env.feet_pos(frame='world'))
-
+    frg = FootholdReferenceGenerator(stance_time=stance_time, hip_height=cfg.hip_height,
+                                     lift_off_positions=env.feet_pos(frame='world'))
 
     # Create swing trajectory generator
     step_height = cfg.simulation_params['step_height']
@@ -177,13 +192,11 @@ if __name__ == '__main__':
                                     position_gain_fb=position_gain_fb, velocity_gain_fb=velocity_gain_fb,
                                     generator=swing_generator)
 
-    
-
     # Terrain estimator
     terrain_computation = TerrainEstimator()
 
     # Online computation of the inertia parameter
-    srb_inertia_computation = SrbInertiaComputation()  # TODO: This seems to be unsused.
+    # srb_inertia_computation = SrbInertiaComputation()  # TODO: This seems to be unsused.
 
     # Initialization of variables used in the main control loop
     # ____________________________________________________________
@@ -215,318 +228,447 @@ if __name__ == '__main__':
     feet_traj_geom_ids, feet_GRF_geom_ids = None, LegsAttr(FL=-1, FR=-1, RL=-1, RR=-1)
     legs_order = ["FL", "FR", "RL", "RR"]
 
-    RENDER_FREQ = 30  # Hz
+    # _____________________________________________________________
+    RENDER_FREQ = 20  # Hz
+    N_EPISODES = 500
+    N_STEPS_PER_EPISODE = 700 if env.base_vel_command_type != "human" else 20000
     last_render_time = time.time()
 
-    MAX_STEPS = 2000 if env.base_vel_command_type != "human" else 10000
-    while True:
-        step_start = time.time()
+    state_obs_history, ctrl_state_history = [], []
+    for episode_num in tqdm(range(N_EPISODES), desc="Episodes"):
 
-        # Update the robot state --------------------------------
-        feet_pos = env.feet_pos(frame='world')
-        hip_pos = env.hip_positions(frame='world')
+        ep_state_obs_history, ep_ctrl_state_history = [], []
+        for _ in range(N_STEPS_PER_EPISODE):
+            step_start = time.time()
 
-        state_current = dict(
-            position=env.base_pos,
-            linear_velocity=env.base_lin_vel,
-            orientation=env.base_ori_euler_xyz,
-            angular_velocity=env.base_ang_vel,
-            foot_FL=feet_pos.FL,
-            foot_FR=feet_pos.FR,
-            foot_RL=feet_pos.RL,
-            foot_RR=feet_pos.RR
-            )
+            # Update the robot state --------------------------------
+            feet_pos = env.feet_pos(frame='world')
+            hip_pos = env.hip_positions(frame='world')
 
-        # Update target base velocity
-        ref_base_lin_vel, ref_base_ang_vel = env.target_base_vel()
-        # -------------------------------------------------------
+            state_current = dict(
+                position=env.base_pos,
+                linear_velocity=env.base_lin_vel,
+                orientation=env.base_ori_euler_xyz,
+                angular_velocity=env.base_ang_vel,
+                foot_FL=feet_pos.FL,
+                foot_FR=feet_pos.FR,
+                foot_RL=feet_pos.RL,
+                foot_RR=feet_pos.RR
+                )
 
-        # Update the desired contact sequence ---------------------------
-        pgg.run(simulation_dt, pgg.step_freq)
-        contact_sequence = pgg.compute_contact_sequence()
+            # Update target base velocity
+            ref_base_lin_vel, ref_base_ang_vel = env.target_base_vel()
+            # -------------------------------------------------------
 
-        # in the case of nonuniform discretization, we need to subsample the contact sequence
-        if (cfg.mpc_params['use_nonuniform_discretization']):
-            dt_fine_grained = cfg.mpc_params['dt_fine_grained']
-            horizon_fine_grained = cfg.mpc_params['horizon_fine_grained']
-            contact_sequence = pgg.sample_contact_sequence(contact_sequence, mpc_dt, dt_fine_grained, horizon_fine_grained)
-        
+            # Update the desired contact sequence ---------------------------
+            pgg.run(simulation_dt, pgg.step_freq)
+            contact_sequence = pgg.compute_contact_sequence()
 
-        previous_contact = current_contact
-        current_contact = np.array([contact_sequence[0][0],
-                                    contact_sequence[1][0],
-                                    contact_sequence[2][0],
-                                    contact_sequence[3][0]])
+            # in the case of nonuniform discretization, we need to subsample the contact sequence
+            if (cfg.mpc_params['use_nonuniform_discretization']):
+                dt_fine_grained = cfg.mpc_params['dt_fine_grained']
+                horizon_fine_grained = cfg.mpc_params['horizon_fine_grained']
+                contact_sequence = pgg.sample_contact_sequence(contact_sequence, mpc_dt, dt_fine_grained,
+                                                               horizon_fine_grained)
 
-        # Compute the reference for the footholds ---------------------------------------------------
-        frg.update_lift_off_positions(previous_contact, current_contact, feet_pos, legs_order)
-        ref_feet_pos = frg.compute_footholds_reference(
-            com_position=env.base_pos,
-            base_ori_euler_xyz=env.base_ori_euler_xyz,
-            base_xy_lin_vel=env.base_lin_vel[0:2],
-            ref_base_xy_lin_vel=ref_base_lin_vel[0:2],
-            hips_position=hip_pos)
+            previous_contact = current_contact
+            current_contact = np.array([contact_sequence[0][0],
+                                        contact_sequence[1][0],
+                                        contact_sequence[2][0],
+                                        contact_sequence[3][0]])
 
-        # Estimate the terrain slope and elevation -------------------------------------------------------
-        terrain_roll, \
-            terrain_pitch, \
-            terrain_height = terrain_computation.compute_terrain_estimation(
-            base_position=env.base_pos,
-            yaw=env.base_ori_euler_xyz[2],
-            feet_pos=frg.lift_off_positions,
-            current_contact=current_contact)
+            # Compute the reference for the footholds ---------------------------------------------------
+            frg.update_lift_off_positions(previous_contact, current_contact, feet_pos, legs_order)
+            ref_feet_pos = frg.compute_footholds_reference(
+                com_position=env.base_pos,
+                base_ori_euler_xyz=env.base_ori_euler_xyz,
+                base_xy_lin_vel=env.base_lin_vel[0:2],
+                ref_base_xy_lin_vel=ref_base_lin_vel[0:2],
+                hips_position=hip_pos)
 
-        ref_pos = np.array([0, 0, cfg.hip_height])
-        ref_pos[2] = cfg.simulation_params['ref_z'] + terrain_height
+            # Estimate the terrain slope and elevation -------------------------------------------------------
+            terrain_roll, \
+                terrain_pitch, \
+                terrain_height = terrain_computation.compute_terrain_estimation(
+                base_position=env.base_pos,
+                yaw=env.base_ori_euler_xyz[2],
+                feet_pos=frg.lift_off_positions,
+                current_contact=current_contact)
 
-        # Update state reference ------------------------------------------------------------------------
-        ref_state |= dict(ref_foot_FL=ref_feet_pos.FL.reshape((1, 3)),
-                          ref_foot_FR=ref_feet_pos.FR.reshape((1, 3)),
-                          ref_foot_RL=ref_feet_pos.RL.reshape((1, 3)),
-                          ref_foot_RR=ref_feet_pos.RR.reshape((1, 3)),
-                          # Also update the reference base linear velocity and
-                          ref_linear_velocity=ref_base_lin_vel,
-                          ref_angular_velocity=ref_base_ang_vel,
-                          ref_orientation=np.array([terrain_roll, terrain_pitch, 0.0]),
-                          ref_position=ref_pos
-                          )
-        # -------------------------------------------------------------------------------------------------
+            ref_pos = np.array([0, 0, cfg.hip_height])
+            ref_pos[2] = cfg.simulation_params['ref_z'] + terrain_height
 
+            # Update state reference ------------------------------------------------------------------------
+            ref_state |= dict(ref_foot_FL=ref_feet_pos.FL.reshape((1, 3)),
+                              ref_foot_FR=ref_feet_pos.FR.reshape((1, 3)),
+                              ref_foot_RL=ref_feet_pos.RL.reshape((1, 3)),
+                              ref_foot_RR=ref_feet_pos.RR.reshape((1, 3)),
+                              # Also update the reference base linear velocity and
+                              ref_linear_velocity=ref_base_lin_vel,
+                              ref_angular_velocity=ref_base_ang_vel,
+                              ref_orientation=np.array([terrain_roll, terrain_pitch, 0.0]),
+                              ref_position=ref_pos
+                              )
+            # -------------------------------------------------------------------------------------------------
 
-        # TODO: this should be hidden inside the controller forward/get_action method
-        # Solve OCP ---------------------------------------------------------------------------------------
-        if env.step_num % round(1 / (mpc_frequency * simulation_dt)) == 0:
+            # TODO: this should be hidden inside the controller forward/get_action method
+            # Solve OCP ---------------------------------------------------------------------------------------
+            if env.step_num % round(1 / (mpc_frequency * simulation_dt)) == 0:
 
-            # We can recompute the inertia of the single rigid body model
+                # We can recompute the inertia of the single rigid body model
 
-            # or use the fixed one in cfg.py
-            if(cfg.simulation_params['use_inertia_recomputation']):
-                # TODO: d.qpos is not defined
-                #inertia = srb_inertia_computation.compute_inertia(d.qpos)
-                inertia = env.get_base_inertia().flatten()  # Reflected inertia of base at qpos, in world frame
-            else:
-                inertia = cfg.inertia.flatten()
+                # or use the fixed one in cfg.py
+                if (cfg.simulation_params['use_inertia_recomputation']):
+                    # TODO: d.qpos is not defined
+                    # inertia = srb_inertia_computation.compute_inertia(d.qpos)
+                    inertia = env.get_base_inertia().flatten()  # Reflected inertia of base at qpos, in world frame
+                else:
+                    inertia = cfg.inertia.flatten()
 
-            if ((cfg.mpc_params['optimize_step_freq'])):
-                # we can always optimize the step freq, or just at the apex of the swing
-                # to avoid possible jittering in the solution
-                optimize_swing = 0  # 1 for always, 0 for apex
-                for leg_id in range(4):
-                    # Swing time check
-                    if (current_contact[leg_id] == 0):
-                        if ((stc.swing_time[leg_id] > (swing_period / 2.) - 0.02) and \
-                                (stc.swing_time[leg_id] < (swing_period / 2.) + 0.02)):
-                            optimize_swing = 1
-                            nominal_sample_freq = step_frequency
-            else:
-                optimize_swing = 0
+                if ((cfg.mpc_params['optimize_step_freq'])):
+                    # we can always optimize the step freq, or just at the apex of the swing
+                    # to avoid possible jittering in the solution
+                    optimize_swing = 0  # 1 for always, 0 for apex
+                    for leg_id in range(4):
+                        # Swing time check
+                        if (current_contact[leg_id] == 0):
+                            if ((stc.swing_time[leg_id] > (swing_period / 2.) - 0.02) and \
+                                    (stc.swing_time[leg_id] < (swing_period / 2.) + 0.02)):
+                                optimize_swing = 1
+                                nominal_sample_freq = step_frequency
+                else:
+                    optimize_swing = 0
 
-            # If we use sampling
-            if (cfg.mpc_params['type'] == 'sampling'):
+                # If we use sampling
+                if (cfg.mpc_params['type'] == 'sampling'):
 
-                time_start = time.time()
+                    time_start = time.time()
 
-                # Shift the previous solution ahead
-                if (cfg.mpc_params['shift_solution']):
-                    index_shift = 1./mpc_frequency
-                    best_control_parameters = controller.shift_solution(best_control_parameters, index_shift)
-                
-                # Convert data to jax
-                state_current_jax, \
-                    reference_state_jax, \
-                    best_control_parameters = jitted_prepare_state_and_reference(state_current, ref_state,
-                                                                                 best_control_parameters,
-                                                                                 current_contact, previous_contact_mpc)
+                    # Shift the previous solution ahead
+                    if (cfg.mpc_params['shift_solution']):
+                        index_shift = 1. / mpc_frequency
+                        best_control_parameters = controller.shift_solution(best_control_parameters, index_shift)
 
-                for iter_sampling in range(iteration):
-                    if (cfg.mpc_params['sampling_method'] == 'cem_mppi'):
-                        if (iter_sampling == 0):
-                            controller = controller.with_newsigma(cfg.mpc_params['sigma_cem_mppi'])
-                        nmpc_GRFs, \
-                            nmpc_footholds, \
-                            best_control_parameters, \
-                            best_cost, \
-                            best_sample_freq, \
-                            costs, \
-                            sigma_cem_mppi = jitted_compute_control(state_current_jax, reference_state_jax,
-                                                                    contact_sequence, best_control_parameters,
-                                                                    controller.master_key, controller.sigma_cem_mppi)
-                        controller = controller.with_newsigma(sigma_cem_mppi)
-                    else:
-                        nmpc_GRFs, \
-                            nmpc_footholds, \
-                            best_control_parameters, \
-                            best_cost, \
-                            best_sample_freq, \
-                            costs = jitted_compute_control(state_current_jax, reference_state_jax, contact_sequence,
-                                                           best_control_parameters, controller.master_key, pgg.get_t(),
-                                                           nominal_sample_freq, optimize_swing)
+                    # Convert data to jax
+                    state_current_jax, \
+                        reference_state_jax, \
+                        best_control_parameters = jitted_prepare_state_and_reference(state_current, ref_state,
+                                                                                     best_control_parameters,
+                                                                                     current_contact,
+                                                                                     previous_contact_mpc)
 
-                    controller = controller.with_newkey()
+                    for iter_sampling in range(iteration):
+                        if (cfg.mpc_params['sampling_method'] == 'cem_mppi'):
+                            if (iter_sampling == 0):
+                                controller = controller.with_newsigma(cfg.mpc_params['sigma_cem_mppi'])
+                            nmpc_GRFs, \
+                                nmpc_footholds, \
+                                best_control_parameters, \
+                                best_cost, \
+                                best_sample_freq, \
+                                costs, \
+                                sigma_cem_mppi = jitted_compute_control(state_current_jax, reference_state_jax,
+                                                                        contact_sequence, best_control_parameters,
+                                                                        controller.master_key,
+                                                                        controller.sigma_cem_mppi)
+                            controller = controller.with_newsigma(sigma_cem_mppi)
+                        else:
+                            nmpc_GRFs, \
+                                nmpc_footholds, \
+                                best_control_parameters, \
+                                best_cost, \
+                                best_sample_freq, \
+                                costs = jitted_compute_control(state_current_jax, reference_state_jax, contact_sequence,
+                                                               best_control_parameters, controller.master_key,
+                                                               pgg.get_t(),
+                                                               nominal_sample_freq, optimize_swing)
 
-                if ((cfg.mpc_params['optimize_step_freq']) and (optimize_swing == 1)):
-                    pgg.step_freq = np.array([best_sample_freq])[0]
-                    nominal_sample_freq = pgg.step_freq
-                    stance_time = (1 / pgg.step_freq) * duty_factor
-                    frg.stance_time = stance_time
+                        controller = controller.with_newkey()
 
-                    swing_period = (1 - duty_factor) * (1 / pgg.step_freq)  # + 0.07
-                    stc.regenerate_swing_trajectory_generator(step_height=step_height, swing_period=swing_period)
+                    if ((cfg.mpc_params['optimize_step_freq']) and (optimize_swing == 1)):
+                        pgg.step_freq = np.array([best_sample_freq])[0]
+                        nominal_sample_freq = pgg.step_freq
+                        stance_time = (1 / pgg.step_freq) * duty_factor
+                        frg.stance_time = stance_time
 
-                nmpc_footholds = ref_feet_pos
+                        swing_period = (1 - duty_factor) * (1 / pgg.step_freq)  # + 0.07
+                        stc.regenerate_swing_trajectory_generator(step_height=step_height, swing_period=swing_period)
 
-                nmpc_GRFs = np.array(nmpc_GRFs)
+                    nmpc_footholds = ref_feet_pos
 
-                previous_contact_mpc = current_contact
-                index_shift = 0
-                # optimizer_cost = best_cost
+                    nmpc_GRFs = np.array(nmpc_GRFs)
 
-            # If we use Gradient-Based MPC
-            else:
-                time_start = time.time()
-                nmpc_GRFs, nmpc_footholds, _, status = controller.compute_control(
-                    state_current,
-                    ref_state,
-                    contact_sequence,
-                    inertia=inertia)
-                
-                # TODO functions should output this class instance.
-                nmpc_footholds = LegsAttr(FL=nmpc_footholds[0],
-                                          FR=nmpc_footholds[1],
-                                          RL=nmpc_footholds[2],
-                                          RR=nmpc_footholds[3])
+                    previous_contact_mpc = current_contact
+                    index_shift = 0
+                    # optimizer_cost = best_cost
 
-                # optimizer_cost = controller.acados_ocp_solver.get_cost()
+                # If we use Gradient-Based MPC
+                else:
+                    time_start = time.time()
+                    nmpc_GRFs, nmpc_footholds, _, status = controller.compute_control(
+                        state_current,
+                        ref_state,
+                        contact_sequence,
+                        inertia=inertia)
 
-                if cfg.mpc_params['optimize_step_freq'] and optimize_swing == 1:
-                    contact_sequence_temp = np.zeros((len(cfg.mpc_params['step_freq_available']), 4, horizon * 2))
-                    for j in range(len(cfg.mpc_params['step_freq_available'])):
-                        pgg_temp = PeriodicGaitGenerator(duty_factor=duty_factor,
-                                                         step_freq=cfg.mpc_params['step_freq_available'][j],
-                                                         gait_type=gait_type,
-                                                         horizon=horizon * 2)
-                        pgg_temp.phase_signal = pgg.phase_signal
-                        pgg_temp.init = pgg.init
-                        contact_sequence_temp[j] = pgg_temp.compute_contact_sequence()
-                        
-                        # in the case of nonuniform discretization, we need to subsample the contact sequence
-                        if (cfg.mpc_params['use_nonuniform_discretization']):
-                            dt_fine_grained = cfg.mpc_params['dt_fine_grained']
-                            horizon_fine_grained = cfg.mpc_params['horizon_fine_grained']
-                            contact_sequence_temp[j] = pgg.sample_contact_sequence(contact_sequence, mpc_dt, dt_fine_grained, horizon_fine_grained)
-       
+                    # TODO functions should output this class instance.
+                    nmpc_footholds = LegsAttr(FL=nmpc_footholds[0],
+                                              FR=nmpc_footholds[1],
+                                              RL=nmpc_footholds[2],
+                                              RR=nmpc_footholds[3])
 
-                    costs, best_sample_freq = batched_controller.compute_batch_control(state_current, ref_state,
-                                                                                       contact_sequence_temp)
+                    # optimizer_cost = controller.acados_ocp_solver.get_cost()
 
-                    pgg.step_freq = best_sample_freq
-                    stance_time = (1 / pgg.step_freq) * duty_factor
-                    frg.stance_time = stance_time
-                    swing_period = (1 - duty_factor) * (1 / pgg.step_freq)  # + 0.07
-                    stc.regenerate_swing_trajectory_generator(step_height=step_height, swing_period=swing_period)
+                    if cfg.mpc_params['optimize_step_freq'] and optimize_swing == 1:
+                        contact_sequence_temp = np.zeros((len(cfg.mpc_params['step_freq_available']), 4, horizon * 2))
+                        for j in range(len(cfg.mpc_params['step_freq_available'])):
+                            pgg_temp = PeriodicGaitGenerator(duty_factor=duty_factor,
+                                                             step_freq=cfg.mpc_params['step_freq_available'][j],
+                                                             gait_type=gait_type,
+                                                             horizon=horizon * 2)
+                            pgg_temp.phase_signal = pgg.phase_signal
+                            pgg_temp.init = pgg.init
+                            contact_sequence_temp[j] = pgg_temp.compute_contact_sequence()
 
-                # If the controller is using RTI, we need to linearize the mpc after its computation
-                # this helps to minize the delay between new state->control, but only in a real case.
-                # Here we are in simulation and does not make any difference for now
-                if (controller.use_RTI):
-                    # preparation phase
-                    controller.acados_ocp_solver.options_set('rti_phase', 1)
-                    status = controller.acados_ocp_solver.solve()
-                    # print("preparation phase time: ", controller.acados_ocp_solver.get_stats('time_tot'))
+                            # in the case of nonuniform discretization, we need to subsample the contact sequence
+                            if (cfg.mpc_params['use_nonuniform_discretization']):
+                                dt_fine_grained = cfg.mpc_params['dt_fine_grained']
+                                horizon_fine_grained = cfg.mpc_params['horizon_fine_grained']
+                                contact_sequence_temp[j] = pgg.sample_contact_sequence(contact_sequence, mpc_dt,
+                                                                                       dt_fine_grained,
+                                                                                       horizon_fine_grained)
 
-            # TODO: Indexing should not be hardcoded. Env should provide indexing of leg actuator dimensions.
-            nmpc_GRFs = LegsAttr(FL=nmpc_GRFs[0:3] * current_contact[0],
-                                 FR=nmpc_GRFs[3:6] * current_contact[1],
-                                 RL=nmpc_GRFs[6:9] * current_contact[2],
-                                 RR=nmpc_GRFs[9:12] * current_contact[3])
+                        costs, best_sample_freq = batched_controller.compute_batch_control(state_current, ref_state,
+                                                                                           contact_sequence_temp)
 
-        # -------------------------------------------------------------------------------------------------
+                        pgg.step_freq = best_sample_freq
+                        stance_time = (1 / pgg.step_freq) * duty_factor
+                        frg.stance_time = stance_time
+                        swing_period = (1 - duty_factor) * (1 / pgg.step_freq)  # + 0.07
+                        stc.regenerate_swing_trajectory_generator(step_height=step_height, swing_period=swing_period)
 
-        # Compute Stance Torque ---------------------------------------------------------------------------
-        feet_jac = env.feet_jacobians(frame='world', return_rot_jac=False)
-        # Compute feet velocities
-        feet_vel = LegsAttr(**{leg_name: feet_jac[leg_name] @ env.mjData.qvel for leg_name in legs_order})
-        # Compute jacobian derivatives of the contact points
-        jac_feet_dot = (feet_jac - jac_feet_prev) / simulation_dt  # Finite difference approximation
-        jac_feet_prev = feet_jac  # Update previous Jacobians
-        # Compute the torque with the contact jacobian (-J.T @ f)   J: R^nv -> R^3,   f: R^3
-        tau.FL = -np.matmul(feet_jac.FL[:, env.legs_qvel_idx.FL].T, nmpc_GRFs.FL)
-        tau.FR = -np.matmul(feet_jac.FR[:, env.legs_qvel_idx.FR].T, nmpc_GRFs.FR)
-        tau.RL = -np.matmul(feet_jac.RL[:, env.legs_qvel_idx.RL].T, nmpc_GRFs.RL)
-        tau.RR = -np.matmul(feet_jac.RR[:, env.legs_qvel_idx.RR].T, nmpc_GRFs.RR)
-        # ---------------------------------------------------------------------------------------------------
+                    # If the controller is using RTI, we need to linearize the mpc after its computation
+                    # this helps to minize the delay between new state->control, but only in a real case.
+                    # Here we are in simulation and does not make any difference for now
+                    if (controller.use_RTI):
+                        # preparation phase
+                        controller.acados_ocp_solver.options_set('rti_phase', 1)
+                        status = controller.acados_ocp_solver.solve()
+                        # print("preparation phase time: ", controller.acados_ocp_solver.get_stats('time_tot'))
 
-        # Compute Swing Torque ------------------------------------------------------------------------------
-        # TODO: Move contact sequence to labels FL, FR, RL, RR instead of a fixed indexing.
-        # The swing controller is in the end-effector space. For its computation,
-        # we save for simplicity joints position and velocities
-        qpos, qvel = env.mjData.qpos, env.mjData.qvel
-        # centrifugal, coriolis, gravity
-        legs_mass_matrix = env.legs_mass_matrix()
-        legs_qfrc_bias = env.legs_qfrc_bias()
+                # TODO: Indexing should not be hardcoded. Env should provide indexing of leg actuator dimensions.
+                nmpc_GRFs = LegsAttr(FL=nmpc_GRFs[0:3] * current_contact[0],
+                                     FR=nmpc_GRFs[3:6] * current_contact[1],
+                                     RL=nmpc_GRFs[6:9] * current_contact[2],
+                                     RR=nmpc_GRFs[9:12] * current_contact[3])
 
-        
-        stc.update_swing_time(current_contact, legs_order, simulation_dt)
+            # -------------------------------------------------------------------------------------------------
 
-        for leg_id, leg_name in enumerate(legs_order):
-            if current_contact[leg_id] == 0:  # If in swing phase, compute the swing trajectory tracking control.
-                tau[leg_name], _, _ = stc.compute_swing_control(
-                    leg_id=leg_id,
-                    q_dot=qvel[env.legs_qvel_idx[leg_name]],
-                    J=feet_jac[leg_name][:, env.legs_qvel_idx[leg_name]],
-                    J_dot=jac_feet_dot[leg_name][:, env.legs_qvel_idx[leg_name]],
-                    lift_off=frg.lift_off_positions[leg_name],
-                    touch_down=nmpc_footholds[leg_name],
-                    foot_pos=feet_pos[leg_name],
-                    foot_vel=feet_vel[leg_name],
-                    h=legs_qfrc_bias[leg_name],
-                    mass_matrix=legs_mass_matrix[leg_name]
-                    )
-        # ---------------------------------------------------------------------------------------------------
-        # Set control and mujoco step ----------------------------------------------------------------------
-        action = np.zeros(env.mjModel.nu)
-        action[env.legs_tau_idx.FL] = tau.FL
-        action[env.legs_tau_idx.FR] = tau.FR
-        action[env.legs_tau_idx.RL] = tau.RL
-        action[env.legs_tau_idx.RR] = tau.RR
-        action_noise = np.random.normal(0, 2, size=env.mjModel.nu)
+            # Compute Stance Torque ---------------------------------------------------------------------------
+            feet_jac = env.feet_jacobians(frame='world', return_rot_jac=False)
+            # Compute feet velocities
+            feet_vel = LegsAttr(**{leg_name: feet_jac[leg_name] @ env.mjData.qvel for leg_name in legs_order})
+            # Compute jacobian derivatives of the contact points
+            jac_feet_dot = (feet_jac - jac_feet_prev) / simulation_dt  # Finite difference approximation
+            jac_feet_prev = feet_jac  # Update previous Jacobians
+            # Compute the torque with the contact jacobian (-J.T @ f)   J: R^nv -> R^3,   f: R^3
+            tau.FL = -np.matmul(feet_jac.FL[:, env.legs_qvel_idx.FL].T, nmpc_GRFs.FL)
+            tau.FR = -np.matmul(feet_jac.FR[:, env.legs_qvel_idx.FR].T, nmpc_GRFs.FR)
+            tau.RL = -np.matmul(feet_jac.RL[:, env.legs_qvel_idx.RL].T, nmpc_GRFs.RL)
+            tau.RR = -np.matmul(feet_jac.RR[:, env.legs_qvel_idx.RR].T, nmpc_GRFs.RR)
+            # ---------------------------------------------------------------------------------------------------
 
-        state, reward, is_terminated, is_truncated, info = env.step(action=action + action_noise)
+            # Compute Swing Torque ------------------------------------------------------------------------------
+            # TODO: Move contact sequence to labels FL, FR, RL, RR instead of a fixed indexing.
+            # The swing controller is in the end-effector space. For its computation,
+            # we save for simplicity joints position and velocities
+            qpos, qvel = env.mjData.qpos, env.mjData.qvel
+            # centrifugal, coriolis, gravity
+            legs_mass_matrix = env.legs_mass_matrix
+            legs_qfrc_bias = env.legs_qfrc_bias
 
-        state_obs = env.extract_obs_from_state(state)
-        feet_contact_state, _, feet_GRF = env.feet_contact_state(ground_reaction_forces=True)
+            stc.update_swing_time(current_contact, legs_order, simulation_dt)
 
-        # Render only at a certain frequency
-        if time.time() - last_render_time > 1.0 / RENDER_FREQ or env.step_num == 1:
-            feet_traj_geom_ids = plot_swing_mujoco(viewer=env.viewer,
-                                                   swing_traj_controller=stc,
-                                                   swing_period=swing_period,
-                                                   swing_time=LegsAttr(FL=stc.swing_time[0],
-                                                                       FR=stc.swing_time[1],
-                                                                       RL=stc.swing_time[2],
-                                                                       RR=stc.swing_time[3]),
-                                                   lift_off_positions=frg.lift_off_positions,
-                                                   nmpc_footholds=nmpc_footholds,
-                                                   ref_feet_pos=ref_feet_pos,
-                                                   geom_ids=feet_traj_geom_ids)
             for leg_id, leg_name in enumerate(legs_order):
-                feet_GRF_geom_ids[leg_name] = render_vector(env.viewer,
-                                                            vector=feet_GRF[leg_name],
-                                                            pos=feet_pos[leg_name],
-                                                            scale=np.linalg.norm(feet_GRF[leg_name]) * 0.005,
-                                                            color=np.array([0, 1, 0, .5]),
-                                                            geom_id=feet_GRF_geom_ids[leg_name])
+                if current_contact[leg_id] == 0:  # If in swing phase, compute the swing trajectory tracking control.
+                    tau[leg_name], _, _ = stc.compute_swing_control(
+                        leg_id=leg_id,
+                        q_dot=qvel[env.legs_qvel_idx[leg_name]],
+                        J=feet_jac[leg_name][:, env.legs_qvel_idx[leg_name]],
+                        J_dot=jac_feet_dot[leg_name][:, env.legs_qvel_idx[leg_name]],
+                        lift_off=frg.lift_off_positions[leg_name],
+                        touch_down=nmpc_footholds[leg_name],
+                        foot_pos=feet_pos[leg_name],
+                        foot_vel=feet_vel[leg_name],
+                        h=legs_qfrc_bias[leg_name],
+                        mass_matrix=legs_mass_matrix[leg_name]
+                        )
+            # Set control and mujoco step ----------------------------------------------------------------------
+            action = np.zeros(env.mjModel.nu)
+            action[env.legs_tau_idx.FL] = tau.FL
+            action[env.legs_tau_idx.FR] = tau.FR
+            action[env.legs_tau_idx.RL] = tau.RL
+            action[env.legs_tau_idx.RR] = tau.RR
 
-            env.render()
-            last_render_time = time.time()
+            action_noise = np.random.normal(0, 2, size=env.mjModel.nu)
+            action += action_noise
 
-        if env.step_num > MAX_STEPS or is_terminated or is_truncated:
-            if is_terminated:
-                print("Environment terminated")
-            env.reset()
-            pgg.reset()
-            frg.lift_off_positions = env.feet_pos(frame='world')
-            current_contact = np.array([0, 0, 0, 0])
-            previous_contact = np.asarray(current_contact)
-            z_foot_mean = 0.0
-        # print("loop time: ", time.time() - step_start)
+            state, reward, is_terminated, is_truncated, info = env.step(action=action)
+
+            # Store the history of observations and control ___________________________________________________________
+            ep_state_obs_history.append(state)
+            base_lin_vel_err = ref_base_lin_vel - env.base_lin_vel
+            base_ang_vel_err = ref_base_ang_vel - env.base_ang_vel
+            base_poz_z_err = ref_pos[2] - env.base_pos[2]
+            ctrl_state = np.concatenate((base_lin_vel_err, base_ang_vel_err, [base_poz_z_err], pgg.phase_signal))
+            ep_ctrl_state_history.append(ctrl_state)
+            # ___________________________________________________________________________________________________________
+
+            # Render only at a certain frequency
+            if time.time() - last_render_time > 1.0 / RENDER_FREQ or env.step_num == 1:
+                _, _, feet_GRF = env.feet_contact_state(ground_reaction_forces=True)
+                feet_traj_geom_ids = plot_swing_mujoco(viewer=env.viewer,
+                                                       swing_traj_controller=stc,
+                                                       swing_period=swing_period,
+                                                       swing_time=LegsAttr(FL=stc.swing_time[0],
+                                                                           FR=stc.swing_time[1],
+                                                                           RL=stc.swing_time[2],
+                                                                           RR=stc.swing_time[3]),
+                                                       lift_off_positions=frg.lift_off_positions,
+                                                       nmpc_footholds=nmpc_footholds,
+                                                       ref_feet_pos=ref_feet_pos,
+                                                       geom_ids=feet_traj_geom_ids)
+                for leg_id, leg_name in enumerate(legs_order):
+                    feet_GRF_geom_ids[leg_name] = render_vector(env.viewer,
+                                                                vector=feet_GRF[leg_name],
+                                                                pos=feet_pos[leg_name],
+                                                                scale=np.linalg.norm(feet_GRF[leg_name]) * 0.005,
+                                                                color=np.array([0, 1, 0, .5]),
+                                                                geom_id=feet_GRF_geom_ids[leg_name])
+
+                    env.render()
+                    last_render_time = time.time()
+
+            if env.step_num > N_STEPS_PER_EPISODE or is_terminated or is_truncated:
+                if is_terminated:
+                    print("Environment terminated")
+                else:
+                    state_obs_history.append(ep_state_obs_history)
+                    ctrl_state_history.append(ep_ctrl_state_history)
+                env.reset()
+                pgg.reset()
+                frg.lift_off_positions = env.feet_pos(frame='world')
+                current_contact = np.array([0, 0, 0, 0])
+                previous_contact = np.asarray(current_contact)
+                z_foot_mean = 0.0
+
+    # env.close()
+    # __________________________________________________________________________________________________________________
+    from morpho_symm.data.DynamicsRecording import DynamicsRecording
+    from morpho_symm.utils.robot_utils import load_symmetric_system
+
+    # Group representations needed for the quadruped observations
+    _, G = load_symmetric_system(robot_name=robot_name)
+    rep_R3 = G.representations["R3"]
+    rep_E3 = G.representations["E3"]
+    rep_R3_pseudo = G.representations["R3_pseudo"]
+    rep_Qjs = G.representations["TqQ_js"]
+    rep_kin_chain = G.representations["kin_chain"]
+    rep_feet_signal = rep_kin_chain.tensor(rep_R3)
+    rep_euler_xyz = G.representations["euler_xyz"]
+    rep_phase_signal = rep_kin_chain.tensor(G.trivial_representation + G.trivial_representation)
+    rep_base_z = group_rep_from_gens(
+        G, rep_H={h: rep_R3(h)[2, 2].reshape((1, 1)) for h in G.elements if h != G.identity})
+    rep_base_z.name = "base_z"
+
+    state_trajs = np.asarray(state_obs_history)
+    ctrl_trajs = np.asarray(ctrl_state_history)
+    # Unstable episodes are not stored into the data.
+    n_stable_episodes = state_trajs.shape[0]
+    # Convert the phase signals to [cos(phase), sin(phase)] for all 4 legs
+    # Such that we have [cos(phase_FL), sin(phase_FL), cos(phase_FR), sin(phase_FR), ...]
+    phase_signal = 2 * np.pi * ctrl_trajs[..., 7:11]
+    phase_cos = np.cos(phase_signal).reshape(n_stable_episodes, N_STEPS_PER_EPISODE, 4, 1)
+    phase_sin = np.sin(phase_signal).reshape(n_stable_episodes, N_STEPS_PER_EPISODE, 4, 1)
+    phase_signal_cos_sin = np.concatenate((phase_cos, phase_sin), axis=-1)
+    phase_signal_cos_sin = phase_signal_cos_sin.reshape(n_stable_episodes, N_STEPS_PER_EPISODE, 8)
+
+    state_obs_trajs = env.extract_obs_from_state(state_trajs)
+    crtl_obs_trajs = dict(base_lin_vel_err=ctrl_trajs[..., :3],
+                          base_ang_vel_err=ctrl_trajs[..., 3:6],
+                          base_pos_z_err=ctrl_trajs[..., 6],
+                          phase_signal=phase_signal_cos_sin)
+
+    state_obs_reps = dict(base_pos=rep_R3, base_lin_vel=rep_R3, base_lin_vel_err=rep_R3,
+                          base_ang_vel=rep_R3_pseudo, base_ang_vel_err=rep_R3_pseudo,
+                          base_ori_euler_xyz=rep_euler_xyz,
+                          base_pos_z_err=rep_base_z,
+                          qpos_js=rep_Qjs, qvel_js=rep_Qjs, tau_ctrl_setpoint=rep_Qjs,
+                          feet_pos_base=rep_feet_signal, feet_vel_base=rep_feet_signal,
+                          contact_forces_base=rep_feet_signal,
+                          contact_state=rep_kin_chain,
+                          phase_signal=rep_phase_signal, )
+
+    data = DynamicsRecording(description=str(env),
+                             info=dict(mpc_params=cfg.mpc_params,
+                                       simulation_params=cfg.simulation_params,
+                                       quadruped_env_kwargs=env._init_args,  # useful to reproduce
+                                       num_trajs=n_stable_episodes,
+                                       num_steps=N_STEPS_PER_EPISODE,
+                                       ),
+                             dynamics_parameters=dict(dt=simulation_dt, ),
+                             state_obs=state_observables_names,
+                             action_obs=("tau_ctrl_setpoint",),
+                             obs_representations=state_obs_reps,
+                             recordings=state_obs_trajs._asdict() | crtl_obs_trajs,
+                             obs_moments=dict(contact_state=(np.zeros(4), np.ones(4))),
+                             )
+    state_obs_trajs = env.extract_obs_from_state(state_trajs)
+
+    # # To reproduce the env used to collect the data we can do:
+    # # reproduced_env = QuadrupedEnv(**data.info['quadruped_env_kwargs'])
+    #
+    # env.reset()
+    # qpos, qvel = env.mjData.qpos, env.mjData.qvel
+    # qpos[:2] += 1
+    # env.reset(qpos, qvel)
+    #
+    # qpos_js, qvel_js = env.joint_space_state
+    # X_B = env.base_configuration
+    # X_B_t = X_B.T
+    # X_B_inv = np.linalg.inv(X_B)
+    # R_B = X_B[:3, :3]
+    # feet_pos_base = env.feet_pos(frame='base')
+    #
+    # for pos, color in zip(feet_pos_base, [(1, 0, 0, 1), (0, 1, 0, 1), (0, 0, 1, 1), (1, 1, 0, 1)]):
+    #     render_sphere(env.viewer, homogenous_transform(pos, X_B), diameter=0.1, color=color)
+    #
+    # env.render()
+    #
+    # g = G.elements[1]
+    #
+    # g_X_B = rep_E3(g) @ X_B @ rep_E3(~g)
+    # g_qpos_js, g_qvel_js = rep_Qjs(g) @ qpos_js, rep_Qjs(g) @ qvel_js
+    #
+    # g_base_pos = g_X_B[:3, 3]
+    # g_base_lin_vel = rep_R3(g) @ env.base_lin_vel
+    # g_base_ang_vel = rep_R3_pseudo(g) @ env.base_ang_vel
+    # q_base_quat_wxyz = Rotation.from_matrix(g_X_B[:3, :3]).as_quat(scalar_first=True)
+    # g_qpos = np.concatenate((g_base_pos, q_base_quat_wxyz, g_qpos_js))
+    # g_qvel = np.concatenate((g_base_lin_vel, g_base_ang_vel, g_qvel_js))
+    #
+    # g_feet_pos_base = rep_feet_signal(g) @ np.asarray(feet_pos_base.to_list()).flatten()
+    # g_feet_pos_base = g_feet_pos_base.reshape((4, 3))
+    # env.reset(g_qpos, g_qvel)
+    # for pos_pred, color in zip(g_feet_pos_base, [(1, 0, 0, 1), (0, 1, 0, 1), (0, 0, 1, 1), (1, 1, 0, 1)]):
+    #     render_sphere(env.viewer, homogenous_transform(pos_pred, g_X_B), diameter=0.1, color=(0, 0, 0, 1))
+    #
+    # env.render()
+
+    dataset_path = (pathlib.Path(__file__).parent / "datasets" / cfg.robot / f"controller={cfg.mpc_params['type']}"
+                    / f"gait={cfg.simulation_params['gait']}")
+    dataset_path.mkdir(parents=True, exist_ok=True)
+    dataset_name = str(env) + ".pkl"
+    data.save_to_file(dataset_path / dataset_name)
+    env.close()
+    print("s")

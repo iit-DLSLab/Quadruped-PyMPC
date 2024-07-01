@@ -2,20 +2,20 @@ import collections
 
 import mujoco
 import numpy as np
-
-from utils.quadruped_utils import LegsAttr
+from gym_quadruped.utils.quadruped_utils import LegsAttr
 
 
 # Class for the generation of the reference footholds
 # TODO: @Giulio Should we convert this to a single function instead of a class? Stance time, can be passed as argument
 class FootholdReferenceGenerator:
 
-    def __init__(self, stance_time: float, lift_off_positions: LegsAttr, vel_moving_average_length=20, hip_height: float = None) -> None:
-        """
-        This method initializes the foothold generator class, which computes
+    def __init__(self, stance_time: float, lift_off_positions: LegsAttr, vel_moving_average_length=20,
+                 hip_height: float = None) -> None:
+        """This method initializes the foothold generator class, which computes
         the reference foothold for the nonlinear MPC.
 
         Args:
+        ----
             stance_time: The user-defined time of the stance phase.
         """
         self.base_vel_hist = collections.deque(maxlen=vel_moving_average_length)
@@ -29,7 +29,7 @@ class FootholdReferenceGenerator:
                                     base_xy_lin_vel: np.ndarray,
                                     ref_base_xy_lin_vel: np.ndarray,
                                     hips_position: LegsAttr) -> LegsAttr:
-        """ Compute the reference footholds for a quadruped robot, using simple geometric heuristics.
+        """Compute the reference footholds for a quadruped robot, using simple geometric heuristics.
 
         TODO: This function should be adapted to:
            1. Use the terrain slope estimation
@@ -37,7 +37,9 @@ class FootholdReferenceGenerator:
             Similar to the linear velocity compensation.
 
         TODO: This function should be vectorized so operations are not done for each leg separately.
+
         Args:
+        ----
             com_position: (3,) The position of the center of mass of the robot.
             base_ori_euler_xyz: (3,) The orientation of the base in euler angles.
             base_xy_lin_vel: (2,) The [x,y] linear velocity of the base in world frame.
@@ -45,6 +47,7 @@ class FootholdReferenceGenerator:
             hips_position: (LegsAttr) The position of the hips of the robot in world frame.
 
         Returns:
+        -------
             ref_feet: (LegsAttr) The reference footholds for the robot in world frame.
         """
         assert base_xy_lin_vel.shape == (2,) and ref_base_xy_lin_vel.shape == (2,), \
@@ -58,7 +61,7 @@ class FootholdReferenceGenerator:
 
         # Compute desired and error velocity compensation values for all legs
         base_lin_vel_H = R_W2H @ base_xy_lin_vel
-        ref_base_lin_vel_H = R_W2H @ ref_base_xy_lin_vel
+        R_W2H @ ref_base_xy_lin_vel
 
         # Moving average of the base velocity
         self.base_vel_hist.append(base_lin_vel_H)
@@ -78,7 +81,7 @@ class FootholdReferenceGenerator:
         ref_feet.FR[0:2] = R_W2H @ (hips_position.FR[0:2] - com_position[0:2])
         ref_feet.RL[0:2] = R_W2H @ (hips_position.RL[0:2] - com_position[0:2])
         ref_feet.RR[0:2] = R_W2H @ (hips_position.RR[0:2] - com_position[0:2])
-        # Offsets are introduced to account for x,y offsets from nominal hip and feet positions. 
+        # Offsets are introduced to account for x,y offsets from nominal hip and feet positions.
         # Offsets to the Y axis result in wider/narrower stance (+y values lead to wider stance in left/right)
         # Offsets to the X axis result in spread/crossed legs (+x values lead to spread legs in front/back)
         # TODO: This should not be hardcoded, should be a property of the robot cofiguration and passed as argment
@@ -104,7 +107,6 @@ class FootholdReferenceGenerator:
             ref_feet[leg_id][2] = self.lift_off_positions[leg_id][2] - 0.02
 
         return ref_feet
-    
 
     def update_lift_off_positions(self, previous_contact, current_contact, feet_pos, legs_order):
         for leg_id, leg_name in enumerate(legs_order):
