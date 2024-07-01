@@ -2,7 +2,6 @@
 # Edit at https://www.toptal.com/developers/gitignore?templates=python,c++,c,visualstudiocode,git,linux
 
 ### Custom ###
-./acados/
 ./jnrh2023/
 c_generated_code
 *.json
@@ -302,5 +301,17 @@ pyrightconfig.json
 .history
 .ionide
 
-# End of https://www.toptal.com/developers/gitignore/api/python,c++,c,visualstudiocode,git,linux
-simulation/control_input.pickle
+
+
+quadruped_pympc/controllers/gradient/nominal/c_generated_code_gait_adaptive/
+
+
+
+
+.idea/
+
+MUJOCO_LOG.TXT
+
+MUJOCO_LOG.TXT
+
+cfg/

@@ -63,7 +63,7 @@ Gradient-based MPC: It uses [CasADI](https://web.casadi.org/) to define the mode
     ```
     mkdir build
     cd build
-    cmake -DACADOS_WITH_QPOASES=ON  -DACADOS_WITH_OSQP=ON ..
+    cmake ..
     make install -j4
     pip install -e ./../interfaces/acados_template
     ```
@@ -72,6 +72,13 @@ Gradient-based MPC: It uses [CasADI](https://web.casadi.org/) to define the mode
     
     ```
     export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:"/path_to_acados/lib"
+    export ACADOS_SOURCE_DIR="/path_to_acados"
+    ```
+
+    Notice that if you are using Mac, you should set
+    
+    ```
+    DYLD_LIBRARY_PATH=$LD_LIBRARY_PATH:"/path_to_acados/lib"
     export ACADOS_SOURCE_DIR="/path_to_acados"
     ```
 
@@ -95,13 +102,11 @@ In the file [config.py](https://github.com/iit-DLSLab/Quadruped-PyMPC/blob/main/
 
 3. you can interact with the simulation with your mouse to add disturbances, or with the keyboard by pressing
 ```
-w, s -> add positive or negative forward velocity
-a, d -> add positive or negative lateral velocity
-q, e -> add positive or negative yaw velocity
-0 -> set zero velocities
-+, - -> increase or decrease step height
+arrow up, arrow down -> add positive or negative forward velocity
+arrow left, arrow right -> add positive or negative yaw velocity
+ctrl -> set zero all velocities
 ```
-Be aware that this only works if the terminal is in focus, otherwise mujoco will catch the keyboard event.
+
 
 ## Citing this work
 
