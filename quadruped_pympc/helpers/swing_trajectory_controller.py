@@ -1,15 +1,5 @@
 import os
-
-import matplotlib.pyplot as plt
 import numpy as np
-
-dir_path = os.path.dirname(os.path.realpath(__file__))
-
-import sys
-
-sys.path.append(dir_path)
-sys.path.append(dir_path + '/swing_generators/')
-
 
 class SwingTrajectoryController:
     def __init__(self,
@@ -22,13 +12,13 @@ class SwingTrajectoryController:
         self.generator = generator
 
         if (self.generator == "ndcurves"):
-            from ndcurves_swing_trajectory_generator import SwingTrajectoryGenerator
+            from .swing_generators.ndcurves_swing_trajectory_generator import SwingTrajectoryGenerator
             self.swing_generator = SwingTrajectoryGenerator(swing_period=swing_period, step_height=step_height)
         elif (self.generator == "scipy"):
-            from scipy_swing_trajectory_generator import SwingTrajectoryGenerator
+            from .swing_generators.scipy_swing_trajectory_generator import SwingTrajectoryGenerator
             self.swing_generator = SwingTrajectoryGenerator(swing_period=swing_period, step_height=step_height)
         else:
-            from explicit_swing_trajectory_generator import SwingTrajectoryGenerator
+            from .swing_generators.explicit_swing_trajectory_generator import SwingTrajectoryGenerator
             self.swing_generator = SwingTrajectoryGenerator(swing_period=swing_period, step_height=step_height)
 
         self.position_gain_fb = position_gain_fb
@@ -122,6 +112,7 @@ if __name__ == "__main__":
     import mujoco
     import mujoco.viewer
     from swing_trajectory_controller import SwingTrajectoryController
+    import matplotlib.pyplot as plt
 
     from quadruped_pympc.helpers.quadruped_utils import plot_swing_mujoco
 

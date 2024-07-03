@@ -68,7 +68,7 @@ if __name__ == '__main__':
                        sim_dt=simulation_dt,
                        ref_base_lin_vel=0.0,  # pass a float for a fixed value
                        ground_friction_coeff=(0.2, 1.5),  # pass a float for a fixed value
-                       base_vel_command_type="random",  # "forward", "random", "forward+rotate", "human"
+                       base_vel_command_type="human",  # "forward", "random", "forward+rotate", "human"
                        state_obs_names=state_observables_names,  # Desired quantities in the 'state' vec
                        )
     # env = QuadrupedEnv(robot=robot_name,
@@ -414,8 +414,8 @@ if __name__ == '__main__':
                                                              step_freq=cfg.mpc_params['step_freq_available'][j],
                                                              gait_type=gait_type,
                                                              horizon=horizon * 2)
-                            pgg_temp.phase_signal = pgg.phase_signal
-                            pgg_temp.init = pgg.init
+                            pgg_temp._phase_signal = pgg._phase_signal
+                            pgg_temp._init = pgg._init
                             contact_sequence_temp[j] = pgg_temp.compute_contact_sequence()
 
                             # in the case of nonuniform discretization, we need to subsample the contact sequence
@@ -508,7 +508,7 @@ if __name__ == '__main__':
             base_lin_vel_err = ref_base_lin_vel - env.base_lin_vel
             base_ang_vel_err = ref_base_ang_vel - env.base_ang_vel
             base_poz_z_err = ref_pos[2] - env.base_pos[2]
-            ctrl_state = np.concatenate((base_lin_vel_err, base_ang_vel_err, [base_poz_z_err], pgg.phase_signal))
+            ctrl_state = np.concatenate((base_lin_vel_err, base_ang_vel_err, [base_poz_z_err], pgg._phase_signal))
             ep_ctrl_state_history.append(ctrl_state)
             # ___________________________________________________________________________________________________________
 
@@ -551,3 +551,114 @@ if __name__ == '__main__':
                 z_foot_mean = 0.0
 
     env.close()
+
+    # __________________________________________________________________________________________________________________
+    from morpho_symm.data.DynamicsRecording import DynamicsRecording
+    from morpho_symm.utils.robot_utils import load_symmetric_system
+    from morpho_symm.utils.rep_theory_utils import group_rep_from_gens
+
+    # Group representations needed for the quadruped observations
+    _, G = load_symmetric_system(robot_name=robot_name)
+    rep_R3 = G.representations["R3"]
+    rep_E3 = G.representations["E3"]
+    rep_R3_pseudo = G.representations["R3_pseudo"]
+    rep_Qjs = G.representations["TqQ_js"]
+    rep_kin_chain = G.representations["kin_chain"]
+    rep_feet_signal = rep_kin_chain.tensor(rep_R3)
+    rep_euler_xyz = G.representations["euler_xyz"]
+    rep_phase_signal = rep_kin_chain.tensor(G.trivial_representation + G.trivial_representation)
+    rep_base_z = group_rep_from_gens(
+        G, rep_H={h: rep_R3(h)[2, 2].reshape((1, 1)) for h in G.elements if h != G.identity})
+    rep_base_z.name = "base_z"
+
+    state_trajs = np.asarray(state_obs_history)
+    ctrl_trajs = np.asarray(ctrl_state_history)
+    # Unstable episodes are not stored into the data.
+    n_stable_episodes = state_trajs.shape[0]
+    # Convert the phase signals to [cos(phase), sin(phase)] for all 4 legs
+    # Such that we have [cos(phase_FL), sin(phase_FL), cos(phase_FR), sin(phase_FR), ...]
+    phase_signal = 2 * np.pi * ctrl_trajs[..., 7:11]
+    phase_cos = np.cos(phase_signal).reshape(n_stable_episodes, N_STEPS_PER_EPISODE, 4, 1)
+    phase_sin = np.sin(phase_signal).reshape(n_stable_episodes, N_STEPS_PER_EPISODE, 4, 1)
+    phase_signal_cos_sin = np.concatenate((phase_cos, phase_sin), axis=-1)
+    phase_signal_cos_sin = phase_signal_cos_sin.reshape(n_stable_episodes, N_STEPS_PER_EPISODE, 8)
+
+    state_obs_trajs = env.extract_obs_from_state(state_trajs)
+    crtl_obs_trajs = dict(base_lin_vel_err=ctrl_trajs[..., :3],
+                          base_ang_vel_err=ctrl_trajs[..., 3:6],
+                          base_pos_z_err=ctrl_trajs[..., 6],
+                          phase_signal=phase_signal_cos_sin)
+
+    state_obs_reps = dict(base_pos=rep_R3, base_lin_vel=rep_R3, base_lin_vel_err=rep_R3,
+                          base_ang_vel=rep_R3_pseudo, base_ang_vel_err=rep_R3_pseudo,
+                          base_ori_euler_xyz=rep_euler_xyz,
+                          base_pos_z_err=rep_base_z,
+                          qpos_js=rep_Qjs, qvel_js=rep_Qjs, tau_ctrl_setpoint=rep_Qjs,
+                          feet_pos_base=rep_feet_signal, feet_vel_base=rep_feet_signal,
+                          contact_forces_base=rep_feet_signal,
+                          contact_state=rep_kin_chain,
+                          phase_signal=rep_phase_signal, )
+
+    data = DynamicsRecording(description=str(env),
+                             info=dict(mpc_params=cfg.mpc_params,
+                                       simulation_params=cfg.simulation_params,
+                                       quadruped_env_kwargs=env._init_args,  # useful to reproduce
+                                       num_trajs=n_stable_episodes,
+                                       num_steps=N_STEPS_PER_EPISODE,
+                                       ),
+                             dynamics_parameters=dict(dt=simulation_dt, ),
+                             state_obs=state_observables_names,
+                             action_obs=("tau_ctrl_setpoint",),
+                             obs_representations=state_obs_reps,
+                             recordings=state_obs_trajs._asdict() | crtl_obs_trajs,
+                             obs_moments=dict(contact_state=(np.zeros(4), np.ones(4))),
+                             )
+    state_obs_trajs = env.extract_obs_from_state(state_trajs)
+
+    # # To reproduce the env used to collect the data we can do:
+    # # reproduced_env = QuadrupedEnv(**data.info['quadruped_env_kwargs'])
+    #
+    # env.reset()
+    # qpos, qvel = env.mjData.qpos, env.mjData.qvel
+    # qpos[:2] += 1
+    # env.reset(qpos, qvel)
+    #
+    # qpos_js, qvel_js = env.joint_space_state
+    # X_B = env.base_configuration
+    # X_B_t = X_B.T
+    # X_B_inv = np.linalg.inv(X_B)
+    # R_B = X_B[:3, :3]
+    # feet_pos_base = env.feet_pos(frame='base')
+    #
+    # for pos, color in zip(feet_pos_base, [(1, 0, 0, 1), (0, 1, 0, 1), (0, 0, 1, 1), (1, 1, 0, 1)]):
+    #     render_sphere(env.viewer, homogenous_transform(pos, X_B), diameter=0.1, color=color)
+    #
+    # env.render()
+    #
+    # g = G.elements[1]
+    #
+    # g_X_B = rep_E3(g) @ X_B @ rep_E3(~g)
+    # g_qpos_js, g_qvel_js = rep_Qjs(g) @ qpos_js, rep_Qjs(g) @ qvel_js
+    #
+    # g_base_pos = g_X_B[:3, 3]
+    # g_base_lin_vel = rep_R3(g) @ env.base_lin_vel
+    # g_base_ang_vel = rep_R3_pseudo(g) @ env.base_ang_vel
+    # q_base_quat_wxyz = Rotation.from_matrix(g_X_B[:3, :3]).as_quat(scalar_first=True)
+    # g_qpos = np.concatenate((g_base_pos, q_base_quat_wxyz, g_qpos_js))
+    # g_qvel = np.concatenate((g_base_lin_vel, g_base_ang_vel, g_qvel_js))
+    #
+    # g_feet_pos_base = rep_feet_signal(g) @ np.asarray(feet_pos_base.to_list()).flatten()
+    # g_feet_pos_base = g_feet_pos_base.reshape((4, 3))
+    # env.reset(g_qpos, g_qvel)
+    # for pos_pred, color in zip(g_feet_pos_base, [(1, 0, 0, 1), (0, 1, 0, 1), (0, 0, 1, 1), (1, 1, 0, 1)]):
+    #     render_sphere(env.viewer, homogenous_transform(pos_pred, g_X_B), diameter=0.1, color=(0, 0, 0, 1))
+    #
+    # env.render()
+
+    dataset_path = (pathlib.Path(__file__).parent / "datasets" / cfg.robot / f"controller={cfg.mpc_params['type']}"
+                    / f"gait={cfg.simulation_params['gait']}")
+    dataset_path.mkdir(parents=True, exist_ok=True)
+    dataset_name = str(env) + ".pkl"
+    data.save_to_file(dataset_path / dataset_name)
+    env.close()
+    print("s")

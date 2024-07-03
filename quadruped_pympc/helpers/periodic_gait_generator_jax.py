@@ -70,18 +70,18 @@ class PeriodicGaitGeneratorJax:
         #for leg in range(self.n_contact):
             
         #restart condition
-        t = t.at[0].set(jnp.where(t[0] >= 1.0, 0, t[0]))
-        t = t.at[1].set(jnp.where(t[1] >= 1.0, 0, t[1]))
-        t = t.at[2].set(jnp.where(t[2] >= 1.0, 0, t[2]))
-        t = t.at[3].set(jnp.where(t[3] >= 1.0, 0, t[3]))
+        t = t.at[0].set_phase_signal(jnp.where(t[0] >= 1.0, 0, t[0]))
+        t = t.at[1].set_phase_signal(jnp.where(t[1] >= 1.0, 0, t[1]))
+        t = t.at[2].set_phase_signal(jnp.where(t[2] >= 1.0, 0, t[2]))
+        t = t.at[3].set_phase_signal(jnp.where(t[3] >= 1.0, 0, t[3]))
 
 
 
         #increase time by dt
-        t = t.at[0].set(t[0] + self.mpc_dt*step_freq)
-        t = t.at[1].set(t[1] + self.mpc_dt*step_freq)
-        t = t.at[2].set(t[2] + self.mpc_dt*step_freq)
-        t = t.at[3].set(t[3] + self.mpc_dt*step_freq)
+        t = t.at[0].set_phase_signal(t[0] + self.mpc_dt * step_freq)
+        t = t.at[1].set_phase_signal(t[1] + self.mpc_dt * step_freq)
+        t = t.at[2].set_phase_signal(t[2] + self.mpc_dt * step_freq)
+        t = t.at[3].set_phase_signal(t[3] + self.mpc_dt * step_freq)
 
         contact = contact.at[0].set(jnp.where(t[0] < self.duty_factor, 1.0, 0.0))
         contact = contact.at[1].set(jnp.where(t[1] < self.duty_factor, 1.0, 0.0))
@@ -150,7 +150,7 @@ class PeriodicGaitGeneratorJax:
         def body_fn(n, carry):
             new_t, contact_sequence = carry
             new_contact_sequence, new_t = self.run(new_t, step_freq)
-            contact_sequence = contact_sequence.at[:, n].set(new_contact_sequence)
+            contact_sequence = contact_sequence.at[:, n].set_phase_signal(new_contact_sequence)
             return (new_t, contact_sequence)#, None
 
         

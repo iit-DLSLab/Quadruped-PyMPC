@@ -572,7 +572,7 @@ with mujoco.viewer.launch_passive(m, d, show_left_ui=False, show_right_ui=False,
                         pgg_temp = PeriodicGaitGenerator(duty_factor=duty_factor, step_freq=
                         config.mpc_params['step_freq_available'][j], p_gait=gait_type, horizon=horizon * 2)
                         pgg_temp.t = copy.deepcopy(pgg.t)
-                        pgg_temp.init = copy.deepcopy(pgg.init)
+                        pgg_temp._init = copy.deepcopy(pgg._init)
                         contact_sequence_temp[j] = pgg_temp.compute_contact_sequence()
 
                         # in the case of nonuniform discretization, we need to subsample the contact sequence

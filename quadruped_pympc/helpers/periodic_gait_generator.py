@@ -12,6 +12,8 @@ class PeriodicGaitGenerator:
         self.contact_sequence_dt = contact_sequence_dt
         self.gait_type = gait_type
 
+        # Private variables
+        self._phase_signal, self._init = None, None
         self.reset()
 
     def reset(self):
@@ -34,8 +36,8 @@ class PeriodicGaitGenerator:
             self.phase_offset = [0.0, 0.5, 0.5, 0.0]
 
         # Set random gait_signal respecting the gait phase offset between legs
-        self.phase_signal = (np.asarray(self.phase_offset) + np.random.rand()) % 1.0
-        self.init = [False] * len(self.phase_offset)
+        self._phase_signal = (np.asarray(self.phase_offset) + np.random.rand()) % 1.0
+        self._init = [False] * len(self.phase_offset)
         self.n_contact = len(self.phase_offset)
         self.time_before_switch_freq = 0
 
@@ -45,37 +47,45 @@ class PeriodicGaitGenerator:
 
             # Increase time by dt
             # self.t[leg] += dt*self.step_freq
-            self.phase_signal[leg] += dt * new_step_freq
+            self._phase_signal[leg] += dt * new_step_freq
 
             # Phase signal is between 0 and 1
-            self.phase_signal[leg] = self.phase_signal[leg] % 1.0
+            self._phase_signal[leg] = self._phase_signal[leg] % 1.0
 
             # If we are still in init, we check if the delay of the leg
             # is not surpassed. If not, the contact needs to be still 1
             # otherwise we lift off
-            if self.init[leg]:
-                if self.phase_signal[leg] < self.phase_offset[leg]:
+            if self._init[leg]:
+                if self._phase_signal[leg] < self.phase_offset[leg]:
                     contact[leg] = 1
                 else:
-                    self.init[leg] = False
+                    self._init[leg] = False
                     contact[leg] = 1
-                    self.phase_signal[leg] = 0
+                    self._phase_signal[leg] = 0
             else:
                 # During the gait, we check if the time is below the duty factor
                 # if so, the contact is 1, otherwise it is 0
-                if self.phase_signal[leg] < self.duty_factor:
+                if self._phase_signal[leg] < self.duty_factor:
                     contact[leg] = 1
                 else:
                     contact[leg] = 0
 
         return contact
 
-    def set(self, t, init):
-        self.phase_signal = t
-        self.init = init
+    def set_phase_signal(self, phase_signal: np.ndarray, init: np.ndarray | None = None):
+        assert len(phase_signal) == len(self._phase_signal)
 
-    def get_t(self):
-        return np.array(self.phase_signal)
+        self._phase_signal = phase_signal
+
+        if init is not None:
+            assert len(init) == len(self._init)
+            self._init = init
+        else:
+            self._init = [True for _ in range(len(self._phase_signal))]
+
+    @property
+    def phase_signal(self):
+        return np.array(self._phase_signal)
 
     def compute_contact_sequence(self):
         # TODO: This function can be vectorized and computed with numpy vectorized operations
@@ -84,13 +94,13 @@ class PeriodicGaitGenerator:
             return contact_sequence
 
         else:
-            t_init = np.array(self.phase_signal)
-            init_init = np.array(self.init)
+            t_init = np.array(self._phase_signal)
+            init_init = np.array(self._init)
 
             contact_sequence = np.zeros((self.n_contact, self.horizon))
             for i in range(self.horizon):
                 contact_sequence[:, i] = self.run(self.contact_sequence_dt, self.step_freq)
-            self.set(t_init, init_init)
+            self.set_phase_signal(t_init, init_init)
             return contact_sequence
 
     def sample_contact_sequence(self, contact_sequence, mpc_dt, dt_fine_grained, horizon_fine_grained):
