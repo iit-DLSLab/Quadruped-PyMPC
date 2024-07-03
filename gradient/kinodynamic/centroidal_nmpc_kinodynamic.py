@@ -204,12 +204,11 @@ class Acados_NMPC_KinoDynamic:
         init_base_position = np.array([0, 0, 0])
         init_base_yaw = np.array([0])
         init_external_wrench = np.array([0, 0, 0, 0, 0, 0])
-        init_inertia = config.inertia.reshape((9,))
-        init_mass = np.array([config.mass])
+        init_inertia = np.ones((36,))
         
         ocp.parameter_values = np.concatenate((init_contact_status, init_mu, init_stance_proximity, 
                                                init_base_position, init_base_yaw, init_external_wrench, 
-                                               init_inertia, init_mass))
+                                               init_inertia))
 
 
 

@@ -6,7 +6,6 @@ import casadi as cs
 #import example_robot_data as robex
 
 
-
 # Mujoco magic
 import mujoco
 import mujoco.viewer
@@ -17,6 +16,13 @@ from pinocchio import casadi as cpin
 
 import copy
 
+import os 
+dir_path = os.path.dirname(os.path.realpath(__file__))
+
+import sys
+sys.path.append(dir_path + '/../')
+
+import config
 
 
 # Class for solving a generic inverse kinematics problem
@@ -188,59 +194,74 @@ class InverseKinematicsPin:
 
 if __name__ == "__main__":
 
+    
+    if(config.robot == 'go2'):
+        urdf_filename = dir_path + '/../simulation/robot_model/go2/go2.urdf' 
+        xml_filename = dir_path + '/../simulation/robot_model/go2/scene_flat.xml'
+    elif(config.robot == 'aliengo'):
+        urdf_filename = dir_path + '/../simulation/robot_model/aliengo/aliengo.urdf'
+        xml_filename = dir_path + '/../simulation/robot_model/aliengo/scene_flat.xml'
+    elif(config.robot == 'hyqreal'):
+        urdf_filename = dir_path + '/../simulation/robot_model/hyqreal/hyqreal.urdf'
+        xml_filename = dir_path + '/../simulation/robot_model/hyqreal/scene_flat.xml'
+    elif(config.robot == 'mini_cheetah'):
+        urdf_filename = dir_path + '/../simulation/robot_model/mini_cheetah/mini_cheetah.urdf'
+        xml_filename = dir_path + '/../simulation/robot_model/mini_cheetah/scene.xml'
+    
+
     # Load the urdf model
-    urdf_filename = "./../simulation/robot_model/hyqreal/hyqreal.urdf"
     model = pin.buildModelFromUrdf(urdf_filename)
     
     
     ik = InverseKinematicsPin(model=model, use_viewer=False)   
 
-    FL_foot_target_position = np.array([0.1, 0, -0.4])
-    FR_foot_target_position = np.array([-0.08, 0, -0.4])
-    RL_foot_target_position = np.array([-0.12, 0, -0.4])
-    RR_foot_target_position = np.array([0, 0.2, -0.4])
-
-
-    q0 = pin.neutral(ik.model)
-    initial_time = time.time()
-    solution = ik.compute_solution(q0, FL_foot_target_position, FR_foot_target_position, 
-                               RL_foot_target_position, RR_foot_target_position)
-    print("time: ", time.time() - initial_time)
-
-
 
     # Check consistency in mujoco
-    m = mujoco.MjModel.from_xml_path('./../simulation/robot_model/hyqreal/scene.xml')
+    m = mujoco.MjModel.from_xml_path(xml_filename)
     d = mujoco.MjData(m)
-    #d.qpos[2] = q0[2]
-    d.qpos[7:] = q0#[7:]
 
+    random_q_joint = np.random.rand(12,)
+    d.qpos[7:] = random_q_joint
+    mujoco.mj_step(m, d)
 
     FL_id = mujoco.mj_name2id(m, mujoco.mjtObj.mjOBJ_GEOM, 'FL')
     FR_id = mujoco.mj_name2id(m, mujoco.mjtObj.mjOBJ_GEOM, 'FR')
     RL_id = mujoco.mj_name2id(m, mujoco.mjtObj.mjOBJ_GEOM, 'RL')
     RR_id = mujoco.mj_name2id(m, mujoco.mjtObj.mjOBJ_GEOM, 'RR')
+    FL_foot_target_position = d.geom_xpos[FL_id]
+    FR_foot_target_position = d.geom_xpos[FR_id]
+    RL_foot_target_position = d.geom_xpos[RL_id]
+    RR_foot_target_position = d.geom_xpos[RR_id]
+
 
     
-    joint_FL = solution[0:3]
-    joint_FR = solution[3:6]
-    joint_RL = solution[6:9]
-    joint_RR = solution[9:12]
+
+    initial_q = copy.deepcopy(d.qpos)
+    initial_q[7:] = np.random.rand(12,)
+    initial_time = time.time()
+    solution = ik.compute_solution(initial_q, FL_foot_target_position, FR_foot_target_position, 
+                               RL_foot_target_position, RR_foot_target_position)
+    print("time: ", time.time() - initial_time)
+
+
+
+    print("time: ", time.time() - initial_time)
+
+
     
-    d.qpos[7:] = np.concatenate((joint_FL, joint_FR, joint_RL, joint_RR))
-    #d.qpos[7:] = np.concatenate((joint_FR, joint_FL, joint_RR, joint_RL))
-    mujoco.mj_step(m, d)
     print("\n")
     print("MUJOCO SOLUTION")
     foot_position_FL = d.geom_xpos[FL_id]
     foot_position_FR = d.geom_xpos[FR_id]
     foot_position_RL = d.geom_xpos[RL_id]
     foot_position_RR = d.geom_xpos[RR_id]
-    print("joints: ", np.concatenate((joint_FL, joint_FR, joint_RL, joint_RR)))
+    print("joints: ", d.qpos[7:])
     print("FL foot position: ", foot_position_FL)
     print("FR foot position: ", foot_position_FR)
     print("RL foot position:  ", foot_position_RL)
     print("RR foot position: ", foot_position_RR)
+
+
     
     print("\n")
     print("PINOCCHIO SOLUTION")
@@ -251,12 +272,7 @@ if __name__ == "__main__":
     print("RR foot position", ik.RR_foot_position(solution))
 
 
-    print("\n")
-    print("DESIRED SOLUTION")
-    print("FL foot position", FL_foot_target_position)
-    print("FR foot position", FR_foot_target_position)
-    print("RL foot position", RL_foot_target_position)
-    print("RR foot position", RR_foot_target_position)
+
 
     with mujoco.viewer.launch_passive(m, d) as viewer:
         while True:

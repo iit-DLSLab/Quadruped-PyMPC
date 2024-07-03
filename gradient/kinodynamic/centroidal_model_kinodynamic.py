@@ -229,15 +229,9 @@ class Centroidal_Model_KinoDynamic:
 
         self.external_wrench = cs.SX.sym("external_wrench", 6, 1)
 
-        self.inertia = cs.SX.sym("inertia", 9, 1)
-        self.mass = cs.SX.sym("mass", 1, 1)
+        self.inertia = cs.SX.sym("inertia", 36, 1)
 
 
-        # Not so useful, i can instantiate a casadi function for the fd
-        param = cs.vertcat(self.stance_param, self.mu_friction, self.stance_proximity,
-                           self.base_position, self.base_yaw, self.external_wrench, self.inertia, self.mass)
-        fd = self.forward_dynamics(self.states, self.inputs, param)
-        self.fun_forward_dynamics = cs.Function('fun_forward_dynamics', [self.states, self.inputs, param], [fd])
 
 
     def compute_b_R_w(self, roll: float, pitch: float, yaw: float) -> np.ndarray:
@@ -321,9 +315,9 @@ class Centroidal_Model_KinoDynamic:
 
 
         # we should fix this via adam
-        inertia = param[19:28]
-        inertia = inertia.reshape((3, 3))
-        mass = param[28]
+        inertia = param[19:55]
+        inertia = inertia.reshape((6, 6))
+
 
         
 
@@ -370,28 +364,30 @@ class Centroidal_Model_KinoDynamic:
         self.foot_position_rl = self.forward_kinematics_RL_fun(H, joint_position)[0:3, 3]
         self.foot_position_rr = self.forward_kinematics_RR_fun(H, joint_position)[0:3, 3]
 
-        if(config.mpc_params['use_fixed_inertia']):
+        breakpoint()
+
+
+        u = self.jacobian_FL_fun(H, joint_position)[0:3, 6:18].T@foot_force_fl@stanceFL
+        u += self.jacobian_FR_fun(H, joint_position)[0:3, 6:18].T@foot_force_fr@stanceFR
+        u += self.jacobian_RL_fun(H, joint_position)[0:3, 6:18].T@foot_force_rl@stanceRL
+        u += self.jacobian_RR_fun(H, joint_position)[0:3, 6:18].T@foot_force_rr@stanceRR
+        u = u[0:6]
+
+        if(not config.mpc_params['use_fixed_inertia']):
             inertia = self.mass_mass_fun(H, joint_position)[0:6, 0:6]
         
 
 
-        else:
-            if(config.mpc_params['use_coriolis_and_centrifugal']):
-                eta = self.bias_force_fun(H, joint_position, linear_com_vel, joints_velocities)
-                eta += self.gravity_fun(H, joint_position)
-                acc = cs.inv(inertia)@(-eta + 
-                               self.jacobian_FL_fun(H, joint_position)[0:3, 6:9].T@foot_force_fl@stanceFL + 
-                               self.jacobian_FR_fun(H, joint_position)[0:3, 9:12].T@foot_force_fr@stanceFR + 
-                               self.jacobian_RL_fun(H, joint_position)[0:3, 12:15].T@foot_force_rl@stanceRL + 
-                               self.jacobian_RR_fun(H, joint_position)[0:3, 15:18].T@foot_force_rr@stanceRR)
+        
+        if(config.mpc_params['use_coriolis_and_centrifugal']):
+            eta = self.bias_force_fun(H, joint_position, linear_com_vel, joints_velocities)
+            eta += self.gravity_fun(H, joint_position)
+            acc = cs.inv(inertia)@(-eta + u)
 
-            else:
-                eta = self.gravity_fun(H, joint_position)
-                acc = cs.inv(inertia)@(-eta + 
-                               self.jacobian_FL_fun(H, joint_position)[0:3, 6:9].T@foot_force_fl@stanceFL + 
-                               self.jacobian_FR_fun(H, joint_position)[0:3, 9:12].T@foot_force_fr@stanceFR + 
-                               self.jacobian_RL_fun(H, joint_position)[0:3, 12:15].T@foot_force_rl@stanceRL + 
-                               self.jacobian_RR_fun(H, joint_position)[0:3, 15:18].T@foot_force_rr@stanceRR)
+        else:
+            eta = self.gravity_fun(H, joint_position)[0:6]
+
+            acc = cs.inv(inertia)@(-eta + u)
 
 
             
@@ -432,7 +428,7 @@ class Centroidal_Model_KinoDynamic:
  
         # dynamics
         self.param = cs.vertcat(self.stance_param, self.mu_friction, self.stance_proximity, self.base_position, 
-                           self.base_yaw, self.external_wrench, self.inertia, self.mass)
+                           self.base_yaw, self.external_wrench, self.inertia)
         f_expl = self.forward_dynamics(self.states, self.inputs, self.param)
         f_impl = self.states_dot - f_expl
 

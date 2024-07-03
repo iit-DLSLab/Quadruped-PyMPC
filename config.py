@@ -44,7 +44,7 @@ mpc_params = {
     # 'sampling' is a gpu-based mpc that samples the GRF
     # 'collaborative' optimized directly the GRF and has a passive arm model inside 
     # 'kinodynamic' similar to nominal, but considers the kinematics of the robot
-    'type': 'nominal',
+    'type': 'kinodynamic',
     
     # horizon is the number of timesteps in the future that the mpc will optimize
     # dt is the discretization time used in the mpc
@@ -127,7 +127,7 @@ mpc_params = {
 
     # this is used only for kinodynamic mpc
     'use_coriolis_and_centrifugal': False,
-    'use_fixed_inertia': False,
+    'use_fixed_inertia': True,
     'use_adam': True,
 
     # ----- END properties for the gradient-based mpc -----

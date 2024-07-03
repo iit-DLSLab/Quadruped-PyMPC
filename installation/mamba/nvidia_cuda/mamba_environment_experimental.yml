@@ -1,0 +1,29 @@
+name: quadruped_pympc_env
+channels:
+- conda-forge
+- nvidia
+- robostack-staging
+- olivier.roussel
+dependencies:
+- python
+- casadi
+- numpy
+- matplotlib
+- jaxlib=*=*cuda*
+- jax
+- cuda-nvcc 
+- meshcat-python 
+- scipy 
+- hpp-fcl 
+- example-robot-data 
+- pinocchio=2.99.0
+- adam-robotics[all]
+- compilers 
+- cmake 
+- pkg-config 
+- make 
+- pip:
+  - mujoco
+  - readchar
+  - liecasadi
+

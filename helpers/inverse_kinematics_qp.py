@@ -25,11 +25,17 @@ from pinocchio import casadi as cpin
 
 import copy
 
+import os 
+dir_path = os.path.dirname(os.path.realpath(__file__))
 
+import sys
+sys.path.append(dir_path + '/../')
+
+import config
 
 # Class for solving a generic inverse kinematics problem
 class InverseKinematicsQP:
-    def __init__(self, robot: pin.robot_wrapper.RobotWrapper, use_viewer: bool = None) -> None:
+    def __init__(self, model, use_viewer = None) -> None:
         """
         This method initializes the inverse kinematics solver class.
 
@@ -37,9 +43,8 @@ class InverseKinematicsQP:
             robot: The robot model.
             use_viewer: Whether to use the Meshcat viewer.
         """
-        self.robot = robot
-        self.model = self.robot.model
-        self.data = self.robot.data
+        self.model = model
+        self.data = model.createData()
         
         # generate the casadi graph
         cmodel = cpin.Model(self.model)
@@ -181,53 +186,76 @@ class InverseKinematicsQP:
 
 
 if __name__ == "__main__":
-    robot = robex.load("go1")
-    ik = InverseKinematicsQP(robot, use_viewer=False)
-
-    FL_foot_target_position = np.array([0.1, 0, -0.02])
-    FR_foot_target_position = np.array([-0.08, 0, 0])
-    RL_foot_target_position = np.array([-0.12, 0, 0.06])
-    RR_foot_target_position = np.array([0, 0.2, 0])
 
 
 
-    initial_time = time.time()
-    solution = ik.compute_solution(robot.q0, FL_foot_target_position, FR_foot_target_position, 
-                               RL_foot_target_position, RR_foot_target_position)
-    print("time: ", time.time() - initial_time)
+    if(config.robot == 'go2'):
+        urdf_filename = dir_path + '/../simulation/robot_model/go2/go2.urdf' 
+        xml_filename = dir_path + '/../simulation/robot_model/go2/scene_flat.xml'
+    elif(config.robot == 'aliengo'):
+        urdf_filename = dir_path + '/../simulation/robot_model/aliengo/aliengo.urdf'
+        xml_filename = dir_path + '/../simulation/robot_model/aliengo/scene_flat.xml'
+    elif(config.robot == 'hyqreal'):
+        urdf_filename = dir_path + '/../simulation/robot_model/hyqreal/hyqreal.urdf'
+        xml_filename = dir_path + '/../simulation/robot_model/hyqreal/scene_flat.xml'
+    elif(config.robot == 'mini_cheetah'):
+        urdf_filename = dir_path + '/../simulation/robot_model/mini_cheetah/mini_cheetah.urdf'
+        xml_filename = dir_path + '/../simulation/robot_model/mini_cheetah/scene.xml'
+    
+
+    # Load the urdf model
+    model = pin.buildModelFromUrdf(urdf_filename)
+    
+    
+    ik = InverseKinematicsQP(model=model, use_viewer=False)   
 
 
     # Check consistency in mujoco
-    m = mujoco.MjModel.from_xml_path('./../simulation/robot_model/unitree_go1/scene.xml')
+    m = mujoco.MjModel.from_xml_path(xml_filename)
     d = mujoco.MjData(m)
-    d.qpos[2] = robot.q0[2]
-    d.qpos[7:] = robot.q0[7:]
 
+    random_q_joint = np.random.rand(12,)
+    d.qpos[7:] = random_q_joint
+    mujoco.mj_step(m, d)
 
     FL_id = mujoco.mj_name2id(m, mujoco.mjtObj.mjOBJ_GEOM, 'FL')
     FR_id = mujoco.mj_name2id(m, mujoco.mjtObj.mjOBJ_GEOM, 'FR')
     RL_id = mujoco.mj_name2id(m, mujoco.mjtObj.mjOBJ_GEOM, 'RL')
     RR_id = mujoco.mj_name2id(m, mujoco.mjtObj.mjOBJ_GEOM, 'RR')
+    FL_foot_target_position = d.geom_xpos[FL_id]
+    FR_foot_target_position = d.geom_xpos[FR_id]
+    RL_foot_target_position = d.geom_xpos[RL_id]
+    RR_foot_target_position = d.geom_xpos[RR_id]
+
 
     
-    joint_FL = solution[7:10]
-    joint_FR = solution[10:13]
-    joint_RL = solution[13:16]
-    joint_RR = solution[16:19]
+
+    initial_q = copy.deepcopy(d.qpos)
+    initial_q[7:] = np.random.rand(12,)
+    initial_time = time.time()
+    solution = ik.compute_solution(initial_q, FL_foot_target_position, FR_foot_target_position, 
+                               RL_foot_target_position, RR_foot_target_position)
+    print("time: ", time.time() - initial_time)
+
+
+
+    print("time: ", time.time() - initial_time)
+
+
     
-    d.qpos[7:] = np.concatenate((joint_FR, joint_FL, joint_RR, joint_RL))
-    mujoco.mj_step(m, d)
     print("\n")
     print("MUJOCO SOLUTION")
     foot_position_FL = d.geom_xpos[FL_id]
     foot_position_FR = d.geom_xpos[FR_id]
     foot_position_RL = d.geom_xpos[RL_id]
     foot_position_RR = d.geom_xpos[RR_id]
-    print("joints: ", np.concatenate((joint_FL, joint_FR, joint_RL, joint_RR)))
+    print("joints: ", d.qpos[7:])
     print("FL foot position: ", foot_position_FL)
     print("FR foot position: ", foot_position_FR)
     print("RL foot position:  ", foot_position_RL)
     print("RR foot position: ", foot_position_RR)
+
+
     
     print("\n")
     print("PINOCCHIO SOLUTION")
@@ -236,6 +264,8 @@ if __name__ == "__main__":
     print("FR foot position", ik.FR_foot_position(solution))
     print("RL foot position", ik.RL_foot_position(solution))
     print("RR foot position", ik.RR_foot_position(solution))
+
+
 
     with mujoco.viewer.launch_passive(m, d) as viewer:
         while True:
