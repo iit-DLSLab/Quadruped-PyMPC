@@ -7,43 +7,17 @@ import time
 import pathlib
 import numpy as np
 from tqdm import tqdm
+# Gym and Simulation related imports
 from gym_quadruped.quadruped_env import QuadrupedEnv
 from gym_quadruped.utils.mujoco.visual import render_vector
-from gym_quadruped.utils.quadruped_utils import GaitType, LegsAttr
-
-# Parameters for both MPC and simulation
+from gym_quadruped.utils.quadruped_utils import LegsAttr
+# Control imports
 from quadruped_pympc import config as cfg
 from quadruped_pympc.helpers.foothold_reference_generator import FootholdReferenceGenerator
 from quadruped_pympc.helpers.periodic_gait_generator import PeriodicGaitGenerator
 from quadruped_pympc.helpers.swing_trajectory_controller import SwingTrajectoryController
 from quadruped_pympc.helpers.terrain_estimator import TerrainEstimator
-from quadruped_pympc.helpers.quadruped_utils import plot_swing_mujoco
-
-
-def get_gait_params(gait_type: str) -> [GaitType, float, float]:
-    if gait_type == "trot":
-        step_frequency = 2.5
-        duty_factor = 0.65
-        gait_type = GaitType.TROT
-    elif gait_type == "crawl":
-        step_frequency = 0.7
-        duty_factor = 0.9
-        gait_type = GaitType.BACKDIAGONALCRAWL
-    elif gait_type == "pace":
-        step_frequency = 2
-        duty_factor = 0.7
-        gait_type = GaitType.PACE
-    elif gait_type == "bound":
-        step_frequency = 4
-        duty_factor = 0.65
-        gait_type = GaitType.BOUNDING
-    else:
-        step_frequency = 2
-        duty_factor = 0.65
-        gait_type = GaitType.FULL_STANCE
-        # print("FULL STANCE")
-    return gait_type, duty_factor, step_frequency
-
+from quadruped_pympc.helpers.quadruped_utils import plot_swing_mujoco, GaitType
 
 if __name__ == '__main__':
     np.set_printoptions(precision=3, suppress=True)
@@ -156,10 +130,13 @@ if __name__ == '__main__':
 
     # Periodic gait generator _________________________________________________________________________
     gait_name = cfg.simulation_params['gait']
-    gait_type, duty_factor, step_frequency = get_gait_params(gait_name)
+    gait_params = cfg.simulation_params['gait_params'][gait_name]
+    gait_type, duty_factor, step_frequency = gait_params['type'], gait_params['duty_factor'], gait_params['step_freq']
     # Given the possibility to use nonuniform discretization,
     # we generate a contact sequence two times longer and with a dt half of the one of the mpc
-    pgg = PeriodicGaitGenerator(duty_factor=duty_factor, step_freq=step_frequency, gait_type=gait_type,
+    pgg = PeriodicGaitGenerator(duty_factor=duty_factor,
+                                step_freq=step_frequency,
+                                gait_type=gait_type,
                                 horizon=horizon * 2, contact_sequence_dt=mpc_dt / 2.)
 
     contact_sequence = pgg.compute_contact_sequence()

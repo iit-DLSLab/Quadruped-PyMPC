@@ -2,6 +2,7 @@
 and of the internal simulations that can be launch from the folder /simulation.
 """
 import numpy as np
+from quadruped_pympc.helpers.quadruped_utils import GaitType
 
 # These are used both for a real experiment and a simulation -----------
 # These are the only attributes needed per quadruped, the rest can be computed automatically ----------------------
@@ -170,6 +171,12 @@ simulation_params = {
     'dt':                          0.002,
 
     'gait':                        'trot',  # 'trot', 'pace', 'crawl', 'bound', 'full_stance'
+    'gait_params':                 {'trot': {'step_freq': 2.5, 'duty_factor': 0.65, 'type': GaitType.TROT},
+                                    'crawl': {'step_freq': 0.7, 'duty_factor': 0.9, 'type': GaitType.BACKDIAGONALCRAWL},
+                                    'pace': {'step_freq': 2, 'duty_factor': 0.7, 'type': GaitType.PACE},
+                                    'bound': {'step_freq': 4, 'duty_factor': 0.65, 'type': GaitType.BOUNDING},
+                                    'full_stance': {'step_freq': 2, 'duty_factor': 0.65, 'type': GaitType.FULL_STANCE},
+                                   },
 
     # velocity mode: human will give you the possibility to use the keyboard, the other are
     # forward only random linear-velocity, random will give you random linear-velocity and yaw-velocity
