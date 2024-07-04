@@ -307,7 +307,6 @@ if __name__ == '__main__':
             # If we use sampling
             if (cfg.mpc_params['type'] == 'sampling'):
 
-                
                 # Convert data to jax
                 state_current_jax, \
                 reference_state_jax, = controller.prepare_state_and_reference(state_current, 
