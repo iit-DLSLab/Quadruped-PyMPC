@@ -281,6 +281,8 @@ if __name__ == '__main__':
         # Solve OCP ---------------------------------------------------------------------------------------
         if env.step_num % round(1 / (mpc_frequency * simulation_dt)) == 0:
 
+            time_start = time.time()
+
             # We can recompute the inertia of the single rigid body model
             # or use the fixed one in cfg.py
             if(cfg.simulation_params['use_inertia_recomputation']):
@@ -304,8 +306,6 @@ if __name__ == '__main__':
 
             # If we use sampling
             if (cfg.mpc_params['type'] == 'sampling'):
-
-                time_start = time.time()
 
                 
                 # Convert data to jax
@@ -358,7 +358,7 @@ if __name__ == '__main__':
 
             # If we use Gradient-Based MPC
             else:
-                time_start = time.time()
+                
                 nmpc_GRFs, \
                 nmpc_footholds, _, \
                 status = controller.compute_control(state_current,
