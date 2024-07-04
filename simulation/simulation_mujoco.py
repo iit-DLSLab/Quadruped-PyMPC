@@ -21,13 +21,11 @@ import config as cfg
 # Parameters for both MPC and simulation
 from helpers.foothold_reference_generator import FootholdReferenceGenerator
 from helpers.periodic_gait_generator import PeriodicGaitGenerator
-from helpers.srb_inertia_computation import SrbInertiaComputation
 from helpers.swing_trajectory_controller import SwingTrajectoryController
 from helpers.terrain_estimator import TerrainEstimator
 from simulation.quadruped_env import QuadrupedEnv
-from utils.math_utils import skew
 from utils.mujoco_utils.visual import plot_swing_mujoco, render_vector
-from utils.quadruped_utils import GaitType, LegsAttr, estimate_terrain_slope
+from utils.quadruped_utils import GaitType, LegsAttr
 
 
 np.set_printoptions(precision=3, suppress=True)
@@ -36,7 +34,7 @@ np.set_printoptions(precision=3, suppress=True)
 # Main simulation loop ------------------------------------------------------------------
 def get_gait_params(gait_type: str) -> [GaitType, float, float]:
     if gait_type == "trot":
-        step_frequency = 2.5
+        step_frequency = 1.4
         duty_factor = 0.65
         gait_type = GaitType.TROT
     elif gait_type == "crawl":
@@ -97,20 +95,13 @@ if __name__ == '__main__':
     # _______________________________________________________________________________________________________________
 
     # TODO: CONTROLLER INITIALIZATION CODE THAT SHOULD BE REMOVED FROM HERE.
-    #  Here we should simply initialize the selected controller with the desired configuration E.g.:
-    #   if cfg.controller_name == "A"
-    #       controller = ControlerA(**cfg.controller)
-    #   elif cfg.controller_name == "B"
-    #       controller = ControlerB(**cfg.controller)
-    #   ... __________________________________________________________________________________________________
     mpc_frequency = cfg.simulation_params['mpc_frequency']
     mpc_dt = cfg.mpc_params['dt']
     horizon = cfg.mpc_params['horizon']
 
     # input_rates optimize the delta_GRF (smoooth!)
     # nominal optimize directly the GRF (not smooth)
-    # sampling use GPUUUU
-    # collaborative optimize directly the GRF and has a passive arm model inside
+    # sampling use GPU
     if cfg.mpc_params['type'] == 'nominal':
         from gradient.nominal.centroidal_nmpc_nominal import Acados_NMPC_Nominal
 
@@ -149,7 +140,6 @@ if __name__ == '__main__':
                                   device="gpu")
         best_control_parameters = jnp.zeros((controller.num_control_parameters,))
         jitted_compute_control = jax.jit(controller.compute_control, device=controller.device)
-        # jitted_get_key = jax.jit(controller.get_key, device=controller.device)
         jitted_prepare_state_and_reference = controller.prepare_state_and_reference
 
         index_shift = 0
@@ -171,7 +161,7 @@ if __name__ == '__main__':
 
     # Create swing trajectory generator
     step_height = cfg.simulation_params['step_height']
-    swing_period = (1 - duty_factor) * (1 / step_frequency)  # + 0.07
+    swing_period = (1 - pgg.duty_factor) * (1 / pgg.step_frequency) 
     position_gain_fb = cfg.simulation_params['swing_position_gain_fb']
     velocity_gain_fb = cfg.simulation_params['swing_velocity_gain_fb']
     swing_generator = cfg.simulation_params['swing_generator']
@@ -184,8 +174,6 @@ if __name__ == '__main__':
     # Terrain estimator
     terrain_computation = TerrainEstimator()
 
-    # Online computation of the inertia parameter
-    srb_inertia_computation = SrbInertiaComputation()  # TODO: This seems to be unsused.
 
     # Initialization of variables used in the main control loop
     # ____________________________________________________________
@@ -299,11 +287,8 @@ if __name__ == '__main__':
         if env.step_num % round(1 / (mpc_frequency * simulation_dt)) == 0:
 
             # We can recompute the inertia of the single rigid body model
-
             # or use the fixed one in cfg.py
             if(cfg.simulation_params['use_inertia_recomputation']):
-                # TODO: d.qpos is not defined
-                #inertia = srb_inertia_computation.compute_inertia(d.qpos)
                 inertia = env.get_base_inertia().flatten()  # Reflected inertia of base at qpos, in world frame
             else:
                 inertia = cfg.inertia.flatten()
@@ -343,6 +328,7 @@ if __name__ == '__main__':
                     if (cfg.mpc_params['sampling_method'] == 'cem_mppi'):
                         if (iter_sampling == 0):
                             controller = controller.with_newsigma(cfg.mpc_params['sigma_cem_mppi'])
+                        
                         nmpc_GRFs, \
                             nmpc_footholds, \
                             best_control_parameters, \
@@ -359,8 +345,9 @@ if __name__ == '__main__':
                             best_control_parameters, \
                             best_cost, \
                             best_sample_freq, \
-                            costs = jitted_compute_control(state_current_jax, reference_state_jax, contact_sequence,
-                                                           best_control_parameters, controller.master_key, pgg.get_t(),
+                            costs = jitted_compute_control(state_current_jax, reference_state_jax, 
+                                                           contact_sequence, best_control_parameters, 
+                                                           controller.master_key, pgg.get_t(),
                                                            nominal_sample_freq, optimize_swing)
 
                     controller = controller.with_newkey()
@@ -368,36 +355,34 @@ if __name__ == '__main__':
                 if ((cfg.mpc_params['optimize_step_freq']) and (optimize_swing == 1)):
                     pgg.step_freq = np.array([best_sample_freq])[0]
                     nominal_sample_freq = pgg.step_freq
-                    stance_time = (1 / pgg.step_freq) * duty_factor
-                    frg.stance_time = stance_time
-
-                    swing_period = (1 - duty_factor) * (1 / pgg.step_freq)  # + 0.07
+                    frg.stance_time = (1 / pgg.step_freq) * pgg.duty_factor
+                    swing_period = (1 - pgg.duty_factor) * (1 / pgg.step_freq)  # + 0.07
                     stc.regenerate_swing_trajectory_generator(step_height=step_height, swing_period=swing_period)
 
+                
                 nmpc_footholds = ref_feet_pos
-
                 nmpc_GRFs = np.array(nmpc_GRFs)
 
                 previous_contact_mpc = current_contact
                 index_shift = 0
-                # optimizer_cost = best_cost
 
             # If we use Gradient-Based MPC
             else:
                 time_start = time.time()
-                nmpc_GRFs, nmpc_footholds, _, status = controller.compute_control(
-                    state_current,
-                    ref_state,
-                    contact_sequence,
-                    inertia=inertia)
+                nmpc_GRFs, \
+                nmpc_footholds, _, \
+                status = controller.compute_control(state_current,
+                                                    ref_state,
+                                                    contact_sequence,
+                                                    inertia=inertia)
                 
-                # TODO functions should output this class instance.
+    
                 nmpc_footholds = LegsAttr(FL=nmpc_footholds[0],
                                           FR=nmpc_footholds[1],
                                           RL=nmpc_footholds[2],
                                           RR=nmpc_footholds[3])
 
-                # optimizer_cost = controller.acados_ocp_solver.get_cost()
+
 
                 if cfg.mpc_params['optimize_step_freq'] and optimize_swing == 1:
                     contact_sequence_temp = np.zeros((len(cfg.mpc_params['step_freq_available']), 4, horizon * 2))
@@ -405,7 +390,8 @@ if __name__ == '__main__':
                         pgg_temp = PeriodicGaitGenerator(duty_factor=duty_factor,
                                                          step_freq=cfg.mpc_params['step_freq_available'][j],
                                                          gait_type=gait_type,
-                                                         horizon=horizon * 2)
+                                                         horizon=horizon * 2,
+                                                         contact_sequence_dt=mpc_dt/2.)
                         pgg_temp.phase_signal = pgg.phase_signal
                         pgg_temp.init = pgg.init
                         contact_sequence_temp[j] = pgg_temp.compute_contact_sequence()
@@ -417,13 +403,14 @@ if __name__ == '__main__':
                             contact_sequence_temp[j] = pgg.sample_contact_sequence(contact_sequence, mpc_dt, dt_fine_grained, horizon_fine_grained)
        
 
-                    costs, best_sample_freq = batched_controller.compute_batch_control(state_current, ref_state,
-                                                                                       contact_sequence_temp)
+                    costs, \
+                    best_sample_freq = batched_controller.compute_batch_control(state_current, 
+                                                                                ref_state,
+                                                                                contact_sequence_temp)
 
                     pgg.step_freq = best_sample_freq
-                    stance_time = (1 / pgg.step_freq) * duty_factor
-                    frg.stance_time = stance_time
-                    swing_period = (1 - duty_factor) * (1 / pgg.step_freq)  # + 0.07
+                    frg.stance_time = (1 / pgg.step_freq) * pgg.duty_factor
+                    swing_period = (1 - pgg.duty_factor) * (1 / pgg.step_freq)  
                     stc.regenerate_swing_trajectory_generator(step_height=step_height, swing_period=swing_period)
 
                 # If the controller is using RTI, we need to linearize the mpc after its computation
@@ -472,17 +459,17 @@ if __name__ == '__main__':
         for leg_id, leg_name in enumerate(legs_order):
             if current_contact[leg_id] == 0:  # If in swing phase, compute the swing trajectory tracking control.
                 tau[leg_name], _, _ = stc.compute_swing_control(
-                    leg_id=leg_id,
-                    q_dot=qvel[env.legs_qvel_idx[leg_name]],
-                    J=feet_jac[leg_name][:, env.legs_qvel_idx[leg_name]],
-                    J_dot=jac_feet_dot[leg_name][:, env.legs_qvel_idx[leg_name]],
-                    lift_off=frg.lift_off_positions[leg_name],
-                    touch_down=nmpc_footholds[leg_name],
-                    foot_pos=feet_pos[leg_name],
-                    foot_vel=feet_vel[leg_name],
-                    h=legs_qfrc_bias[leg_name],
-                    mass_matrix=legs_mass_matrix[leg_name]
-                    )
+                                            leg_id=leg_id,
+                                            q_dot=qvel[env.legs_qvel_idx[leg_name]],
+                                            J=feet_jac[leg_name][:, env.legs_qvel_idx[leg_name]],
+                                            J_dot=jac_feet_dot[leg_name][:, env.legs_qvel_idx[leg_name]],
+                                            lift_off=frg.lift_off_positions[leg_name],
+                                            touch_down=nmpc_footholds[leg_name],
+                                            foot_pos=feet_pos[leg_name],
+                                            foot_vel=feet_vel[leg_name],
+                                            h=legs_qfrc_bias[leg_name],
+                                            mass_matrix=legs_mass_matrix[leg_name]
+                                            )
         # ---------------------------------------------------------------------------------------------------
         # Set control and mujoco step ----------------------------------------------------------------------
         action = np.zeros(env.mjModel.nu)
@@ -530,4 +517,4 @@ if __name__ == '__main__':
             current_contact = np.array([0, 0, 0, 0])
             previous_contact = np.asarray(current_contact)
             z_foot_mean = 0.0
-        # print("loop time: ", time.time() - step_start)
+        
