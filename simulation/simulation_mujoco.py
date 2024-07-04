@@ -305,7 +305,7 @@ if __name__ == '__main__':
             # If we use sampling
             if (cfg.mpc_params['type'] == 'sampling'):
 
-                # Convert data to jax
+                # Convert data to jax and shift previous solution
                 state_current_jax, \
                 reference_state_jax, = controller.prepare_state_and_reference(state_current, 
                                                                               ref_state,
@@ -501,6 +501,4 @@ if __name__ == '__main__':
             env.reset()
             pgg.reset()
             frg.lift_off_positions = env.feet_pos(frame='world')
-            #current_contact = np.array([0, 0, 0, 0])
-            #previous_contact = np.asarray(current_contact)
-        
+
