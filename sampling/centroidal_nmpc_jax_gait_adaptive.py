@@ -134,6 +134,8 @@ class Sampling_MPC:
             print("Error: sampling method not recognized")
             sys.exit(1)
 
+        self.jitted_compute_control = jax.jit(self.compute_control, device=self.device)
+
 
         # Initialize the robot model
         self.robot = Centroidal_Model_JAX(self.dt,self.device)
@@ -580,10 +582,18 @@ class Sampling_MPC:
 
 
 
-    def prepare_state_and_reference(self, state_current, reference_state, best_control_parameters, current_contact, previous_contact):
+    def prepare_state_and_reference(self, state_current, reference_state, 
+                                    current_contact, previous_contact, mpc_frequency=100):
         """
         This function jaxify the current state and reference for further processing.
-        """        
+        """    
+
+        # Shift the previous solution ahead
+        if (config.mpc_params['shift_solution']):
+            index_shift = 1./mpc_frequency
+            self.best_control_parameters = self.shift_solution(self.best_control_parameters, index_shift)
+         
+
 
         state_current_jax = np.concatenate((state_current["position"], state_current["linear_velocity"],
                             state_current["orientation"], state_current["angular_velocity"],
@@ -606,18 +616,19 @@ class Sampling_MPC:
         
 
 
-        best_control_parameters = np.array(best_control_parameters)
+        self.best_control_parameters = np.array(self.best_control_parameters)
         
         if(previous_contact[0] == 1 and current_contact[0] == 0):
-            best_control_parameters[0:self.num_control_parameters_single_leg] = 0.0
+            self.best_control_parameters[0:self.num_control_parameters_single_leg] = 0.0
         if(previous_contact[1] == 1 and current_contact[1] == 0):
-            best_control_parameters[self.num_control_parameters_single_leg:self.num_control_parameters_single_leg*2] = 0.0
+            self.best_control_parameters[self.num_control_parameters_single_leg:self.num_control_parameters_single_leg*2] = 0.0
         if(previous_contact[2] == 1 and current_contact[2] == 0):
-            best_control_parameters[self.num_control_parameters_single_leg*2:self.num_control_parameters_single_leg*3] = 0.0
+            self.best_control_parameters[self.num_control_parameters_single_leg*2:self.num_control_parameters_single_leg*3] = 0.0
         if(previous_contact[3] == 1 and current_contact[3] == 0):
-            best_control_parameters[self.num_control_parameters_single_leg*3:self.num_control_parameters_single_leg*4] = 0.0
+            self.best_control_parameters[self.num_control_parameters_single_leg*3:self.num_control_parameters_single_leg*4] = 0.0
 
-        return state_current_jax, reference_state_jax, best_control_parameters
+        return state_current_jax, reference_state_jax
+    
     
 
 

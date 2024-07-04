@@ -127,9 +127,6 @@ if __name__ == '__main__':
         else:
             from sampling.centroidal_nmpc_jax import Sampling_MPC
 
-        import jax
-        import jax.numpy as jnp
-
         num_parallel_computations = cfg.mpc_params['num_parallel_computations']
         iteration = cfg.mpc_params['num_sampling_iterations']
         controller = Sampling_MPC(horizon=horizon,
@@ -138,11 +135,9 @@ if __name__ == '__main__':
                                   sampling_method=cfg.mpc_params['sampling_method'],
                                   control_parametrization=cfg.mpc_params['control_parametrization'],
                                   device="gpu")
-        best_control_parameters = jnp.zeros((controller.num_control_parameters,))
-        jitted_compute_control = jax.jit(controller.compute_control, device=controller.device)
-        jitted_prepare_state_and_reference = controller.prepare_state_and_reference
 
-        index_shift = 0
+
+
 
     # Periodic gait generator _________________________________________________________________________
     gait_name = cfg.simulation_params['gait']
@@ -312,17 +307,14 @@ if __name__ == '__main__':
 
                 time_start = time.time()
 
-                # Shift the previous solution ahead
-                if (cfg.mpc_params['shift_solution']):
-                    index_shift = 1./mpc_frequency
-                    best_control_parameters = controller.shift_solution(best_control_parameters, index_shift)
                 
                 # Convert data to jax
                 state_current_jax, \
-                    reference_state_jax, \
-                    best_control_parameters = jitted_prepare_state_and_reference(state_current, ref_state,
-                                                                                 best_control_parameters,
-                                                                                 current_contact, previous_contact_mpc)
+                reference_state_jax, = controller.prepare_state_and_reference(state_current, 
+                                                                              ref_state,
+                                                                              current_contact, 
+                                                                              previous_contact_mpc)
+                previous_contact_mpc = current_contact
 
                 for iter_sampling in range(iteration):
                     if (cfg.mpc_params['sampling_method'] == 'cem_mppi'):
@@ -330,23 +322,23 @@ if __name__ == '__main__':
                             controller = controller.with_newsigma(cfg.mpc_params['sigma_cem_mppi'])
                         
                         nmpc_GRFs, \
-                            nmpc_footholds, \
-                            best_control_parameters, \
-                            best_cost, \
-                            best_sample_freq, \
-                            costs, \
-                            sigma_cem_mppi = jitted_compute_control(state_current_jax, reference_state_jax,
-                                                                    contact_sequence, best_control_parameters,
+                        nmpc_footholds, \
+                        controller.best_control_parameters, \
+                        best_cost, \
+                        best_sample_freq, \
+                        costs, \
+                        sigma_cem_mppi = controller.jitted_compute_control(state_current_jax, reference_state_jax,
+                                                                    contact_sequence, controller.best_control_parameters,
                                                                     controller.master_key, controller.sigma_cem_mppi)
                         controller = controller.with_newsigma(sigma_cem_mppi)
                     else:
                         nmpc_GRFs, \
-                            nmpc_footholds, \
-                            best_control_parameters, \
-                            best_cost, \
-                            best_sample_freq, \
-                            costs = jitted_compute_control(state_current_jax, reference_state_jax, 
-                                                           contact_sequence, best_control_parameters, 
+                        nmpc_footholds, \
+                        controller.best_control_parameters, \
+                        best_cost, \
+                        best_sample_freq, \
+                        costs = controller.jitted_compute_control(state_current_jax, reference_state_jax, 
+                                                           contact_sequence, controller.best_control_parameters, 
                                                            controller.master_key, pgg.get_t(),
                                                            nominal_sample_freq, optimize_swing)
 
@@ -363,8 +355,6 @@ if __name__ == '__main__':
                 nmpc_footholds = ref_feet_pos
                 nmpc_GRFs = np.array(nmpc_GRFs)
 
-                previous_contact_mpc = current_contact
-                index_shift = 0
 
             # If we use Gradient-Based MPC
             else:
@@ -422,6 +412,8 @@ if __name__ == '__main__':
                     status = controller.acados_ocp_solver.solve()
                     # print("preparation phase time: ", controller.acados_ocp_solver.get_stats('time_tot'))
 
+            
+            
             # TODO: Indexing should not be hardcoded. Env should provide indexing of leg actuator dimensions.
             nmpc_GRFs = LegsAttr(FL=nmpc_GRFs[0:3] * current_contact[0],
                                  FR=nmpc_GRFs[3:6] * current_contact[1],
