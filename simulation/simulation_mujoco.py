@@ -127,11 +127,9 @@ if __name__ == '__main__':
         else:
             from sampling.centroidal_nmpc_jax import Sampling_MPC
 
-        num_parallel_computations = cfg.mpc_params['num_parallel_computations']
-        iteration = cfg.mpc_params['num_sampling_iterations']
         controller = Sampling_MPC(horizon=horizon,
                                   dt=mpc_dt,
-                                  num_parallel_computations=num_parallel_computations,
+                                  num_parallel_computations=cfg.mpc_params['num_parallel_computations'],
                                   sampling_method=cfg.mpc_params['sampling_method'],
                                   control_parametrization=cfg.mpc_params['control_parametrization'],
                                   device="gpu")
@@ -315,7 +313,7 @@ if __name__ == '__main__':
                                                                               previous_contact_mpc)
                 previous_contact_mpc = current_contact
 
-                for iter_sampling in range(iteration):
+                for iter_sampling in range(cfg.mpc_params['num_sampling_iterations']):
                     if (cfg.mpc_params['sampling_method'] == 'cem_mppi'):
                         if (iter_sampling == 0):
                             controller = controller.with_newsigma(cfg.mpc_params['sigma_cem_mppi'])
