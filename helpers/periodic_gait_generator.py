@@ -9,7 +9,7 @@ class PeriodicGaitGenerator:
 
     def __init__(self, duty_factor, step_freq, gait_type: GaitType, horizon, contact_sequence_dt):
         self.duty_factor = duty_factor
-        self.step_freq = step_freq
+        self.step_frequency = step_freq
         self.horizon = horizon
         self.contact_sequence_dt = contact_sequence_dt
         self.gait_type = gait_type
@@ -92,7 +92,7 @@ class PeriodicGaitGenerator:
 
             contact_sequence = np.zeros((self.n_contact, self.horizon))
             for i in range(self.horizon):
-                contact_sequence[:, i] = self.run(self.contact_sequence_dt, self.step_freq)
+                contact_sequence[:, i] = self.run(self.contact_sequence_dt, self.step_frequency)
             self.set(t_init, init_init)
             return contact_sequence
         

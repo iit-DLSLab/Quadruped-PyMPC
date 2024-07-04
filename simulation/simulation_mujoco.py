@@ -152,10 +152,10 @@ if __name__ == '__main__':
     pgg = PeriodicGaitGenerator(duty_factor=duty_factor, step_freq=step_frequency, gait_type=gait_type,
                                 horizon=horizon * 2, contact_sequence_dt=mpc_dt/2.)
     contact_sequence = pgg.compute_contact_sequence()
-    nominal_sample_freq = step_frequency
+    nominal_sample_freq = pgg.step_frequency
     
     # Create the foothold reference generator
-    stance_time = (1 / step_frequency) * duty_factor
+    stance_time = (1 / pgg.step_frequency) * pgg.duty_factor
     frg = FootholdReferenceGenerator(stance_time=stance_time, hip_height=cfg.hip_height, lift_off_positions=env.feet_pos(frame='world'))
 
 
@@ -231,7 +231,7 @@ if __name__ == '__main__':
         # -------------------------------------------------------
 
         # Update the desired contact sequence ---------------------------
-        pgg.run(simulation_dt, pgg.step_freq)
+        pgg.run(simulation_dt, pgg.step_frequency)
         contact_sequence = pgg.compute_contact_sequence()
 
         # in the case of nonuniform discretization, we need to subsample the contact sequence
@@ -353,10 +353,10 @@ if __name__ == '__main__':
                     controller = controller.with_newkey()
 
                 if ((cfg.mpc_params['optimize_step_freq']) and (optimize_swing == 1)):
-                    pgg.step_freq = np.array([best_sample_freq])[0]
-                    nominal_sample_freq = pgg.step_freq
-                    frg.stance_time = (1 / pgg.step_freq) * pgg.duty_factor
-                    swing_period = (1 - pgg.duty_factor) * (1 / pgg.step_freq)  # + 0.07
+                    pgg.step_frequency = np.array([best_sample_freq])[0]
+                    nominal_sample_freq = pgg.step_frequency
+                    frg.stance_time = (1 / pgg.step_frequency) * pgg.duty_factor
+                    swing_period = (1 - pgg.duty_factor) * (1 / pgg.step_frequency)
                     stc.regenerate_swing_trajectory_generator(step_height=step_height, swing_period=swing_period)
 
                 
@@ -407,10 +407,10 @@ if __name__ == '__main__':
                     best_sample_freq = batched_controller.compute_batch_control(state_current, 
                                                                                 ref_state,
                                                                                 contact_sequence_temp)
-
-                    pgg.step_freq = best_sample_freq
-                    frg.stance_time = (1 / pgg.step_freq) * pgg.duty_factor
-                    swing_period = (1 - pgg.duty_factor) * (1 / pgg.step_freq)  
+                    
+                    pgg.step_frequency = best_sample_freq
+                    frg.stance_time = (1 / pgg.step_frequency) * pgg.duty_factor
+                    swing_period = (1 - pgg.duty_factor) * (1 / pgg.step_frequency)  
                     stc.regenerate_swing_trajectory_generator(step_height=step_height, swing_period=swing_period)
 
                 # If the controller is using RTI, we need to linearize the mpc after its computation
