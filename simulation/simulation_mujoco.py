@@ -343,13 +343,6 @@ if __name__ == '__main__':
 
                     controller = controller.with_newkey()
 
-                if ((cfg.mpc_params['optimize_step_freq']) and (optimize_swing == 1)):
-                    pgg.step_frequency = np.array([best_sample_freq])[0]
-                    nominal_sample_freq = pgg.step_frequency
-                    frg.stance_time = (1 / pgg.step_frequency) * pgg.duty_factor
-                    swing_period = (1 - pgg.duty_factor) * (1 / pgg.step_frequency)
-                    stc.regenerate_swing_trajectory_generator(step_height=step_height, swing_period=swing_period)
-
                 
                 nmpc_footholds = ref_feet_pos
                 nmpc_GRFs = np.array(nmpc_GRFs)
@@ -397,10 +390,7 @@ if __name__ == '__main__':
                                                                                 ref_state,
                                                                                 contact_sequence_temp)
                     
-                    pgg.step_frequency = best_sample_freq
-                    frg.stance_time = (1 / pgg.step_frequency) * pgg.duty_factor
-                    swing_period = (1 - pgg.duty_factor) * (1 / pgg.step_frequency)  
-                    stc.regenerate_swing_trajectory_generator(step_height=step_height, swing_period=swing_period)
+
 
                 # If the controller is using RTI, we need to linearize the mpc after its computation
                 # this helps to minize the delay between new state->control, but only in a real case.
@@ -412,6 +402,13 @@ if __name__ == '__main__':
                     # print("preparation phase time: ", controller.acados_ocp_solver.get_stats('time_tot'))
 
             
+            if ((cfg.mpc_params['optimize_step_freq']) and (optimize_swing == 1)):
+                pgg.step_frequency = np.array([best_sample_freq])[0]
+                nominal_sample_freq = pgg.step_frequency
+                frg.stance_time = (1 / pgg.step_frequency) * pgg.duty_factor
+                swing_period = (1 - pgg.duty_factor) * (1 / pgg.step_frequency)
+                stc.regenerate_swing_trajectory_generator(step_height=step_height, swing_period=swing_period)
+
             
             # TODO: Indexing should not be hardcoded. Env should provide indexing of leg actuator dimensions.
             nmpc_GRFs = LegsAttr(FL=nmpc_GRFs[0:3] * current_contact[0],
