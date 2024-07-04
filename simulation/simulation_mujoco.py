@@ -501,7 +501,6 @@ if __name__ == '__main__':
             env.reset()
             pgg.reset()
             frg.lift_off_positions = env.feet_pos(frame='world')
-            current_contact = np.array([0, 0, 0, 0])
-            previous_contact = np.asarray(current_contact)
-            z_foot_mean = 0.0
+            #current_contact = np.array([0, 0, 0, 0])
+            #previous_contact = np.asarray(current_contact)
         
