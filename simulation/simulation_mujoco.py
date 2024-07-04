@@ -314,6 +314,7 @@ if __name__ == '__main__':
                 previous_contact_mpc = current_contact
 
                 for iter_sampling in range(cfg.mpc_params['num_sampling_iterations']):
+                    controller = controller.with_newkey()
                     if (cfg.mpc_params['sampling_method'] == 'cem_mppi'):
                         if (iter_sampling == 0):
                             controller = controller.with_newsigma(cfg.mpc_params['sigma_cem_mppi'])
@@ -338,8 +339,6 @@ if __name__ == '__main__':
                                                            contact_sequence, controller.best_control_parameters, 
                                                            controller.master_key, pgg.get_t(),
                                                            nominal_sample_freq, optimize_swing)
-
-                    controller = controller.with_newkey()
 
                 
                 nmpc_footholds = ref_feet_pos
