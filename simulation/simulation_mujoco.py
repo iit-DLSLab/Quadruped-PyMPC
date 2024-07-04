@@ -402,6 +402,7 @@ if __name__ == '__main__':
                     # print("preparation phase time: ", controller.acados_ocp_solver.get_stats('time_tot'))
 
             
+            # If we have optimized the gait, we set all the timing parameters
             if ((cfg.mpc_params['optimize_step_freq']) and (optimize_swing == 1)):
                 pgg.step_frequency = np.array([best_sample_freq])[0]
                 nominal_sample_freq = pgg.step_frequency
