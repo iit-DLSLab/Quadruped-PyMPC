@@ -84,7 +84,7 @@ Gradient-based MPC: It uses [CasADI](https://web.casadi.org/) to define the mode
 
 The first time you run the simulation with acados, in the terminal you will be asked to install tera_render. You should accept to proceed.
 
-7. go inside the folder gym-quadruped and installing it:
+7. go inside the folder gym-quadruped and install it:
     
     ```
     pip install -e .
