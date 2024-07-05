@@ -16,7 +16,7 @@ sys.path.append(dir_path + '/../helpers/')
 
 from quadruped_pympc import config
 from centroidal_model_jax import Centroidal_Model_JAX
-from periodic_gait_generator_jax import PeriodicGaitGeneratorJax
+from quadruped_pympc.helpers.periodic_gait_generator_jax import PeriodicGaitGeneratorJax
 
 import time
 import copy

@@ -61,9 +61,8 @@ if __name__ == '__main__':
     if cfg.qpos0_js is not None:
         env.mjModel.qpos0 = np.concatenate((env.mjModel.qpos0[:7], cfg.qpos0_js))
 
-    env.reset()
+    env.reset(random=False)
     env.render()  # Pass in the first render call any mujoco.viewer.KeyCallbackType
-    mass = np.sum(env.mjModel.body_mass)
 
     # _______________________________________________________________________________________________________________
 
@@ -191,7 +190,7 @@ if __name__ == '__main__':
             # Update the robot state --------------------------------
             feet_pos = env.feet_pos(frame='world')
             hip_pos = env.hip_positions(frame='world')
-            base_lin_vel = env.base_lin_vel(frame='world')
+            base_lin_vel = env.base_lin_vel
             base_ang_vel = env.base_ang_vel
 
             state_current = dict(
@@ -244,6 +243,9 @@ if __name__ == '__main__':
             ref_pos[2] = cfg.simulation_params['ref_z'] + terrain_height
 
             # Update state reference ------------------------------------------------------------------------
+            # Update target base velocity
+            ref_base_lin_vel, ref_base_ang_vel = env.target_base_vel()
+            
             ref_state |= dict(ref_foot_FL=ref_feet_pos.FL.reshape((1, 3)),
                               ref_foot_FR=ref_feet_pos.FR.reshape((1, 3)),
                               ref_foot_RL=ref_feet_pos.RL.reshape((1, 3)),
@@ -318,7 +320,7 @@ if __name__ == '__main__':
                             best_sample_freq, \
                             costs = controller.jitted_compute_control(state_current_jax, reference_state_jax,
                                                                contact_sequence, controller.best_control_parameters,
-                                                               controller.master_key, pgg.get_t(),
+                                                               controller.master_key, pgg.phase_signal,
                                                                nominal_sample_freq, optimize_swing)
 
 
@@ -352,8 +354,7 @@ if __name__ == '__main__':
                                                              gait_type=gait_type,
                                                              horizon=horizon * 2,
                                                              contact_sequence_dt=mpc_dt/2.)
-                            pgg_temp.phase_signal = pgg.phase_signal
-                            pgg_temp.init = pgg.init
+                            pgg_temp.set_phase_signal(pgg.phase_signal)
                             contact_sequence_temp[j] = pgg_temp.compute_contact_sequence()
 
                             # in the case of nonuniform discretization, we need to subsample the contact sequence
@@ -494,7 +495,7 @@ if __name__ == '__main__':
                 else:
                     state_obs_history.append(ep_state_obs_history)
                     ctrl_state_history.append(ep_ctrl_state_history)
-                env.reset()
+                env.reset(random=False)
                 pgg.reset()
                 frg.lift_off_positions = env.feet_pos(frame='world')
                 current_contact = np.array([0, 0, 0, 0])

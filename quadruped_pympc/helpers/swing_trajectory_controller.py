@@ -28,13 +28,13 @@ class SwingTrajectoryController:
 
     def regenerate_swing_trajectory_generator(self, step_height: float, swing_period: float) -> None:
         if (self.generator == "ndcurves"):
-            from ndcurves_swing_trajectory_generator import SwingTrajectoryGenerator
+            from .swing_generators.ndcurves_swing_trajectory_generator import SwingTrajectoryGenerator
             self.swing_generator = SwingTrajectoryGenerator(swing_period=swing_period, step_height=step_height)
         elif (self.generator == "scipy"):
-            from scipy_swing_trajectory_generator import SwingTrajectoryGenerator
+            from .swing_generators.scipy_swing_trajectory_generator import SwingTrajectoryGenerator
             self.swing_generator = SwingTrajectoryGenerator(swing_period=swing_period, step_height=step_height)
         else:
-            from explicit_swing_trajectory_generator import SwingTrajectoryGenerator
+            from .swing_generators.explicit_swing_trajectory_generator import SwingTrajectoryGenerator
             self.swing_generator = SwingTrajectoryGenerator(swing_period=swing_period, step_height=step_height)
 
     def compute_swing_control(self,
