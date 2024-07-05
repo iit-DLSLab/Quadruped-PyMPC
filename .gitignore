@@ -303,7 +303,17 @@ pyrightconfig.json
 
 
 
-gradient/nominal/c_generated_code_gait_adaptive/
+quadruped_pympc/controllers/gradient/nominal/c_generated_code_gait_adaptive/
 
 
 
+
+.idea/
+
+MUJOCO_LOG.TXT
+
+MUJOCO_LOG.TXT
+
+cfg/
+
+*.pkl

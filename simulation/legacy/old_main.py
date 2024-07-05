@@ -4,11 +4,9 @@
 
 import mujoco.viewer
 import mujoco
-import matplotlib.pyplot as plt
 import copy
 import time
 import pprint
-import casadi as cs
 import numpy as np
 np.set_printoptions(precision=3, suppress = True)
 
@@ -25,9 +23,6 @@ sys.path.append(dir_path + '/../../gradient/nominal/')
 sys.path.append(dir_path + '/../../gradient/collaborative/')
 sys.path.append(dir_path + '/../../sampling/')
 
-import threading
-import readchar 
-
 # General magic
 #from foothold_reference_generator import FootholdReferenceGenerator
 #from swing_trajectory_controller import SwingTrajectoryController
@@ -38,18 +33,14 @@ from other import euler_from_quaternion#, plot_swing_mujoco, plot_state_matplotl
 
 
 # Parameters for both MPC and simulation
-from helpers.foothold_reference_generator import FootholdReferenceGenerator
-from helpers.periodic_gait_generator import PeriodicGaitGenerator
-from helpers.srb_inertia_computation import SrbInertiaComputation
-from helpers.swing_trajectory_controller import SwingTrajectoryController
-from simulation.quadruped_env import QuadrupedEnv
-from utils.math_utils import skew
-from utils.mujoco_utils.visual import plot_swing_mujoco, render_vector
-from utils.quadruped_utils import GaitType, LegsAttr, estimate_terrain_slope
+from quadruped_pympc.helpers.foothold_reference_generator import FootholdReferenceGenerator
+from quadruped_pympc.helpers.periodic_gait_generator import PeriodicGaitGenerator
+from quadruped_pympc.helpers.srb_inertia_computation import SrbInertiaComputation
+from quadruped_pympc.helpers.swing_trajectory_controller import SwingTrajectoryController
+from quadruped_pympc.helpers.quadruped_utils import GaitType, LegsAttr
 
 # Parameters for both MPC and simulation
-import config 
-
+from quadruped_pympc import config
 
 
 def get_gait_params(gait_type: str) -> [GaitType, float, float]:
@@ -115,7 +106,7 @@ if(config.mpc_params['type'] == 'nominal'):
         batched_controller = Acados_NMPC_GaitAdaptive()
     
 elif(config.mpc_params['type'] == 'input_rates'):
-    from gradient.input_rates.centroidal_nmpc_input_rates import Acados_NMPC_InputRates
+    from quadruped_pympc.controllers.gradient.input_rates.centroidal_nmpc_input_rates import Acados_NMPC_InputRates
     controller = Acados_NMPC_InputRates()
 
     if(config.mpc_params['optimize_step_freq']):
@@ -124,19 +115,19 @@ elif(config.mpc_params['type'] == 'input_rates'):
 
 elif(config.mpc_params['type'] == 'sampling'):
     if config.mpc_params['optimize_step_freq']:
-        from sampling.centroidal_nmpc_jax_gait_adaptive import Sampling_MPC
+        from quadruped_pympc.controllers.sampling.centroidal_nmpc_jax_gait_adaptive import Sampling_MPC
     else:
-        from sampling.centroidal_nmpc_jax import Sampling_MPC
+        from quadruped_pympc.controllers.sampling.centroidal_nmpc_jax import Sampling_MPC
     
     import jax
     import jax.numpy as jnp
     num_parallel_computations = config.mpc_params['num_parallel_computations']
     iteration = config.mpc_params['num_sampling_iterations']
-    controller = Sampling_MPC(horizon = horizon, 
-                              dt = mpc_dt, 
+    controller = Sampling_MPC(horizon = horizon,
+                              dt = mpc_dt,
                               num_parallel_computations = num_parallel_computations,
                               sampling_method = config.mpc_params['sampling_method'],
-                              control_parametrization = config.mpc_params['control_parametrization'], 
+                              control_parametrization = config.mpc_params['control_parametrization'],
                               device="gpu")
     best_control_parameters = jnp.zeros((controller.num_control_parameters, ))
     jitted_compute_control = jax.jit(controller.compute_control, device=controller.device)
@@ -265,11 +256,11 @@ ref_orientation = np.array([0.0, 0.0, 0])
 ref_angular_velocity = np.array([0, 0, ref_yaw_dot])
 
 ref_feet_pos = frg.compute_footholds_reference(ref_pose,
-                                                    ref_orientation,
+                                               ref_orientation,
                                                     ref_linear_velocity[0:2], 
-                                                    ref_linear_velocity[0:2], 
-                                                    hip_pos_legattr, config.simulation_params['ref_z'],
-                                                    lift_off_positions_legattr)
+                                                    ref_linear_velocity[0:2],
+                                               hip_pos_legattr, config.simulation_params['ref_z'],
+                                               lift_off_positions_legattr)
 
 reference_foot_FL = ref_feet_pos.FL
 reference_foot_FR = ref_feet_pos.FR
@@ -575,12 +566,13 @@ with mujoco.viewer.launch_passive(m, d, show_left_ui=False, show_right_ui=False,
                 
                 
                 if((config.mpc_params['optimize_step_freq']) and (optimize_swing == 1)):
-                    contact_sequence_temp = np.zeros((len(config.mpc_params['step_freq_available']), 4, horizon*2))
+                    contact_sequence_temp = np.zeros((len(config.mpc_params['step_freq_available']), 4, horizon * 2))
                     
                     for j in range(len(config.mpc_params['step_freq_available'])):
-                        pgg_temp = PeriodicGaitGenerator(duty_factor=duty_factor, step_freq=config.mpc_params['step_freq_available'][j], p_gait=gait_type, horizon=horizon*2)
+                        pgg_temp = PeriodicGaitGenerator(duty_factor=duty_factor, step_freq=
+                        config.mpc_params['step_freq_available'][j], p_gait=gait_type, horizon=horizon * 2)
                         pgg_temp.t = copy.deepcopy(pgg.t)
-                        pgg_temp.init = copy.deepcopy(pgg.init)
+                        pgg_temp._init = copy.deepcopy(pgg._init)
                         contact_sequence_temp[j] = pgg_temp.compute_contact_sequence()
 
                         # in the case of nonuniform discretization, we need to subsample the contact sequence

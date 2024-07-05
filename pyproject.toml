@@ -1,0 +1,107 @@
+#_______________________________________________________
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+#_______________________________________________________
+#[build-system]
+#requires = ["setuptools", "wheel"]
+#build-backend = "setuptools.build_meta"
+#
+#[tool.setuptools.packages.find]
+#include = ["quadruped_pympc"]  # package names should match these glob patterns (["*"] by default)
+#_______________________________________________________
+
+[project]
+name = "quadruped_pympc"
+version = "0.1.0"
+description = "A model predictive controller for quadruped robots based on the single rigid body model and written in python. Gradient-based (acados) or Sampling-based (jax)."
+authors = [
+    { name="Giulio Turrisi", email="giulio.turrisi@iit.it" },
+]
+maintainers = [
+    { name="Giulio Turrisi", email="giulio.turrisi@iit.it" },
+]
+
+readme = "README.md"
+#license = "TODO"
+keywords = ["robotics", "locomotion", "quadruped", "deep", "reinforcement", "learning", "environment"]
+classifiers=[
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Developers",
+    "Topic :: Software Development :: Build Tools",
+    "License :: OSI Approved :: Apache Software License",
+    "Programming Language :: Python :: 3.10",
+]
+
+dependencies = [
+    "liecasadi",
+    "readchar",
+    "numpy",
+    "matplotlib",
+    "scipy",
+    "pin",
+    "cmake",
+    "mujoco>=3.1.0",
+    "gym_quadruped",
+]
+
+[project.optional-dependencies]
+# pip install -e .[jax]   /  pip install quadruped_pympc[jax]
+sampling = [  # Example on how we can setup optional dependencies depending on the controller people want to use.
+    "jax",
+    "jaxlib"
+]
+
+#____________________________________________________________________________________________________________________
+[tool.ruff]  # Linter tool
+line-length = 120
+target-version = "py310"
+select = [
+    # pyflakes
+    "F",
+    # pycodestyle
+    "E",
+    "W",
+    # isort
+    "I001",
+    # pydocstyle
+    "D"
+]
+ignore = [
+    "D401",  # good for methods but not for class docstrings
+    "D405",  # British-style section names are also "proper"!
+    "E701",  # short single-line statements are fine
+    "D100",
+]
+
+exclude = [
+    ".bzr",
+    ".direnv",
+    ".eggs",
+    ".git",
+    ".idea",
+    ".git-rewrite",
+    ".hg",
+    ".mypy_cache",
+    ".nox",
+    ".pants.d",
+    ".pytype",
+    ".ruff_cache",
+    ".svn",
+    ".tox",
+    ".venv",
+    "__pypackages__",
+    "_build",
+    "buck-out",
+    "build",
+    "dist",
+    "node_modules",
+    "venv",
+]
+
+[tool.ruff.pydocstyle]
+convention = "google"
+
+[tool.ruff.lint]
+select = ["E4", "E7", "E9", "F", "I", "N", "B", "C4", "SIM"]
+ignore-init-module-imports = true
