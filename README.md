@@ -119,10 +119,10 @@ ctrl -> set zero all velocities
 If you find the work useful, please consider citing:
 
 ```
-@article{turrisi2024sampling,
+@INPROCEEDINGS{turrisi2024sampling,
   title={On the Benefits of GPU Sample-Based Stochastic Predictive Controllers for Legged Locomotion},
-  author={Giulio Turrisi, Valerio Modugno, Lorenzo Amatucci, Dimitrios Kanoulas, Claudio Semini},
-  booktitle={arXiv preprint arXiv:2403.11383},
+  author={Turrisi, Giulio and Modugno, Valerio and Amatucci, Lorenzo and Kanoulas, Dimitrios and Semini, Claudio},
+  booktitle={2024 IEEE/RSJ International Conference on Intelligent Robots and Systems (IROS)},
   year={2024}
 }
 ```
