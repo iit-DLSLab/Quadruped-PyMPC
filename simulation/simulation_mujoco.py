@@ -274,16 +274,13 @@ if __name__ == '__main__':
                 if ((cfg.mpc_params['optimize_step_freq'])):
                     # we can always optimize the step freq, or just at the apex of the swing
                     # to avoid possible jittering in the solution
-                    optimize_swing = 0  # 1 for always, 0 for apex
-                    for leg_id in range(4):
-                        # Swing time check
-                        if (current_contact[leg_id] == 0):
-                            if ((stc.swing_time[leg_id] > (swing_period / 2.) - 0.02) and \
-                                    (stc.swing_time[leg_id] < (swing_period / 2.) + 0.02)):
-                                optimize_swing = 1
-                                nominal_sample_freq = step_frequency
+                    #optimize_swing = 1  
+                    optimize_swing = stc.check_apex_condition(current_contact)
+                    if(optimize_swing == 1):
+                        nominal_sample_freq = pgg.step_freq
                 else:
                     optimize_swing = 0
+
 
                 # If we use sampling
                 if (cfg.mpc_params['type'] == 'sampling'):
@@ -349,9 +346,9 @@ if __name__ == '__main__':
                     if cfg.mpc_params['optimize_step_freq'] and optimize_swing == 1:
                         contact_sequence_temp = np.zeros((len(cfg.mpc_params['step_freq_available']), 4, horizon * 2))
                         for j in range(len(cfg.mpc_params['step_freq_available'])):
-                            pgg_temp = PeriodicGaitGenerator(duty_factor=duty_factor,
+                            pgg_temp = PeriodicGaitGenerator(duty_factor=pgg.duty_factor,
                                                              step_freq=cfg.mpc_params['step_freq_available'][j],
-                                                             gait_type=gait_type,
+                                                             gait_type=pgg.gait_type,
                                                              horizon=horizon * 2,
                                                              contact_sequence_dt=mpc_dt/2.)
                             pgg_temp.set_phase_signal(pgg.phase_signal)
@@ -386,6 +383,7 @@ if __name__ == '__main__':
                     frg.stance_time = (1 / pgg.step_freq) * pgg.duty_factor
                     swing_period = (1 - pgg.duty_factor) * (1 / pgg.step_freq)
                     stc.regenerate_swing_trajectory_generator(step_height=step_height, swing_period=swing_period)
+
 
                 # TODO: Indexing should not be hardcoded. Env should provide indexing of leg actuator dimensions.
                 nmpc_GRFs = LegsAttr(FL=nmpc_GRFs[0:3] * current_contact[0],
@@ -460,7 +458,7 @@ if __name__ == '__main__':
                 _, _, feet_GRF = env.feet_contact_state(ground_reaction_forces=True)
                 feet_traj_geom_ids = plot_swing_mujoco(viewer=env.viewer,
                                                        swing_traj_controller=stc,
-                                                       swing_period=swing_period,
+                                                       swing_period=stc.swing_period,
                                                        swing_time=LegsAttr(FL=stc.swing_time[0],
                                                                            FR=stc.swing_time[1],
                                                                            RL=stc.swing_time[2],

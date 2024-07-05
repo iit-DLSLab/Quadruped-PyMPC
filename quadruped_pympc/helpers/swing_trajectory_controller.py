@@ -36,6 +36,7 @@ class SwingTrajectoryController:
         else:
             from .swing_generators.explicit_swing_trajectory_generator import SwingTrajectoryGenerator
             self.swing_generator = SwingTrajectoryGenerator(swing_period=swing_period, step_height=step_height)
+        self.swing_period = swing_period
 
     def compute_swing_control(self,
                               leg_id,
@@ -103,6 +104,16 @@ class SwingTrajectoryController:
                     self.swing_time[leg_id] = self.swing_time[leg_id] + dt
             else:
                 self.swing_time[leg_id] = 0
+
+    def check_apex_condition(self, current_contact):
+        optimize_swing = 0
+        for leg_id in range(4):
+            # Swing time check
+            if (current_contact[leg_id] == 0):
+                if ((self.swing_time[leg_id] > (self.swing_period / 2.) - 0.02) and \
+                        (self.swing_time[leg_id] < (self.swing_period / 2.) + 0.02)):
+                    optimize_swing = 1
+        return optimize_swing
 
 
 # Example:
