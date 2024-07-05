@@ -155,7 +155,7 @@ mpc_params = {
     # for the sampling controller, this is done in the rollout
     # for the gradient-based controller, this is done with a batched version of the ocp
     'optimize_step_freq':                      False,
-    'step_freq_available':                     [0.00, 0.5, 1.0, 2.0, 3.0]
+    'step_freq_available':                     [1.4, 2.0, 3.0]
 
     }
 # -----------------------------------------------------------------------
