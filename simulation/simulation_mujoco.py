@@ -371,14 +371,6 @@ if __name__ == '__main__':
 
 
 
-                    # in the case of nonuniform discretization, we need to subsample the contact sequence
-                    if (cfg.mpc_params['use_nonuniform_discretization']):
-                        dt_fine_grained = cfg.mpc_params['dt_fine_grained']
-                        horizon_fine_grained = cfg.mpc_params['horizon_fine_grained']
-                        contact_sequence_temp[j] = pgg.sample_contact_sequence(contact_sequence, mpc_dt,
-                                                                               dt_fine_grained,
-                                                                               horizon_fine_grained)
-
 
                     # If the controller is using RTI, we need to linearize the mpc after its computation
                     # this helps to minize the delay between new state->control, but only in a real case.
