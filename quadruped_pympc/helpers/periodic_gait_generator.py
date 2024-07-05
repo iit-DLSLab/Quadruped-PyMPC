@@ -81,7 +81,7 @@ class PeriodicGaitGenerator:
             assert len(init) == len(self._init)
             self._init = init
         else:
-            self._init = [True for _ in range(len(self._phase_signal))]
+            self._init = [False for _ in range(len(self._phase_signal))]
 
     @property
     def phase_signal(self):

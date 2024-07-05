@@ -209,12 +209,14 @@ if __name__ == '__main__':
             # Update the robot state --------------------------------
             feet_pos = env.feet_pos(frame='world')
             hip_pos = env.hip_positions(frame='world')
+            base_lin_vel = env.base_lin_vel(frame='world')
+            base_ang_vel = env.base_ang_vel
 
             state_current = dict(
                 position=env.base_pos,
-                linear_velocity=env.base_lin_vel,
+                linear_velocity=base_lin_vel,
                 orientation=env.base_ori_euler_xyz,
-                angular_velocity=env.base_ang_vel,
+                angular_velocity=base_ang_vel,
                 foot_FL=feet_pos.FL,
                 foot_FR=feet_pos.FR,
                 foot_RL=feet_pos.RL,
@@ -247,7 +249,7 @@ if __name__ == '__main__':
             ref_feet_pos = frg.compute_footholds_reference(
                 com_position=env.base_pos,
                 base_ori_euler_xyz=env.base_ori_euler_xyz,
-                base_xy_lin_vel=env.base_lin_vel[0:2],
+                base_xy_lin_vel=base_lin_vel[0:2],
                 ref_base_xy_lin_vel=ref_base_lin_vel[0:2],
                 hips_position=hip_pos)
 
@@ -482,8 +484,8 @@ if __name__ == '__main__':
 
             # Store the history of observations and control ___________________________________________________________
             ep_state_obs_history.append(state)
-            base_lin_vel_err = ref_base_lin_vel - env.base_lin_vel
-            base_ang_vel_err = ref_base_ang_vel - env.base_ang_vel
+            base_lin_vel_err = ref_base_lin_vel - base_lin_vel
+            base_ang_vel_err = ref_base_ang_vel - base_ang_vel
             base_poz_z_err = ref_pos[2] - env.base_pos[2]
             ctrl_state = np.concatenate((base_lin_vel_err, base_ang_vel_err, [base_poz_z_err], pgg._phase_signal))
             ep_ctrl_state_history.append(ctrl_state)

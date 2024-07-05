@@ -7,7 +7,6 @@ from enum import Enum
 import numpy as np
 from mujoco.viewer import Handle
 
-from quadruped_pympc import config
 from quadruped_pympc.helpers.swing_trajectory_controller import SwingTrajectoryController
 
 
@@ -97,6 +96,9 @@ def plot_swing_mujoco(viewer: Handle,
 
 
 def check_zmp_constraint_satisfaction(state, contact_status, forces):
+    # TODO: This import should go
+    from quadruped_pympc import config
+
     base_w = copy.deepcopy(state['position'])
     base_vel_w = copy.deepcopy(state['linear_velocity'])
 

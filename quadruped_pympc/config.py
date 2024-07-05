@@ -171,11 +171,11 @@ simulation_params = {
     'dt':                          0.002,
 
     'gait':                        'trot',  # 'trot', 'pace', 'crawl', 'bound', 'full_stance'
-    'gait_params':                 {'trot': {'step_freq': 2.5, 'duty_factor': 0.65, 'type': GaitType.TROT},
-                                    'crawl': {'step_freq': 0.7, 'duty_factor': 0.9, 'type': GaitType.BACKDIAGONALCRAWL},
-                                    'pace': {'step_freq': 2, 'duty_factor': 0.7, 'type': GaitType.PACE},
-                                    'bound': {'step_freq': 4, 'duty_factor': 0.65, 'type': GaitType.BOUNDING},
-                                    'full_stance': {'step_freq': 2, 'duty_factor': 0.65, 'type': GaitType.FULL_STANCE},
+    'gait_params':                 {'trot': {'step_freq': 2.5, 'duty_factor': 0.65, 'type': GaitType.TROT.value},
+                                    'crawl': {'step_freq': 0.7, 'duty_factor': 0.9, 'type': GaitType.BACKDIAGONALCRAWL.value},
+                                    'pace': {'step_freq': 2, 'duty_factor': 0.7, 'type': GaitType.PACE.value},
+                                    'bound': {'step_freq': 4, 'duty_factor': 0.65, 'type': GaitType.BOUNDING.value},
+                                    'full_stance': {'step_freq': 2, 'duty_factor': 0.65, 'type': GaitType.FULL_STANCE.value},
                                    },
 
     # velocity mode: human will give you the possibility to use the keyboard, the other are
