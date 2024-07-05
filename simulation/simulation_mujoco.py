@@ -369,9 +369,6 @@ if __name__ == '__main__':
                                                                                     ref_state,
                                                                                     contact_sequence_temp)
 
-
-
-
                     # If the controller is using RTI, we need to linearize the mpc after its computation
                     # this helps to minize the delay between new state->control, but only in a real case.
                     # Here we are in simulation and does not make any difference for now
@@ -380,6 +377,8 @@ if __name__ == '__main__':
                         controller.acados_ocp_solver.options_set('rti_phase', 1)
                         status = controller.acados_ocp_solver.solve()
                         # print("preparation phase time: ", controller.acados_ocp_solver.get_stats('time_tot'))
+                
+                
                 # If we have optimized the gait, we set all the timing parameters
                 if ((cfg.mpc_params['optimize_step_freq']) and (optimize_swing == 1)):
                     pgg.step_freq = np.array([best_sample_freq])[0]
