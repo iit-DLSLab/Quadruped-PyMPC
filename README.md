@@ -84,6 +84,12 @@ Gradient-based MPC: It uses [CasADI](https://web.casadi.org/) to define the mode
 
 The first time you run the simulation with acados, in the terminal you will be asked to install tera_render. You should accept to proceed.
 
+7. go inside the folder gym-quadruped and installing it:
+    
+    ```
+    pip install -e .
+    ```
+
 ## How to run
 
 1. activate the conda environment
@@ -98,7 +104,7 @@ The first time you run the simulation with acados, in the terminal you will be a
    python3 simulation_mujoco.py
    ```
 
-In the file [config.py](https://github.com/iit-DLSLab/Quadruped-PyMPC/blob/main/config.py), you can set up the robot, the mpc type (gradient, sampling..), its proprierties (real time iteration, sampling type, foothold optimization..), and other simulation params (reference, gait type..). 
+In the file [config.py](https://github.com/iit-DLSLab/Quadruped-PyMPC/blob/main/quadruped_pympc/config.py), you can set up the robot, the mpc type (gradient, sampling..), its proprierties (real time iteration, sampling type, foothold optimization..), and other simulation params (reference, gait type..). 
 
 3. you can interact with the simulation with your mouse to add disturbances, or with the keyboard by pressing
 ```
