@@ -22,6 +22,8 @@ dependencies:
 - colcon-common-extensions 
 - catkin_tools 
 - rosdep
+- tqdm
+- gymnasium
 - pip:
   - mujoco
   - readchar

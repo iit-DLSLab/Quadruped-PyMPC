@@ -19,6 +19,8 @@ dependencies:
 - cmake 
 - pkg-config 
 - make 
+- tqdm
+- gymnasium
 - pip:
   - mujoco
   - readchar
