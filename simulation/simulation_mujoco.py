@@ -41,7 +41,7 @@ if __name__ == '__main__':
                        scene=scene_name,
                        sim_dt=simulation_dt,
                        ref_base_lin_vel=0.0,  # pass a float for a fixed value
-                       ground_friction_coeff=(0.2, 1.5),  # pass a float for a fixed value
+                       ground_friction_coeff=1.5,  # pass a float for a fixed value
                        base_vel_command_type="human",  # "forward", "random", "forward+rotate", "human"
                        state_obs_names=state_observables_names,  # Desired quantities in the 'state' vec
                        )
@@ -228,7 +228,8 @@ if __name__ == '__main__':
                 base_ori_euler_xyz=env.base_ori_euler_xyz,
                 base_xy_lin_vel=base_lin_vel[0:2],
                 ref_base_xy_lin_vel=ref_base_lin_vel[0:2],
-                hips_position=hip_pos)
+                hips_position=hip_pos,
+                com_height_nominal=cfg.simulation_params['ref_z'])
 
             # Estimate the terrain slope and elevation -------------------------------------------------------
             terrain_roll, \

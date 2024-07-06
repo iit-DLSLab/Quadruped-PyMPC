@@ -28,7 +28,8 @@ class FootholdReferenceGenerator:
                                     base_ori_euler_xyz: np.ndarray,
                                     base_xy_lin_vel: np.ndarray,
                                     ref_base_xy_lin_vel: np.ndarray,
-                                    hips_position: LegsAttr) -> LegsAttr:
+                                    hips_position: LegsAttr,
+                                    com_height_nominal: np.float32) -> LegsAttr:
         """Compute the reference footholds for a quadruped robot, using simple geometric heuristics.
 
         TODO: This function should be adapted to:
@@ -61,17 +62,27 @@ class FootholdReferenceGenerator:
 
         # Compute desired and error velocity compensation values for all legs
         base_lin_vel_H = R_W2H @ base_xy_lin_vel
-        R_W2H @ ref_base_xy_lin_vel
+        ref_base_lin_vel_H = R_W2H @ ref_base_xy_lin_vel
 
         # Moving average of the base velocity
         self.base_vel_hist.append(base_lin_vel_H)
         base_vel_mvg = np.mean(list(self.base_vel_hist), axis=0)
         # Compensation due to average velocity
-        delta_ref_H = (self.stance_time / 2.) * base_vel_mvg
+        #delta_ref_H = (self.stance_time / 2.) * base_vel_mvg
+        
         # Compensation due to desired velocity
-        # max_vel_offset = (self.stance_time / 2.) * ref_base_lin_vel_H
+        delta_ref_H = (self.stance_time / 2.) * ref_base_lin_vel_H
         delta_ref_H = np.clip(delta_ref_H, -self.hip_height * 1.5, self.hip_height * 1.5)
         vel_offset = np.concatenate((delta_ref_H, np.zeros(1)))
+
+
+        # Compensation for the error in velocity tracking
+        error_compensation = np.sqrt(com_height_nominal/9.81)*(base_vel_mvg - ref_base_lin_vel_H) 
+        error_compensation = np.where(error_compensation > 0.05, 0.05, error_compensation)
+        error_compensation = np.where(error_compensation < -0.05, -0.05, error_compensation)
+        error_compensation = np.concatenate((error_compensation, np.zeros(1)))
+
+
 
         # Reference footholds in the horizontal frame
         ref_feet = LegsAttr(*[np.zeros(3) for _ in range(4)])
@@ -91,8 +102,14 @@ class FootholdReferenceGenerator:
         ref_feet.RL[1] += 0.1
         ref_feet.RR[1] -= 0.1
 
+        ref_feet.FL[0] -= 0.1
+        ref_feet.FR[0] -= 0.1
+        ref_feet.RL[0] -= 0.1
+        ref_feet.RR[0] -= 0.1
+        
+
         # Add the velocity compensation and desired velocity to the feet positions
-        ref_feet += vel_offset  # Add offset to all feet
+        ref_feet += vel_offset + error_compensation  # Add offset to all feet
 
         # Reference footholds in world frame
         ref_feet.FL[0:2] = R_W2H.T @ ref_feet.FL[:2] + com_position[0:2]
