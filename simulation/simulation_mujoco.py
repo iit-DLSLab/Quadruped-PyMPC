@@ -17,7 +17,7 @@ from quadruped_pympc.helpers.foothold_reference_generator import FootholdReferen
 from quadruped_pympc.helpers.periodic_gait_generator import PeriodicGaitGenerator
 from quadruped_pympc.helpers.swing_trajectory_controller import SwingTrajectoryController
 from quadruped_pympc.helpers.terrain_estimator import TerrainEstimator
-from quadruped_pympc.helpers.quadruped_utils import plot_swing_mujoco, GaitType
+from quadruped_pympc.helpers.quadruped_utils import plot_swing_mujoco
 
 if __name__ == '__main__':
     np.set_printoptions(precision=3, suppress=True)
