@@ -18,19 +18,19 @@ class PeriodicGaitGenerator:
 
     def reset(self):
         # Choose of the gait, this represent the delay of each leg
-        if self.gait_type == GaitType.TROT:
+        if self.gait_type == GaitType.TROT.value:
             self.phase_offset = [0.5, 1.0, 1.0, 0.5]
-        elif self.gait_type == GaitType.PACE:
+        elif self.gait_type == GaitType.PACE.value:
             self.phase_offset = [0.8, 0.3, 0.8, 0.3]
-        elif self.gait_type == GaitType.BOUNDING:
+        elif self.gait_type == GaitType.BOUNDING.value:
             self.phase_offset = [0.5, 0.5, 0.0, 0.0]
-        elif self.gait_type == GaitType.CIRCULARCRAWL:
+        elif self.gait_type == GaitType.CIRCULARCRAWL.value:
             self.phase_offset = [0.0, 0.25, 0.75, 0.5]
-        elif self.gait_type == GaitType.BFDIAGONALCRAWL:
+        elif self.gait_type == GaitType.BFDIAGONALCRAWL.value:
             self.phase_offset = [0.0, 0.25, 0.5, 0.75]
-        elif self.gait_type == GaitType.BACKDIAGONALCRAWL:
+        elif self.gait_type == GaitType.BACKDIAGONALCRAWL.value:
             self.phase_offset = [0.0, 0.5, 0.75, 0.25]
-        elif self.gait_type == GaitType.FRONTDIAGONALCRAWL:
+        elif self.gait_type == GaitType.FRONTDIAGONALCRAWL.value:
             self.phase_offset = [0.5, 1.0, 0.75, 1.25]
         else:
             self.phase_offset = [0.0, 0.5, 0.5, 0.0]
