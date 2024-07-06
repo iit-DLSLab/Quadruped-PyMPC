@@ -102,10 +102,6 @@ class FootholdReferenceGenerator:
         ref_feet.RL[1] += 0.1
         ref_feet.RR[1] -= 0.1
 
-        ref_feet.FL[0] -= 0.1
-        ref_feet.FR[0] -= 0.1
-        ref_feet.RL[0] -= 0.1
-        ref_feet.RR[0] -= 0.1
         
 
         # Add the velocity compensation and desired velocity to the feet positions
