@@ -91,8 +91,8 @@ class SwingTrajectoryController:
 
         # Compute inertia matrix in task space.
         # Mass Matrix and centrifugal missing
-        # tau_swing = J.T @ (accelleration - J_dot @ q_dot) + h
-        tau_swing = mass_matrix @ np.linalg.pinv(J) @ (accelleration - J_dot @ q_dot) + h
+        tau_swing = J.T @ (self.position_gain_fb * (err_pos) + self.velocity_gain_fb * (err_vel))
+        tau_swing += mass_matrix @ np.linalg.pinv(J) @ (accelleration - J_dot @ q_dot) + h
 
         return tau_swing, des_foot_pos, des_foot_vel
 
