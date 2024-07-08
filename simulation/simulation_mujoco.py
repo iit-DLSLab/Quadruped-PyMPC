@@ -14,7 +14,7 @@ from gym_quadruped.utils.quadruped_utils import LegsAttr
 # Control imports
 from quadruped_pympc import config as cfg
 from quadruped_pympc.helpers.quadruped_utils import plot_swing_mujoco
-from quadruped_pympc.controllers.Controllers import Controller
+from quadruped_pympc.controllers.srb_controller import SingleRigidBodyController as Controller
 
 
 if __name__ == '__main__':
@@ -27,6 +27,9 @@ if __name__ == '__main__':
     scene_name = cfg.simulation_params['scene']
     simulation_dt = cfg.simulation_params['dt']
     feet_traj_geom_ids, feet_GRF_geom_ids = None, LegsAttr(FL=-1, FR=-1, RL=-1, RR=-1)
+    gait_name="trot" # 'trot', 'pace', 'crawl', 'bound', 'full_stance'
+    legs_order = ["FL", "FR", "RL", "RR"]
+    
 
     state_observables_names = ('base_pos', 'base_lin_vel', 'base_ori_euler_xyz', 'base_ori_quat_wxyz', 'base_ang_vel',
                                'qpos_js', 'qvel_js', 'tau_ctrl_setpoint',
@@ -52,38 +55,19 @@ if __name__ == '__main__':
     env.reset(random=False)
     env.render()  # Pass in the first render call any mujoco.viewer.KeyCallbackType
 
+    #
+    lift_off_positions=env.feet_pos(frame='world')
+
     # _______________________________________________________________________________________________________________
     # Controller initialization ______________________________________________________________________________________
-    controller= Controller(
-                           env=env,
-                           gait_name="trot", # 'trot', 'pace', 'crawl', 'bound', 'full_stance'
-                           sim_dt=0.002, # this is the integration time used in the simulator
-                           hip_height=hip_height,
-                           legs_order=["FL", "FR", "RL", "RR"],
-                           step_height=0.3 * hip_height,
-                           swing_position_gain_fb= 5000 ,
-                           swing_velocity_gain_fb = 100,
-                           swing_generator = "scipy", # 'scipy', 'explicit', 'ndcurves'
-                           mpc_frequency= 200,
-                           mpc_dt=0.002,
-                           controller_type = 'nominal',
-                           horizon=12,
-                           optimize_step_freq=False,
-                           step_freq_available=[0.00, 0.5, 1.0, 2.0, 3.0],
-                           sampling_method='sampling_method',  # 'random_sampling', 'mppi', 'cem_mppi'
-                           control_parametrization='cubic_spline', # 'cubic_spline', 'linear_spline_1', 'linear_spline_2', 'zero_order'
-                           sigma_cem_mppi=3,
-                           num_parallel_computations = 10000, # More is better, but slower computation!
-                           num_sampling_iterations = 1, # More is better, but slower computation!
-                           shift_solution= False,
-                           use_nonuniform_discretization=False,
-                           dt_fine_grained=0.01,
-                           horizon_fine_grained=2,
-                           use_inertia_recomputation=True,
-                           inertia=cfg.inertia, #this is robot dependetent                           
+    controller= Controller(hip_height=hip_height,
+                           legs_order=legs_order,        
+                           inertia=cfg.inertia,
+                           lift_off_positions=lift_off_positions,
+                           simulation_parameters=cfg.simulation_params,
+                           mpc_parameters=cfg.mpc_params,
                            )
 
-    controller.initialize()    
 
     # _____________________________________________________________
     RENDER_FREQ = 20  # Hz
@@ -97,13 +81,38 @@ if __name__ == '__main__':
         ep_state_obs_history, ep_ctrl_state_history = [], []
         for _ in range(N_STEPS_PER_EPISODE):
             step_start = time.time()
+
             # update reference state
-            controller.update_mpc_reference()
+            ref_base_lin_vel, ref_base_ang_vel = env.target_base_vel()
+            base_lin_vel=env.base_lin_vel
+            base_ang_vel = env.base_ang_vel
+
+            controller.update_mpc_reference(nv=env.mjModel.nv,
+                                            feet_pos = env.feet_pos(frame='world'),
+                                            hip_pos = env.hip_positions(frame='world'),
+                                            base_pos=env.base_pos,
+                                            base_ori_euler_xyz=env.base_ori_euler_xyz,
+                                            base_lin_vel=base_lin_vel,
+                                            base_ang_vel = base_ang_vel,
+                                            ref_base_lin_vel=ref_base_lin_vel, 
+                                            ref_base_ang_vel=ref_base_ang_vel)
+
             # compute ground reaction forces out of mpc simulation only
-            controller.solve_MPC_main_loop(env=env)
+            controller.solve_MPC_main_loop(alpha =env.step_num,inertia_env=env.get_base_inertia().flatten())
+
+            qpos, qvel = env.mjData.qpos, env.mjData.qvel
+            feet_jac=env.feet_jacobians(frame='world', return_rot_jac=False)
+
 
             time_start = time.time()
-            tau = controller.get_forward_action(simulation=True,env=env)
+            tau = controller.get_forward_action(simulation=True,
+                                                feet_jac=feet_jac,
+                                                feet_vel = LegsAttr(**{leg_name: feet_jac[leg_name] @ env.mjData.qvel for leg_name in legs_order}),
+                                                legs_qvel_idx=env.legs_qvel_idx,
+                                                qpos=qpos,
+                                                qvel=qvel,
+                                                legs_qfrc_bias=env.legs_qfrc_bias,
+                                                legs_mass_matrix=env.legs_mass_matrix)
 
             # Set control and mujoco step ----------------------------------------------------------------------
             action = np.zeros(env.mjModel.nu)
@@ -119,8 +128,8 @@ if __name__ == '__main__':
 
             # Store the history of observations and control ___________________________________________________________
             ep_state_obs_history.append(state)
-            base_lin_vel_err = controller.ref_base_lin_vel - controller.base_lin_vel
-            base_ang_vel_err = controller.ref_base_ang_vel - controller.base_ang_vel
+            base_lin_vel_err = ref_base_lin_vel - base_lin_vel
+            base_ang_vel_err = ref_base_ang_vel - base_ang_vel
             base_poz_z_err = controller.ref_pos[2] - env.base_pos[2]
             ctrl_state = np.concatenate((base_lin_vel_err, base_ang_vel_err, [base_poz_z_err], controller.pgg._phase_signal))
             ep_ctrl_state_history.append(ctrl_state)
@@ -158,7 +167,7 @@ if __name__ == '__main__':
                     state_obs_history.append(ep_state_obs_history)
                     ctrl_state_history.append(ep_ctrl_state_history)
                 env.reset(random=False)
-                controller.reset(env=env)
+                controller.reset()
                 current_contact = np.array([0, 0, 0, 0])
                 previous_contact = np.asarray(current_contact)
                 z_foot_mean = 0.0

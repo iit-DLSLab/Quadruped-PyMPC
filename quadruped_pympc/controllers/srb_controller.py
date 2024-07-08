@@ -1,16 +1,5 @@
-import os
-import time
 
-# TODO: Ugly hack so people dont have to run the python command specifying the working directory.
-#  we should remove this before the final release.
-import sys
-
-# Add the parent directory of this script to the Python path
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-
-import mujoco
 import numpy as np
-
 
 # Parameters for both MPC and simulation
 from quadruped_pympc.helpers.foothold_reference_generator import FootholdReferenceGenerator
@@ -27,84 +16,73 @@ from gym_quadruped.utils.quadruped_utils import LegsAttr
 ####
     
 #------------
-class Controller:
+class SingleRigidBodyController:
     #constructor
     def __init__(self,
-                 env,
-                 gait_name=None,
-                 sim_dt=None,
                  hip_height=None,
-                 legs_order=None,
-                 step_height=None,
-                 swing_position_gain_fb=None,
-                 swing_velocity_gain_fb=None,
-                 swing_generator=None,
-                 mpc_frequency= None,
-                 mpc_dt=None,
-                 controller_type=None,
-                 horizon=None,
-                 optimize_step_freq=None,
-                 step_freq_available=None,
-                 sampling_method=None,
-                 control_parametrization=None,
-                 sigma_cem_mppi=None,
-                 num_parallel_computations=None,
-                 num_sampling_iterations=None,
-                 use_nonuniform_discretization=False,
-                 shift_solution=None,
-                 dt_fine_grained=None,
-                 horizon_fine_grained=None,
-                 use_inertia_recomputation=None,
-                 inertia=None):
+                 legs_order=None,        
+                 inertia=None,
+                 lift_off_positions=None,
+                 simulation_parameters:dict=None,
+                 mpc_parameters:dict=None,
+                 ):
         #
-        self.env=env
-        self.gait_name=gait_name
-        self.simulation_dt = sim_dt
+        
+        #Robot dependent parameters
         self.hip_height = hip_height
         self.legs_order = legs_order
-        self.ref_z=hip_height
         self.inertia=inertia
-        self.use_inertia_recomputation=use_inertia_recomputation
-        self.sigma_cem_mppi=sigma_cem_mppi
-        self.use_nonuniform_discretization=use_nonuniform_discretization
+        self.lift_off_positions=lift_off_positions
 
-        ### All this parameter are for the WBC 
-        self.step_height = step_height
-        self.position_gain_fb = swing_position_gain_fb
-        self.velocity_gain_fb = swing_velocity_gain_fb
-        self.swing_generator = swing_generator
 
-        # MPC parameters
-        self.mpc_frequency = mpc_frequency
-        self.mpc_dt = mpc_dt
-        self.horizon = horizon
-        self.controller_type= controller_type
-        self.optimize_step_frequency= optimize_step_freq
-        self.step_freq_available = step_freq_available
-        if self.controller_type == 'sampling':
-            sampling_method = sampling_method
-            control_parametrization = control_parametrization
-            num_parallel_computations = num_parallel_computations
-            self.iteration = num_sampling_iterations
-            shift_solution = shift_solution
+        ### All this parameter are for the WBC in simulation come from the dicotionary
+        self.swing_generator = simulation_parameters['swing_generator']
+        self.position_gain_fb = simulation_parameters['swing_position_gain_fb']
+        self.velocity_gain_fb = simulation_parameters['swing_velocity_gain_fb']
+        self.swing_integral_gain_fb=simulation_parameters['swing_integral_gain_fb']
+        self.step_height =simulation_parameters['step_height']
+        self.simulation_dt=simulation_parameters['dt']
+        gait_name=simulation_parameters['gait']
+        gait_params=simulation_parameters['gait_params'][gait_name]
+        self.gait_type, self.duty_factor, self.step_frequency = gait_params['type'], gait_params['duty_factor'], gait_params['step_freq']
+        self.use_inertia_recomputation=simulation_parameters['use_inertia_recomputation']
+        self.mpc_frequency = simulation_parameters['mpc_frequency']
+        self.ref_z=simulation_parameters['ref_z']
         
-        if use_nonuniform_discretization==True :
-            dt_fine_grained = dt_fine_grained
-            horizon_fine_grained = horizon_fine_grained
+        ## Common MPC parameters
+        self.controller_type=mpc_parameters['type']
+        self.horizon = mpc_parameters['horizon']
+        self.mpc_dt = mpc_parameters['dt']
+        self.optimize_step_frequency=mpc_parameters['optimize_step_freq']
+        self.step_freq_available=mpc_parameters['step_freq_available']
+        self.grf_max=mpc_parameters["grf_max"]
+        self.grf_min=mpc_parameters["grf_min"]
+        self.mu=mpc_parameters["mu"]
 
+        # compute stance and swing tme based on gate selection!
+        self.stance_time = (1 / self.step_frequency) * self.duty_factor
+        self.swing_period = (1 - self.duty_factor) * (1 / self.step_frequency)  # + 0.07
+        ### initialized controller function
+        self.set_controller(mpc_parameters=mpc_parameters)
+        ## Initialize the foothold reference generator
+        self.frg = FootholdReferenceGenerator(stance_time=self.stance_time, hip_height=self.hip_height,
+                                              lift_off_positions= self.lift_off_positions)
+        # Create swing trajectory generator
 
-        self.stance_time=0
-        self.swing_period = 0
+        self.stc = SwingTrajectoryController(step_height=self.step_height, swing_period=self.swing_period,
+                                        position_gain_fb=self.position_gain_fb, velocity_gain_fb=self.velocity_gain_fb,
+                                        generator=self.swing_generator)
+        # periodic gate generator
+        self.pgg = PeriodicGaitGenerator(duty_factor=self.duty_factor, step_freq=self.step_frequency, gait_type=self.gait_type,
+                                horizon=self.horizon * 2, contact_sequence_dt=self.mpc_dt/2.)
+        self.contact_sequence = self.pgg.compute_contact_sequence()
+        self.nominal_sample_freq = self.step_frequency
 
-        self.nmpc_grf_old=None
+        # Online computation of the inertia parameter
+        # Terrain estimator
+        self.terrain_computation = TerrainEstimator()
 
-
-
-        # Initialization of variables used in the main control loop
-        # ____________________________________________________________
-        # Set the reference for the state
-        self.ref_pose = np.array([0, 0, hip_height])
-        self.ref_base_lin_vel, self.ref_base_ang_vel = env.target_base_vel()
+        ####
         self.ref_orientation = np.array([0.0, 0.0, 0.0])
         # # SET REFERENCE AS DICTIONARY
         # TODO: I would suggest to create a DataClass for "BaseConfig" used in the PotatoModel controllers.
@@ -117,53 +95,48 @@ class Controller:
         self.nmpc_GRFs = np.zeros((12,))
         self.nmpc_wrenches = np.zeros((6,))
         self.nmpc_footholds = np.zeros((12,))
-
-        # Jacobian matrices
-        self.jac_feet_prev = LegsAttr(*[np.zeros((3, env.mjModel.nv)) for _ in range(4)])
-        self.jac_feet_dot = LegsAttr(*[np.zeros((3, env.mjModel.nv)) for _ in range(4)])
-        # Torque vector
-        self.tau = LegsAttr(*[np.zeros((env.mjModel.nv, 1)) for _ in range(4)])
         # State
         self.state_current, self.state_prev = {}, {}
         self.feet_pos = None
 
-
-        
-
-
-
-    def get_gait_params(self,gait_type: str) -> [GaitType, float, float]:
-        if gait_type == "trot":
-            step_frequency = 2.5
-            duty_factor = 0.65
-            gait_type = GaitType.TROT
-        elif gait_type == "crawl":
-            step_frequency = 0.7
-            duty_factor = 0.9
-            gait_type = GaitType.BACKDIAGONALCRAWL
-        elif gait_type == "pace":
-            step_frequency = 2
-            duty_factor = 0.7
-            gait_type = GaitType.PACE
-        elif gait_type == "bound":
-            step_frequency = 4
-            duty_factor = 0.65
-            gait_type = GaitType.BOUNDING
-        else:
-            step_frequency = 2
-            duty_factor = 0.65
-            gait_type = GaitType.FULL_STANCE
-        return gait_type, duty_factor, step_frequency
-    
-
-    def set_controller(self):
+    def set_controller(self,mpc_parameters:dict=None):
         ##############################################
         ############ SET THE CONTROLLER TYPE  ########
         ##############################################
 
         if(self.controller_type == 'nominal'):
             from quadruped_pympc.controllers.gradient.nominal.centroidal_nmpc_nominal import Acados_NMPC_Nominal
+                    ##gradient based properties
+        
+            self.warm_start=mpc_parameters['use_warm_start']
+            self.use_integrator=mpc_parameters['use_integrators']
+            self.alpha_integrator=mpc_parameters['alpha_integrator']
+            self.inttegrator_cap=mpc_parameters['integrator_cap']
+            self.use_foothold_optimization=mpc_parameters['use_foothold_optimization']
+            self.use_foothold_constraints=mpc_parameters['use_foothold_constraints']
+            self.use_RTI=mpc_parameters['use_RTI']
+            self.as_rti_type=mpc_parameters['as_rti_type']
+            self.as_rti_iter=mpc_parameters['as_rti_iter']
+            self.use_DDP=mpc_parameters['use_DDP']
+            self.num_qp_iterations=mpc_parameters['num_qp_iterations']
+            self.solver_mode=mpc_parameters['solver_mode']
+            self.use_zmp_stability=mpc_parameters['use_zmp_stability']              
+            self.trot_stability_margin=mpc_parameters['trot_stability_margin']              
+            self.pace_stability_margin=mpc_parameters['pace_stability_margin']              
+            self.crawl_stability_margin=mpc_parameters['crawl_stability_margin']
+
+            self.external_wrenches_compensation=mpc_parameters['external_wrenches_compensation']
+            self.external_wrenches_compensation_num_steps=mpc_parameters['external_wrenches_compensation_num_step']
+            self.passive_arm_compensation=mpc_parameters['passive_arm_compensation']
+
+            self.use_nonuniform_discretization=mpc_parameters['use_nonuniform_discretization']
+            self.dt_fine_grained = mpc_parameters['dt_fine_grained']
+            self.horizon_fine_grained = mpc_parameters['horizon_fine_grained']
+
+            self.use_input_prediction=mpc_parameters['use_input_prediction']
+            self.use_static_stability=mpc_parameters['use_static_stability']
             self.controller = Acados_NMPC_Nominal()
+
             if self.optimize_step_frequency==True:
                 from quadruped_pympc.controllers.gradient.nominal.centroidal_nmpc_gait_adaptive import Acados_NMPC_GaitAdaptive
                 self.batched_controller = Acados_NMPC_GaitAdaptive()
@@ -178,7 +151,14 @@ class Controller:
                 self.batched_controller = Acados_NMPC_GaitAdaptive()
 
         elif(self.controller_type ==  'sampling'):
-
+            self.sampling_method = mpc_parameters['sampling_method']
+            self.control_parametrization = mpc_parameters['control_parametrization']
+            self.num_parallel_computations = mpc_parameters['num_parallel_computations']
+            self.num_sampling_iterations = mpc_parameters['num_sampling_iterations']
+            self.sigma_mppi=mpc_parameters['sigma_mppi']
+            self.sigma_cem_mppi=mpc_parameters['sigma_cem_mppi']
+            self.sigma_random_sampling=mpc_parameters['sigma_random_sampling']
+            self.shift_solution = mpc_parameters['shift_solution']
             if self.optimize_step_frequency==True:
                 from quadruped_pympc.controllers.sampling.centroidal_nmpc_jax_gait_adaptive import Sampling_MPC
 
@@ -188,7 +168,6 @@ class Controller:
             import jax
             import jax.numpy as jnp
             num_parallel_computations = self.num_parallel_computations
-            # self.iteration = self.iteration
             self.controller = Sampling_MPC(horizon = self.horizon, 
                                       dt = self.mpc_dt, 
                                       num_parallel_computations = num_parallel_computations,
@@ -208,62 +187,37 @@ class Controller:
         self.mean_optimizer_cost = 0
         self.optimizer_cost = 0
 
-
-
-
+    def update_mpc_reference(self,nv:float,feet_pos:list,hip_pos:list,base_pos:list,base_ori_euler_xyz:list,base_lin_vel:list,
+                             base_ang_vel:list,ref_base_lin_vel:list, ref_base_ang_vel:list):
+        """
+        Update the MPC reference.
         
-    def periodic_gait_generator(self):
-
-        # Periodic gait generator _________________________________________________________________________
-        gait_name = self.gait_name
-        gait_type, duty_factor, step_frequency = self.get_gait_params(gait_name)
-        #
-        self.duty_factor = duty_factor
-        self.step_frequency = step_frequency
-        self.gait_type = gait_type
-        self.pgg = PeriodicGaitGenerator(duty_factor=duty_factor, step_freq=step_frequency, gait_type=self.gait_type,
-                                        horizon=self.horizon * 2, contact_sequence_dt=self.mpc_dt/2.)
-        
-        self.contact_sequence = self.pgg.compute_contact_sequence()
-        self.nominal_sample_freq = self.step_frequency
-        # compute stance and swing tme based on gate selection!
-        self.stance_time = (1 / self.step_frequency) * self.duty_factor
-        self.swing_period = (1 - self.duty_factor) * (1 / self.step_frequency)  # + 0.07
-
-    
-
-    def initialize(self):
-        self.set_controller()
-        self.periodic_gait_generator()
-
-        # Create the foothold reference generator
-        self.frg = FootholdReferenceGenerator(stance_time=self.stance_time, hip_height=self.hip_height,
-                                              lift_off_positions= self.env.feet_pos(frame='world'))
-
-        # Create swing trajectory generator
-
-        self.stc = SwingTrajectoryController(step_height=self.step_height, swing_period=self.swing_period,
-                                        position_gain_fb=self.position_gain_fb, velocity_gain_fb=self.velocity_gain_fb,
-                                        generator=self.swing_generator)
-        
-        # Online computation of the inertia parameter
-        # Terrain estimator
-        self.terrain_computation = TerrainEstimator()
-
-
-    def update_mpc_reference(self):
-
+        Parameters:
+        nv (int): mujoco number of variables
+        feet_pos (list or np.ndarray): Feet positions;
+        hip_pos (list or np.ndarray): Hip positions;
+        base_pos (list or np.ndarray): Base position;
+        base_ori_euler_xyz (list or np.ndarray): Base orientation in Euler angles (XYZ);
+        base_lin_vel (list or np.ndarray): Base linear velocity;
+        base_ang_vel (list or np.ndarray): Base angular velocity;
+        ref_base_lin_vel (list or np.ndarray): Reference base linear velocity;
+        ref_base_ang_vel (list or np.ndarray): Reference base angular velocity;
+        """
+        # Initialization of variables used in the main control loop
+        # ____________________________________________________________
+        # Set the reference for the state
+        self.feet_pos=feet_pos
+        # Jacobian matrices
+        self.jac_feet_prev = LegsAttr(*[np.zeros((3, nv)) for _ in range(4)])
+        self.jac_feet_dot = LegsAttr(*[np.zeros((3, nv)) for _ in range(4)])
+        # Torque vector
+        self.tau = LegsAttr(*[np.zeros((nv, 1)) for _ in range(4)])
         # Update the robot state --------------------------------
-        self.feet_pos = self.env.feet_pos(frame='world')
-        self.hip_pos = self.env.hip_positions(frame='world')
-        self.base_lin_vel=self.env.base_lin_vel
-        self.base_ang_vel = self.env.base_ang_vel
-
         self.state_current = dict(
-            position=self.env.base_pos,
-            linear_velocity=self.env.base_lin_vel,
-            orientation=self.env.base_ori_euler_xyz,
-            angular_velocity=self.env.base_ang_vel,
+            position= base_pos,
+            linear_velocity= base_lin_vel,
+            orientation= base_ori_euler_xyz,
+            angular_velocity= base_ang_vel,
             foot_FL=self.feet_pos.FL,
             foot_FR=self.feet_pos.FR,
             foot_RL=self.feet_pos.RL,
@@ -271,7 +225,6 @@ class Controller:
             )
 
         # Update target base velocity
-        self.ref_base_lin_vel, self.ref_base_ang_vel = self.env.target_base_vel()
         # -------------------------------------------------------
 
         # Update the desired contact sequence ---------------------------
@@ -280,7 +233,7 @@ class Controller:
 
         # in the case of nonuniform discretization, we need to subsample the contact sequence
         if self.use_nonuniform_discretization==True:
-            self.contact_sequence = self.pgg.sample_contact_sequence(self.contact_sequence, self.mpc_dt, dt_fine_grained, horizon_fine_grained)
+            self.contact_sequence = self.pgg.sample_contact_sequence(self.contact_sequence, self.mpc_dt, self.dt_fine_grained, self.horizon_fine_grained)
         
 
         previous_contact = self.current_contact
@@ -292,19 +245,19 @@ class Controller:
         # Compute the reference for the footholds ---------------------------------------------------
         self.frg.update_lift_off_positions(previous_contact, self.current_contact, self.feet_pos, self.legs_order)
         self.ref_feet_pos = self.frg.compute_footholds_reference(
-            com_position=self.env.base_pos,
-            base_ori_euler_xyz=self.env.base_ori_euler_xyz,
-            base_xy_lin_vel=self.env.base_lin_vel[0:2],
-            ref_base_xy_lin_vel=self.ref_base_lin_vel[0:2],
-            hips_position=self.hip_pos,
+            com_position=base_pos, #this comes as input from env
+            base_ori_euler_xyz=base_ori_euler_xyz, #this comes as input from env
+            base_xy_lin_vel=base_lin_vel[0:2], #this comes as input from env
+            ref_base_xy_lin_vel=ref_base_lin_vel[0:2],
+            hips_position=hip_pos,
             com_height_nominal=self.ref_z)
 
         # Estimate the terrain slope and elevation -------------------------------------------------------
         terrain_roll, \
             terrain_pitch, \
             terrain_height = self.terrain_computation.compute_terrain_estimation(
-            base_position=self.env.base_pos,
-            yaw=self.env.base_ori_euler_xyz[2],
+            base_position=base_pos, 
+            yaw=base_ori_euler_xyz[2], 
             feet_pos=self.frg.lift_off_positions,
             current_contact=self.current_contact)
 
@@ -317,25 +270,32 @@ class Controller:
                           ref_foot_RL=self.ref_feet_pos.RL.reshape((1, 3)),
                           ref_foot_RR=self.ref_feet_pos.RR.reshape((1, 3)),
                           # Also update the reference base linear velocity and
-                          ref_linear_velocity=self.ref_base_lin_vel,
-                          ref_angular_velocity=self.ref_base_ang_vel,
+                          ref_linear_velocity=ref_base_lin_vel,
+                          ref_angular_velocity=ref_base_ang_vel,
                           ref_orientation=np.array([terrain_roll, terrain_pitch, 0.0]),
                           ref_position=self.ref_pos
                           )
         # -------------------------------------------------------------------------------------------------
 
-    def solve_MPC_main_loop(self,env=None):
+    def solve_MPC_main_loop(self,alpha : float,inertia_env: list):
+        """
+        Main loop to solve the Model Predictive Control (MPC).
+        
+        Parameters:
+        alpha (float): A numeric parameter representing simulation time for solving the MPC;
+        inertia_env (list or np.ndarray): Inertia  values from QuadrupedEnv,
+            
+        """
         # Solve OCP ---------------------------------------------------------------------------------------
-        if self.env.step_num % round(1 / (self.mpc_frequency * self.simulation_dt)) == 0:
-            print("Solving MPC")
+        if alpha % round(1 / (self.mpc_frequency * self.simulation_dt)) == 0:
 
             # We can recompute the inertia of the single rigid body model
-
             # or use the fixed one in cfg.py
             if self.use_inertia_recomputation==True:
                 # TODO: d.qpos is not defined
                 #inertia = srb_inertia_computation.compute_inertia(d.qpos)
-                inertia = self.env.get_base_inertia().flatten()  # Reflected inertia of base at qpos, in world frame
+                inertia = inertia_env  # Reflected inertia of base at qpos, in world frame 
+                #this comes as inout from env
             else:
                 inertia = self.inertia.flatten()
 
@@ -356,7 +316,6 @@ class Controller:
             # If we use sampling
             if (self.controller_type == 'sampling'):
 
-                time_start = time.time()
 
                 # Shift the previous solution ahead
                 if (self.shift_solution == True):
@@ -370,7 +329,7 @@ class Controller:
                                                                                  best_control_parameters,
                                                                                  self.current_contact, previous_contact_mpc)
 
-                for iter_sampling in range(self.iteration):
+                for iter_sampling in range(self.num_sampling_iterations):
                     if (self.sampling_method == 'mppi'):
                         if (iter_sampling == 0):
                             self.controller = self.controller.with_newsigma(self.sigma_cem_mppi)
@@ -415,7 +374,6 @@ class Controller:
 
             # If we use Gradient-Based MPC
             else:
-                time_start = time.time()
                 self.nmpc_GRFs, nmpc_footholds, _, status = self.controller.compute_control(
                     self.state_current,
                     self.ref_state,
@@ -451,7 +409,7 @@ class Controller:
                             contact_sequence_temp[j] = self.pgg.sample_contact_sequence(self.contact_sequence, self.mpc_dt, self.dt_fine_grained, self.horizon_fine_grained)
        
 
-                    costs, best_sample_freq = self.batched_controller.compute_batch_control(self.state_current, ref_state,
+                    costs, best_sample_freq = self.batched_controller.compute_batch_control(self.state_current, self.ref_state,
                                                                                        contact_sequence_temp)
 
                     self.pgg.step_freq = best_sample_freq
@@ -482,7 +440,25 @@ class Controller:
             # print("nmpc_GRFs: ", self.nmpc_GRFs)
 
     
-    def get_forward_action(self,simulation=True,env=None):
+    def get_forward_action(self,simulation: bool,feet_jac: dict,feet_vel: dict,legs_qvel_idx: dict,qpos:list, qvel:list,legs_qfrc_bias:dict,legs_mass_matrix:dict):
+        """
+        Compute the forward action for the robot based on the provided simulation state and parameters.
+
+        Parameters:
+        simulation (bool): Indicates if the simulation is active.
+        feet_jac (dict): Jacobian matrices of the feet.
+        feet_vel (dict): Feet velocities.
+        legs_qvel_idx (dict): Index of the joint velocities.
+        qpos (np.ndarray): Generalized positions vectors.
+        qvel (np.ndarray): Generalized velocities vector.
+        legs_qfrc_bias (dict): Bias forces for the legs.
+        legs_mass_matrix (dict): Mass matrix for the legs.
+        Returns:
+        tau (dict): Torque vector or forward action for the robot.
+        """
+
+
+        
         if simulation == True:
             nmpc_GRFs = self.nmpc_GRFs
         else:
@@ -490,17 +466,17 @@ class Controller:
             breakpoint()
         
         # Compute Stance Torque ---------------------------------------------------------------------------
-        feet_jac = self.env.feet_jacobians(frame='world', return_rot_jac=False)
+        # feet_jac = self.env.feet_jacobians(frame='world', return_rot_jac=False) #come from outside
         # Compute feet velocities
-        feet_vel = LegsAttr(**{leg_name: feet_jac[leg_name] @ self.env.mjData.qvel for leg_name in self.legs_order})
+        # feet_vel = LegsAttr(**{leg_name: feet_jac[leg_name] @ self.env.mjData.qvel for leg_name in self.legs_order}) #compute outside
         # Compute jacobian derivatives of the contact points
         jac_feet_dot = (feet_jac - self.jac_feet_prev) / self.simulation_dt  # Finite difference approximation
         self.jac_feet_prev = feet_jac  # Update previous Jacobians
         # Compute the torque with the contact jacobian (-J.T @ f)   J: R^nv -> R^3,   f: R^3
-        self.tau.FL = -np.matmul(feet_jac.FL[:, self.env.legs_qvel_idx.FL].T, nmpc_GRFs.FL)
-        self.tau.FR = -np.matmul(feet_jac.FR[:, self.env.legs_qvel_idx.FR].T, nmpc_GRFs.FR)
-        self.tau.RL = -np.matmul(feet_jac.RL[:, self.env.legs_qvel_idx.RL].T, nmpc_GRFs.RL)
-        self.tau.RR = -np.matmul(feet_jac.RR[:, self.env.legs_qvel_idx.RR].T, nmpc_GRFs.RR)
+        self.tau.FL = -np.matmul(feet_jac.FL[:, legs_qvel_idx.FL].T, nmpc_GRFs.FL) #env
+        self.tau.FR = -np.matmul(feet_jac.FR[:, legs_qvel_idx.FR].T, nmpc_GRFs.FR) #env
+        self.tau.RL = -np.matmul(feet_jac.RL[:, legs_qvel_idx.RL].T, nmpc_GRFs.RL) #env
+        self.tau.RR = -np.matmul(feet_jac.RR[:, legs_qvel_idx.RR].T, nmpc_GRFs.RR) #env
 
         # ---------------------------------------------------------------------------------------------------
 
@@ -508,19 +484,18 @@ class Controller:
         # TODO: Move contact sequence to labels FL, FR, RL, RR instead of a fixed indexing.
         # The swing controller is in the end-effector space. For its computation,
         # we save for simplicity joints position and velocities
-        qpos, qvel = self.env.mjData.qpos, self.env.mjData.qvel
+        
         # centrifugal, coriolis, gravity
-        legs_mass_matrix = self.env.legs_mass_matrix
-        legs_qfrc_bias = self.env.legs_qfrc_bias
+
         self.stc.update_swing_time(self.current_contact, self.legs_order, self.simulation_dt)
 
         for leg_id, leg_name in enumerate(self.legs_order):
             if self.current_contact[leg_id] == 0:  # If in swing phase, compute the swing trajectory tracking control.
                 self.tau[leg_name], _, _ = self.stc.compute_swing_control(
                     leg_id=leg_id,
-                    q_dot=qvel[self.env.legs_qvel_idx[leg_name]],
-                    J=feet_jac[leg_name][:, self.env.legs_qvel_idx[leg_name]],
-                    J_dot=jac_feet_dot[leg_name][:, self.env.legs_qvel_idx[leg_name]],
+                    q_dot=qvel[legs_qvel_idx[leg_name]],
+                    J=feet_jac[leg_name][:, legs_qvel_idx[leg_name]],
+                    J_dot=jac_feet_dot[leg_name][:,legs_qvel_idx[leg_name]],
                     lift_off=self.frg.lift_off_positions[leg_name],
                     touch_down=self.nmpc_footholds[leg_name],
                     foot_pos=self.feet_pos[leg_name],
@@ -531,9 +506,9 @@ class Controller:
         tau=self.tau
         return tau    
 
-    def reset(self,env):
+    def reset(self):
         self.pgg.reset()
-        self.frg.lift_off_positions = env.feet_pos(frame='world')
+        self.frg.lift_off_positions =  self.lift_off_positions
         self.current_contact = np.array([0, 0, 0, 0])
         self.previous_contact = np.asarray(self.current_contact)
 
