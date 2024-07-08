@@ -129,4 +129,4 @@ If you find the work useful, please consider citing [our work](https://arxiv.org
 
 ## Maintainer
 
-This repository is maintained by [Giulio Turrisi](https://github.com/giulioturrisi).
+This repository is maintained by [Giulio Turrisi](https://github.com/giulioturrisi) and [Daniel Ordonez](https://github.com/Danfoa).

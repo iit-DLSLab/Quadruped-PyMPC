@@ -1,7 +1,7 @@
 # Description: This script is used to simulate the full model of the robot in mujoco
 
 # Authors:
-# - Giulio Turrisi
+# Giulio Turrisi, Daniel Ordonez
 
 import time
 import pathlib
