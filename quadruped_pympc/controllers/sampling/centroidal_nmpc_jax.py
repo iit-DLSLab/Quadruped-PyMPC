@@ -266,34 +266,23 @@ class Sampling_MPC:
 
         tau = step/(horizon_leg)
         q = (tau - 0.0)/(1.0-0.0)
-        
-        phi = (1./2.)*(((parameters[2] - parameters[1])/0.5) + ((parameters[1] - parameters[0])/0.5))
-        phi_next = (1./2.)*(((parameters[3] - parameters[2])/0.5) + ((parameters[2] - parameters[1])/0.5))
-        
-        a_x = 2*q*q*q - 3*q*q + 1
-        b_x = (q*q*q - 2*q*q + q)*0.5
-        c_x = -2*q*q*q + 3*q*q
-        d_x = (q*q*q - q*q)*0.5
-        f_x = a_x*parameters[1] + b_x*phi + c_x*parameters[2] + d_x*phi_next
+        a = 2*q*q*q - 3*q*q + 1
+        b = (q*q*q - 2*q*q + q)*1.0
+        c = -2*q*q*q + 3*q*q
+        d = (q*q*q - q*q)*1.0  
 
-        phi = (1./2.)*(((parameters[6] - parameters[5])/0.5) + ((parameters[5] - parameters[4])/0.5))
-        phi_next = (1./2.)*(((parameters[7] - parameters[6])/0.5) + ((parameters[6] - parameters[5])/0.5))
-        
-        a_y = 2*q*q*q - 3*q*q + 1
-        b_y = (q*q*q - 2*q*q + q)*0.5
-        c_y = -2*q*q*q + 3*q*q
-        d_y = (q*q*q - q*q)*0.5
-        f_y = a_y*parameters[5] + b_y*phi + c_y*parameters[6] + d_y*phi_next
+        phi = (1./2.)*(((parameters[2] - parameters[1])/1.0) + ((parameters[1] - parameters[0])/1.0))
+        phi_next = (1./2.)*(((parameters[3] - parameters[2])/1.0) + ((parameters[2] - parameters[1])/1.0))
+        f_x = a*parameters[1] + b*phi + c*parameters[2] + d*phi_next
+
+        phi = (1./2.)*(((parameters[6] - parameters[5])/1.0) + ((parameters[5] - parameters[4])/1.0))
+        phi_next = (1./2.)*(((parameters[7] - parameters[6])/1.0) + ((parameters[6] - parameters[5])/1.0))
+        f_y = a*parameters[5] + b*phi + c*parameters[6] + d*phi_next
 
 
-        phi = (1./2.)*(((parameters[10] - parameters[9])/0.5) + ((parameters[9] - parameters[8])/0.5))
-        phi_next = (1./2.)*(((parameters[11] - parameters[10])/0.5) + ((parameters[10] - parameters[9])/0.5))
-        
-        a_z = 2*q*q*q - 3*q*q + 1
-        b_z = (q*q*q - 2*q*q + q)*0.5
-        c_z = -2*q*q*q + 3*q*q
-        d_z = (q*q*q - q*q)*0.5
-        f_z = a_z*parameters[9] + b_z*phi + c_z*parameters[10] + d_z*phi_next
+        phi = (1./2.)*(((parameters[10] - parameters[9])/1.0) + ((parameters[9] - parameters[8])/1.0))
+        phi_next = (1./2.)*(((parameters[11] - parameters[10])/1.0) + ((parameters[10] - parameters[9])/1.0))
+        f_z = a*parameters[9] + b*phi + c*parameters[10] + d*phi_next
        
         return f_x, f_y, f_z
     
