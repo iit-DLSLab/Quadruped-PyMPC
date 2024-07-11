@@ -310,6 +310,24 @@ if __name__ == '__main__':
                                             FR=nmpc_footholds[1],
                                             RL=nmpc_footholds[2],
                                             RR=nmpc_footholds[3])
+                
+    
+                nmpc_joints_pos = LegsAttr(FL=nmpc_joints_pos[0:3],
+                                           FR=nmpc_joints_pos[3:6],
+                                           RL=nmpc_joints_pos[6:9],
+                                           RR=nmpc_joints_pos[9:12])
+                
+                nmpc_joints_vel = LegsAttr(FL=nmpc_joints_vel[0:3],
+                                           FR=nmpc_joints_vel[3:6],
+                                           RL=nmpc_joints_vel[6:9],
+                                           RR=nmpc_joints_vel[9:12])
+
+                nmpc_joints_acc = LegsAttr(FL=nmpc_joints_acc[0:3],
+                                           FR=nmpc_joints_acc[3:6],
+                                           RL=nmpc_joints_acc[6:9],
+                                           RR=nmpc_joints_acc[9:12])
+
+
 
 
 
@@ -362,15 +380,12 @@ if __name__ == '__main__':
 
             for leg_id, leg_name in enumerate(legs_order):
                 if current_contact[leg_id] == 0:  # If in swing phase, compute the swing trajectory tracking control.
-                    tau[leg_name], _, _ = stc.compute_swing_control(
-                        leg_id=leg_id,
+                    tau[leg_name], _, _ = stc.compute_swing_control_joint_space(
+                        q=qpos[env.legs_qpos_idx[leg_name]],
                         q_dot=qvel[env.legs_qvel_idx[leg_name]],
-                        J=feet_jac[leg_name][:, env.legs_qvel_idx[leg_name]],
-                        J_dot=jac_feet_dot[leg_name][:, env.legs_qvel_idx[leg_name]],
-                        lift_off=frg.lift_off_positions[leg_name],
-                        touch_down=nmpc_footholds[leg_name],
-                        foot_pos=feet_pos[leg_name],
-                        foot_vel=feet_vel[leg_name],
+                        desired_joint_position=nmpc_joints_pos[leg_name],
+                        desired_joint_velocity=nmpc_joints_vel[leg_name],
+                        desired_joint_acceleration=nmpc_joints_acc[leg_name],
                         h=legs_qfrc_bias[leg_name],
                         mass_matrix=legs_mass_matrix[leg_name]
                         )

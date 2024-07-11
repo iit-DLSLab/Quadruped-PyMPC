@@ -421,7 +421,7 @@ if __name__ == '__main__':
 
             for leg_id, leg_name in enumerate(legs_order):
                 if current_contact[leg_id] == 0:  # If in swing phase, compute the swing trajectory tracking control.
-                    tau[leg_name], _, _ = stc.compute_swing_control(
+                    tau[leg_name], _, _ = stc.compute_swing_control_cartesian_space(
                         leg_id=leg_id,
                         q_dot=qvel[env.legs_qvel_idx[leg_name]],
                         J=feet_jac[leg_name][:, env.legs_qvel_idx[leg_name]],
