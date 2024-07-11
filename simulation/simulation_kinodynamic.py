@@ -329,9 +329,6 @@ if __name__ == '__main__':
 
 
 
-
-
-
                 # If the controller is using RTI, we need to linearize the mpc after its computation
                 # this helps to minize the delay between new state->control, but only in a real case.
                 # Here we are in simulation and does not make any difference for now
@@ -352,6 +349,8 @@ if __name__ == '__main__':
 
             # -------------------------------------------------------------------------------------------------
 
+
+
             # Compute Stance Torque ---------------------------------------------------------------------------
             feet_jac = env.feet_jacobians(frame='world', return_rot_jac=False)
             # Compute feet velocities
@@ -366,6 +365,8 @@ if __name__ == '__main__':
             tau.RR = -np.matmul(feet_jac.RR[:, env.legs_qvel_idx.RR].T, nmpc_GRFs.RR)
             # ---------------------------------------------------------------------------------------------------
 
+
+
             # Compute Swing Torque ------------------------------------------------------------------------------
             # TODO: Move contact sequence to labels FL, FR, RL, RR instead of a fixed indexing.
             # TODO: Develop controller in the joint space for the kinodynamic model
@@ -378,17 +379,34 @@ if __name__ == '__main__':
 
             stc.update_swing_time(current_contact, legs_order, simulation_dt)
 
+            #breakpoint()
+            print("desired_joint_position FL: ", nmpc_joints_pos.FL)
+            print("actual joint position FL:", state_current["joint_FL"])
+            print("desired_joint_position FR: ", nmpc_joints_pos.FR)
+            print("actual joint position FR:", state_current["joint_FR"])
+            print("desired_joint_position RL: ", nmpc_joints_pos.RL)
+            print("actual joint position RL:", state_current["joint_RL"])
+            print("desired_joint_position RR: ", nmpc_joints_pos.RR)
+            print("actual joint position RR:", state_current["joint_RR"])
+
+
             for leg_id, leg_name in enumerate(legs_order):
-                if current_contact[leg_id] == 0:  # If in swing phase, compute the swing trajectory tracking control.
-                    tau[leg_name], _, _ = stc.compute_swing_control_joint_space(
-                        q=qpos[env.legs_qpos_idx[leg_name]],
-                        q_dot=qvel[env.legs_qvel_idx[leg_name]],
-                        desired_joint_position=nmpc_joints_pos[leg_name],
-                        desired_joint_velocity=nmpc_joints_vel[leg_name],
-                        desired_joint_acceleration=nmpc_joints_acc[leg_name],
-                        h=legs_qfrc_bias[leg_name],
-                        mass_matrix=legs_mass_matrix[leg_name]
-                        )
+
+                error_position = nmpc_joints_pos[leg_name] - qpos[env.legs_qpos_idx[leg_name]]
+                error_position = error_position.reshape((3, ))
+
+                error_velocity = nmpc_joints_vel[leg_name] - qvel[env.legs_qvel_idx[leg_name]]
+                error_velocity = error_velocity.reshape((3, ))
+
+                accelleration = nmpc_joints_acc[leg_name] 
+                accelleration = accelleration.reshape((3,))
+                
+                # Feedback linearization
+                tau_pd = legs_mass_matrix[leg_name]@(accelleration + 100*error_position + error_velocity) + legs_qfrc_bias[leg_name]
+                tau[leg_name] += tau_pd
+            
+            
+            
             # Set control and mujoco step ----------------------------------------------------------------------
             action = np.zeros(env.mjModel.nu)
             action[env.legs_tau_idx.FL] = tau.FL

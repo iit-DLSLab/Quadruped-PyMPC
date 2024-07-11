@@ -98,32 +98,6 @@ class SwingTrajectoryController:
     
 
 
-    def compute_swing_control_joint_space(self,
-                            q,
-                            q_dot,
-                            desired_joint_position,
-                            desired_joint_velocity,
-                            desired_joint_acceleration,
-                            h,
-                            mass_matrix):
-
-        error_position = desired_joint_position - q
-        error_position = error_position.reshape((3, ))
-
-        error_velocity = desired_joint_velocity - q_dot
-        error_velocity = error_velocity.reshape((3, ))
-
-        accelleration = desired_joint_acceleration 
-        accelleration = accelleration.reshape((3,))
-        
-        # Feedback linearization
-        tau_swing = mass_matrix@ (accelleration + 100*error_position + error_velocity) + h
-        
-        desired_foot_position = np.array([0, 0, 0])
-        desired_foot_velocity = np.array([0, 0, 0])
-
-        return tau_swing, desired_foot_position, desired_foot_velocity
-    
 
 
     def update_swing_time(self, current_contact, legs_order, dt):
