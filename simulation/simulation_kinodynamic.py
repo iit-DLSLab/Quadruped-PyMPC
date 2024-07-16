@@ -200,6 +200,7 @@ if __name__ == '__main__':
             desired_foot_position_RL = np.zeros((horizon, 3))
             desired_foot_position_RR = np.zeros((horizon, 3))
             for leg_id, leg_name in enumerate(legs_order):
+                lifted_off = [False, False, False, False]
                 for n in range(horizon):
 
                     dt_increment_swing = 0.0
@@ -208,47 +209,67 @@ if __name__ == '__main__':
                     else:
                         dt_increment_swing = (n)*cfg.mpc_params['dt']
                     
+                    if(lifted_off[leg_id] == False and n >= 0):
+                        if(contact_sequence[leg_id][n-1] == 1 and contact_sequence[leg_id][n] == 0):
+                            lifted_off[leg_id] = True 
+
                     if(leg_id == 0):
-                        if(contact_sequence[leg_id][n] == 0):
+                       
+                        if(contact_sequence[leg_id][n] == 1 and lifted_off[leg_id] == False):
+                            desired_foot_position_FL[n] = feet_pos.FL
+                        elif(contact_sequence[leg_id][n] == 1 and lifted_off[leg_id] == True):
+                            desired_foot_position_FL[n] = ref_feet_pos.FL
+                        else:
                             desired_foot_position, \
                             desired_foot_velocity, \
                             _ = stc.swing_generator.compute_trajectory_references(stc.swing_time[leg_id] + dt_increment_swing, 
                                                                                   frg.lift_off_positions[leg_name], 
                                                                                   ref_feet_pos.FL)
                             desired_foot_position_FL[n] = desired_foot_position
-                        else:
-                            desired_foot_position_FL[n] = ref_feet_pos.FL
+
                     elif(leg_id == 1):
-                        if(contact_sequence[leg_id][n] == 0):
+                     
+                        if(contact_sequence[leg_id][n] == 1 and lifted_off[leg_id] == False):
+                            desired_foot_position_FR[n] = feet_pos.FR
+                        elif(contact_sequence[leg_id][n] == 1 and lifted_off[leg_id] == True):
+                            desired_foot_position_FR[n] = ref_feet_pos.FR
+                        else:
                             desired_foot_position, \
                             desired_foot_velocity, \
                             _ = stc.swing_generator.compute_trajectory_references(stc.swing_time[leg_id]  + dt_increment_swing, 
                                                                                   frg.lift_off_positions[leg_name], 
                                                                                   ref_feet_pos.FR)
                             desired_foot_position_FR[n] = desired_foot_position
-                        else:
-                            desired_foot_position_FR[n] = ref_feet_pos.FR
+
                     elif(leg_id == 2):
-                        if(contact_sequence[leg_id][n] == 0):
+                       
+                        if(contact_sequence[leg_id][n] == 1 and lifted_off[leg_id] == False):
+                            desired_foot_position_RL[n] = feet_pos.RL
+                        elif(contact_sequence[leg_id][n] == 1 and lifted_off[leg_id] == True):
+                            desired_foot_position_RL[n] = ref_feet_pos.RL
+                        else:
                             desired_foot_position, \
                             desired_foot_velocity, \
                             _ = stc.swing_generator.compute_trajectory_references(stc.swing_time[leg_id]  + dt_increment_swing, 
                                                                                   frg.lift_off_positions[leg_name], 
                                                                                   ref_feet_pos.RL)
                             desired_foot_position_RL[n] = desired_foot_position
-                        else:
-                            desired_foot_position_RL[n] = ref_feet_pos.RL
+
                     elif(leg_id == 3):
-                        if(contact_sequence[leg_id][n] == 0):
+                      
+                        if(contact_sequence[leg_id][n] == 1 and lifted_off[leg_id] == False):
+                            desired_foot_position_RR[n] = feet_pos.RR
+                        elif(contact_sequence[leg_id][n] == 1 and lifted_off[leg_id] == True):
+                            desired_foot_position_RR[n] = ref_feet_pos.RR
+                        else:
                             desired_foot_position, \
                             desired_foot_velocity, \
                             _ = stc.swing_generator.compute_trajectory_references(stc.swing_time[leg_id]  + dt_increment_swing, 
                                                                                   frg.lift_off_positions[leg_name], 
                                                                                   ref_feet_pos.RR)
                             desired_foot_position_RR[n] = desired_foot_position
-                        else:
-                            desired_foot_position_RR[n] = ref_feet_pos.RR
-            
+
+            print("desired_foot_position_FL", desired_foot_position_FL)
 
             # Estimate the terrain slope and elevation -------------------------------------------------------
             terrain_roll, \
