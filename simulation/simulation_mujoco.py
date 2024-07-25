@@ -8,16 +8,15 @@ import pathlib
 import numpy as np
 from tqdm import tqdm
 # Gym and Simulation related imports
-from gym_quadruped.quadruped_env_coll import QuadrupedEnvColl
 from gym_quadruped.quadruped_env import QuadrupedEnv
 from gym_quadruped.utils.mujoco.visual import render_vector
 from gym_quadruped.utils.quadruped_utils import LegsAttr
 # Control imports
 from quadruped_pympc import config as cfg
+
 from quadruped_pympc.helpers.quadruped_utils import plot_swing_mujoco
 from quadruped_pympc.controllers.srb_controller import SingleRigidBodyController as Controller
-from quadruped_pympc.controllers.srb_controlller_original import SingleRigidBodyController as ControllerOR
-
+##
 import copy as cp
 if __name__ == '__main__':
     np.set_printoptions(precision=3, suppress=True)
@@ -66,8 +65,14 @@ if __name__ == '__main__':
     tau = LegsAttr(*[np.zeros((nv, 1)) for _ in range(4)]) 
     #
     lift_off_positions=env.feet_pos(frame='world')
+    #
     # _______________________________________________________________________________________________________________
     # Controller initialization ______________________________________________________________________________________
+    #firest create or select the controller type and the dictionary with the entries needed in this case we use the config file
+    if cfg.mpc_params['type'] == 'nominal':
+        mpc_params =cfg.mpc_params.update(cfg.mpc_nominal_params)
+    if cfg.mpc_params['type'] == 'sampling':
+        mpc_params =cfg.mpc_params.update(cfg.mpc_sampling_params)
     controller= Controller(hip_height=hip_height,
                            legs_order = ["FL", "FR", "RL", "RR"],
                            inertia=cfg.inertia,
@@ -111,7 +116,7 @@ if __name__ == '__main__':
 
 
             ###### Controller single aliengo model
-            ref_feet_pos=controller.update_mpc_reference(nv=nv,
+            ref_state,state_current,ref_feet_pos,contact_sequence=controller.update_mpc_reference_and_state(nv=nv,
                                             feet_pos = feet_pos, #two robots edit,
                                             hip_pos = hip_pos, #two robots edit,
                                             base_pos=env.base_pos,
@@ -121,8 +126,14 @@ if __name__ == '__main__':
                                             ref_base_lin_vel=ref_base_lin_vel,
                                             ref_base_ang_vel=ref_base_ang_vel)
             if env.step_num % round(1 / (mpc_frequency * simulation_dt)) == 0:
-                nmpc_footholds_mpc, nmpc_GRFs, current_contact = controller.solve_MPC_main_loop(alpha =env.step_num,inertia_env=env.get_base_inertia().flatten(),ref_feet_pos=ref_feet_pos)
-    
+                nmpc_footholds_mpc, nmpc_GRFs, current_contact = controller.solve_MPC_main_loop(
+                                                                                                inertia_env=env.get_base_inertia().flatten(),
+                                                                                                ref_feet_pos=ref_feet_pos,
+                                                                                                spring_gain=None,
+                                                                                                eef_position=None,
+                                                                                                eef_jacobian=None,
+                                                                                                ext_wrenches=None)    
+
             nmpc_footholds = LegsAttr(FL=nmpc_footholds_mpc[0], 
                                       FR=nmpc_footholds_mpc[1],
                                       RL=nmpc_footholds_mpc[2],
@@ -133,7 +144,7 @@ if __name__ == '__main__':
                                           RL=nmpc_GRFs[6:9] * current_contact[2],
                                           RR=nmpc_GRFs[9:12]* current_contact[3])
                 
-            tau,lift_off_position_ctrl = controller.get_forward_action(simulation=True,
+            tau,lift_off_position_ctrl = controller.compute_stance_and_swing_torque(simulation=True,
                                     feet_jac=feet_jac,
                                     feet_vel =feet_vel,
                                     legs_qvel_idx=leg_qvel_idx,
@@ -143,7 +154,8 @@ if __name__ == '__main__':
                                     legs_mass_matrix=legs_mass_matrix,
                                     nmpc_GRFs=nmpc_GRFs_computed,
                                     nmpc_footholds=nmpc_footholds,
-                                    tau=tau,)
+                                    tau=tau,
+                                    current_contact=current_contact,)
             
             time_start = time.time()
 
@@ -191,7 +203,7 @@ if __name__ == '__main__':
                                                                 geom_id=feet_GRF_geom_ids[leg_name])
 
                 env.render()
-                last_render_time = time.time()
+                last_render_time = time.time()            
             if env.step_num > N_STEPS_PER_EPISODE or is_terminated or is_truncated:
                 if is_terminated:
                     print("Environment terminated")

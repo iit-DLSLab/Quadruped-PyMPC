@@ -17,21 +17,25 @@ from .centroidal_model_nominal import Centroidal_Model_Nominal
 
 # Class for the Acados NMPC, the model is in another file!
 class Acados_NMPC_GaitAdaptive():
-    def __init__(self):
+    def __init__(self,controller_params=None):
 
-        self.horizon = config.mpc_params['horizon']  # Define the number of discretization steps
-        self.dt = config.mpc_params['dt']
+
+
+        self.mpc_params = controller_params
+
+        self.horizon = self.mpc_params['horizon']  # Define the number of discretization steps
+        self.dt = self.mpc_params['dt']
         self.T_horizon = self.horizon * self.dt
-        self.use_RTI = config.mpc_params['use_RTI']
-        self.use_integrators = config.mpc_params['use_integrators']
-        self.use_warm_start = config.mpc_params['use_warm_start']
-        self.use_foothold_constraints = config.mpc_params['use_foothold_constraints']
+        self.use_RTI = self.mpc_params['use_RTI']
+        self.use_integrators = self.mpc_params['use_integrators']
+        self.use_warm_start = self.mpc_params['use_warm_start']
+        self.use_foothold_constraints = self.mpc_params['use_foothold_constraints']
 
-        self.use_static_stability = config.mpc_params['use_static_stability']
-        self.use_zmp_stability = config.mpc_params['use_zmp_stability']
+        self.use_static_stability = self.mpc_params['use_static_stability']
+        self.use_zmp_stability = self.mpc_params['use_zmp_stability']
         self.use_stability_constraints = self.use_static_stability or self.use_zmp_stability
 
-        self.use_DDP = config.mpc_params['use_DDP']
+        self.use_DDP = self.mpc_params['use_DDP']
 
         self.previous_status = -1
         self.previous_contact_sequence = np.zeros((4, self.horizon))
@@ -51,11 +55,11 @@ class Acados_NMPC_GaitAdaptive():
 
         # Create the acados ocp solver
         self.ocp = self.create_ocp_solver_description(acados_model, num_threads_in_batch_solve=len(
-            config.mpc_params['step_freq_available']))
+            self.mpc_params['step_freq_available']))
 
         # Batch solver
-        use_batch_solver = config.mpc_params['optimize_step_freq']
-        num_batch = len(config.mpc_params['step_freq_available'])
+        use_batch_solver = self.mpc_params['optimize_step_freq']
+        num_batch = len(self.mpc_params['step_freq_available'])
         self.batch = num_batch
         # batch_ocp = self.create_ocp_solver_description(acados_model, num_threads_in_batch_solve)
         batch_ocp = self.ocp
@@ -197,7 +201,7 @@ class Acados_NMPC_GaitAdaptive():
         ocp.solver_options.integrator_type = "ERK"  # ERK IRK GNSF DISCRETE
         if (self.use_DDP):
             ocp.solver_options.nlp_solver_type = 'DDP'
-            ocp.solver_options.nlp_solver_max_iter = config.mpc_params['num_qp_iterations']
+            ocp.solver_options.nlp_solver_max_iter = self.mpc_params['num_qp_iterations']
             # ocp.solver_options.globalization = 'MERIT_BACKTRACKING'
             ocp.solver_options.with_adaptive_levenberg_marquardt = True
 
@@ -213,32 +217,32 @@ class Acados_NMPC_GaitAdaptive():
             ocp.solver_options.nlp_solver_max_iter = 1
             # Set the RTI type for the advanced RTI method 
             # (see https://arxiv.org/pdf/2403.07101.pdf)
-            if (config.mpc_params['as_rti_type'] == "AS-RTI-A"):
+            if (self.mpc_params['as_rti_type'] == "AS-RTI-A"):
                 ocp.solver_options.as_rti_iter = 1
                 ocp.solver_options.as_rti_level = 0
-            elif (config.mpc_params['as_rti_type'] == "AS-RTI-B"):
+            elif (self.mpc_params['as_rti_type'] == "AS-RTI-B"):
                 ocp.solver_options.as_rti_iter = 1
                 ocp.solver_options.as_rti_level = 1
-            elif (config.mpc_params['as_rti_type'] == "AS-RTI-C"):
+            elif (self.mpc_params['as_rti_type'] == "AS-RTI-C"):
                 ocp.solver_options.as_rti_iter = 1
                 ocp.solver_options.as_rti_level = 2
-            elif (config.mpc_params['as_rti_type'] == "AS-RTI-D"):
+            elif (self.mpc_params['as_rti_type'] == "AS-RTI-D"):
                 ocp.solver_options.as_rti_iter = 1
                 ocp.solver_options.as_rti_level = 3
 
         else:
             ocp.solver_options.nlp_solver_type = "SQP"
-            ocp.solver_options.nlp_solver_max_iter = config.mpc_params['num_qp_iterations']
+            ocp.solver_options.nlp_solver_max_iter = self.mpc_params['num_qp_iterations']
         # ocp.solver_options.globalization = "MERIT_BACKTRACKING"  # FIXED_STEP, MERIT_BACKTRACKING
 
-        if (config.mpc_params['solver_mode'] == "balance"):
+        if (self.mpc_params['solver_mode'] == "balance"):
             ocp.solver_options.hpipm_mode = "BALANCE"
-        elif (config.mpc_params['solver_mode'] == "robust"):
+        elif (self.mpc_params['solver_mode'] == "robust"):
             ocp.solver_options.hpipm_mode = "ROBUST"
-        elif (config.mpc_params['solver_mode'] == "fast"):
+        elif (self.mpc_params['solver_mode'] == "fast"):
             ocp.solver_options.qp_solver_iter_max = 10
             ocp.solver_options.hpipm_mode = "SPEED"
-        elif (config.mpc_params['solver_mode'] == "crazy_speed"):
+        elif (self.mpc_params['solver_mode'] == "crazy_speed"):
             ocp.solver_options.qp_solver_iter_max = 5
             ocp.solver_options.hpipm_mode = "SPEED_ABS"
 
@@ -252,11 +256,11 @@ class Acados_NMPC_GaitAdaptive():
         ocp.solver_options.tf = self.T_horizon
 
         # Nonuniform discretization
-        if (config.mpc_params['use_nonuniform_discretization']):
-            time_steps_fine_grained = np.tile(config.mpc_params['dt_fine_grained'],
-                                              config.mpc_params['horizon_fine_grained'])
+        if (self.mpc_params['use_nonuniform_discretization']):
+            time_steps_fine_grained = np.tile(self.mpc_params['dt_fine_grained'],
+                                              self.mpc_params['horizon_fine_grained'])
             time_steps = np.concatenate(
-                (time_steps_fine_grained, np.tile(self.dt, self.horizon - config.mpc_params['horizon_fine_grained'])))
+                (time_steps_fine_grained, np.tile(self.dt, self.horizon - self.mpc_params['horizon_fine_grained'])))
             shooting_nodes = np.zeros((self.horizon + 1,))
             for i in range(len(time_steps)):
                 shooting_nodes[i + 1] = shooting_nodes[i] + time_steps[i]
@@ -455,8 +459,8 @@ class Acados_NMPC_GaitAdaptive():
         t = np.array([1, 0, 0])
         b = np.array([0, 1, 0])
         mu = self.centroidal_model.mu_friction
-        f_max = config.mpc_params['grf_max']
-        f_min = config.mpc_params['grf_min']
+        f_max = self.mpc_params['grf_max']
+        f_min = self.mpc_params['grf_min']
 
         # Derivation can be found in the paper
         # "High-slope terrain locomotion for torque-controlled quadruped robots",
@@ -886,7 +890,7 @@ class Acados_NMPC_GaitAdaptive():
                     elif (np.array_equal(FL_contact_sequence, RR_contact_sequence)
                           and np.array_equal(FR_contact_sequence, RL_contact_sequence)):
                         # TROT
-                        stability_margin = config.mpc_params['trot_stability_margin']
+                        stability_margin = self.mpc_params['trot_stability_margin']
                         if (FL_contact_sequence[j] == 1 and FR_contact_sequence[j] == 0):
                             ub_support_FL_RR = 0 + stability_margin
                             lb_support_FL_RR = 0 - stability_margin
@@ -898,7 +902,7 @@ class Acados_NMPC_GaitAdaptive():
                     elif (np.array_equal(FL_contact_sequence, RL_contact_sequence)
                           and np.array_equal(FR_contact_sequence, RR_contact_sequence)):
                         # PACE
-                        stability_margin = config.mpc_params['pace_stability_margin']
+                        stability_margin = self.mpc_params['pace_stability_margin']
                         if (FL_contact_sequence[j] == 1 and FR_contact_sequence[j] == 0):
                             ub_support_RL_FL = 0 + stability_margin
                             lb_support_RL_FL = 0 - stability_margin
@@ -909,7 +913,7 @@ class Acados_NMPC_GaitAdaptive():
 
                     else:
                         # CRAWL BACKDIAGONALCRAWL ONLY
-                        stability_margin = config.mpc_params['crawl_stability_margin']
+                        stability_margin = self.mpc_params['crawl_stability_margin']
 
                         if (FL_contact_sequence[j] == 1):
                             if (FR_contact_sequence[j] == 1):
@@ -1076,7 +1080,7 @@ class Acados_NMPC_GaitAdaptive():
 
         # Fill stance param, friction and stance proximity
         # (stance proximity will disable foothold optimization near a stance!!)
-        mu = config.mpc_params['mu']
+        mu = self.mpc_params['mu']
 
         state_acados = np.concatenate((state["position"], state["linear_velocity"],
                                        state["orientation"], state["angular_velocity"],
@@ -1157,12 +1161,12 @@ class Acados_NMPC_GaitAdaptive():
             cost_single_qp = self.batch_solver.ocp_solvers[n].get_cost()
             if (n != 0):
                 cost_single_qp += 3 * (
-                        config.mpc_params["step_freq_available"][n] - config.mpc_params["step_freq_available"][
+                        self.mpc_params["step_freq_available"][n] - self.mpc_params["step_freq_available"][
                     0]) ** 2
             costs.append(cost_single_qp)
 
         best_freq_index = np.argmin(costs)
-        best_freq = config.mpc_params["step_freq_available"][best_freq_index]
+        best_freq = self.mpc_params["step_freq_available"][best_freq_index]
 
         print("costs: ", costs)
         print("best_freq: ", best_freq)
