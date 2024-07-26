@@ -16,23 +16,27 @@ class SingleRigidBodyController:
                  hip_height=None,
                  legs_order=None,        
                  inertia=None,
+                 mass=None,
                  lift_off_positions=None,
                  simulation_parameters:dict=None,
                  mpc_parameters:dict=None,
                  jac_feet_dot=None,
                  jac_feet_prev=None,
                  tau=None,
+                 robot_name=None,
                  ):
         #
         
         #Robot dependent parameters
         self.hip_height = hip_height
         self.inertia=inertia
+        self.mass=mass
         self.lift_off_positions=lift_off_positions
         self.legs_order = legs_order
         self.jac_feet_prev = jac_feet_prev
         self.jac_feet_dot = jac_feet_dot
         self.tau = tau
+        self.robot_name = robot_name
         # MPC parameters
         self.mpc_parameters = mpc_parameters
         ### All this parameter are for the WBC in simulation come from the dicotionary
@@ -53,13 +57,8 @@ class SingleRigidBodyController:
         self.controller_type=mpc_parameters['type']
         self.horizon = self.mpc_parameters['horizon']
         self.mpc_dt = self.mpc_parameters['dt']
-        self.optimize_step_frequency=self.mpc_parameters['optimize_step_freq']
+        self.optimize_step_freq=self.mpc_parameters['optimize_step_freq']
         self.step_freq_available=self.mpc_parameters['step_freq_available']
-        self.grf_max=self.mpc_parameters["grf_max"]
-        self.grf_min=self.mpc_parameters["grf_min"]
-        # self.mu=mpc_parameters["mu"] #not even used
-
-
         ## all of this go in gradient based or collaborative one
         self.use_nonuniform_discretization=mpc_parameters['use_nonuniform_discretization'] #this is a common parameter?
 
@@ -119,58 +118,34 @@ class SingleRigidBodyController:
 
         if(self.controller_type == 'nominal'):
             from quadruped_pympc.controllers.gradient.nominal.centroidal_nmpc_nominal import Acados_NMPC_Nominal
-                    ##gradient based properties
-        
-            self.warm_start=self.mpc_parameters['use_warm_start']
-            self.use_integrator=self.mpc_parameters['use_integrators']
-            self.alpha_integrator=self.mpc_parameters['alpha_integrator']
-            self.inttegrator_cap=self.mpc_parameters['integrator_cap']
-            self.use_foothold_optimization=self.mpc_parameters['use_foothold_optimization']
-            self.use_foothold_constraints=self.mpc_parameters['use_foothold_constraints']
-            self.use_RTI=self.mpc_parameters['use_RTI']
-            self.as_rti_type=self.mpc_parameters['as_rti_type']
-            self.as_rti_iter=self.mpc_parameters['as_rti_iter']
-            self.use_DDP=self.mpc_parameters['use_DDP']
-            self.num_qp_iterations=self.mpc_parameters['num_qp_iterations']
-            self.solver_mode=self.mpc_parameters['solver_mode']
-            self.use_zmp_stability=self.mpc_parameters['use_zmp_stability']              
-            self.trot_stability_margin=self.mpc_parameters['trot_stability_margin']              
-            self.pace_stability_margin=self.mpc_parameters['pace_stability_margin']              
-            self.crawl_stability_margin=self.mpc_parameters['crawl_stability_margin']
-            self.dt_fine_grained = self.mpc_parameters['dt_fine_grained']
-            self.horizon_fine_grained = self.mpc_parameters['horizon_fine_grained']
-            self.use_input_prediction=self.mpc_parameters['use_input_prediction']
             
-            self.controller = Acados_NMPC_Nominal(controller_params=self.mpc_parameters) #still has inertia and hyq from config check omn that rest is ok
+            self.controller = Acados_NMPC_Nominal(mpc_parameters=self.mpc_parameters,inertia=self.inertia,mass=self.mass,robot_name=self.robot_name) 
  
-            if self.optimize_step_frequency==True:
+            if self.optimize_step_freq==True:
                 from quadruped_pympc.controllers.gradient.nominal.centroidal_nmpc_gait_adaptive import Acados_NMPC_GaitAdaptive
-                self.batched_controller = Acados_NMPC_GaitAdaptive() #ok but inertia
+                self.batched_controller = Acados_NMPC_GaitAdaptive(mpc_parameters=self.mpc_parameters,inertia=self.inertia,mass=self.mass,robot_name=self.robot_name) 
                 
         elif(self.controller_type == 'collaborative'):
 
             from quadruped_pympc.controllers.gradient.collaborative.centroidal_nmpc_collaborative import Acados_NMPC_Collaborative
-            self.controller_collaborative = Acados_NMPC_Collaborative(controller_params=self.mpc_parameters) #ok but hyqreal
+            self.controller_collaborative = Acados_NMPC_Collaborative(mpc_parameters=self.mpc_parameters,robot_name=self.robot_name)
 
         elif(self.controller_type == 'input_rates'):
             from quadruped_pympc.controllers.gradient.input_rates.centroidal_nmpc_input_rates import Acados_NMPC_InputRates
 
-            self.controller = Acados_NMPC_InputRates(controller_params=self.mpc_parameters)  #still has inertia and hyq from config check omn that
+            self.controller = Acados_NMPC_InputRates(mpc_parameters=self.mpc_parameters,inertia=self.inertia,mass=self.mass,robot_name=self.robot_name)  
 
-            if self.optimize_step_frequency==True: #this may be eliminated since it call on niominal mpc again
+            if self.optimize_step_freq==True: 
                 from quadruped_pympc.controllers.gradient.nominal.centroidal_nmpc_gait_adaptive import Acados_NMPC_GaitAdaptive
-                self.batched_controller = Acados_NMPC_GaitAdaptive(controller_params=self.mpc_parameters)  #ok but inertia 
+                self.batched_controller = Acados_NMPC_GaitAdaptive(mpc_parameters=self.mpc_parameters,inertia=self.inertia,mass=self.mass,robot_name=self.robot_name)   
 
         elif(self.controller_type ==  'sampling'):
             self.sampling_method = self.mpc_parameters['sampling_method']
-            self.control_parametrization = self.mpc_parameters['control_parametrization']
-            self.num_parallel_computations = self.mpc_parameters['num_parallel_computations']
             self.num_sampling_iterations = self.mpc_parameters['num_sampling_iterations']
-            self.sigma_mppi=self.mpc_parameters['sigma_mppi']
             self.sigma_cem_mppi=self.mpc_parameters['sigma_cem_mppi']
-            self.sigma_random_sampling=self.mpc_parameters['sigma_random_sampling']
             self.shift_solution = self.mpc_parameters['shift_solution']
-            if self.optimize_step_frequency==True:
+
+            if self.optimize_step_freq==True:
                 from quadruped_pympc.controllers.sampling.centroidal_nmpc_jax_gait_adaptive import Sampling_MPC
 
             else:
@@ -178,14 +153,13 @@ class SingleRigidBodyController:
 
             import jax
             import jax.numpy as jnp
-            num_parallel_cxomputations = self.num_parallel_computations
             self.controller = Sampling_MPC(horizon = self.horizon, 
                                       dt = self.mpc_dt, 
-                                      num_parallel_computations = self.num_parallel_computations,
+                                      num_parallel_computations = self.mpc_parameters['num_parallel_computations'],
                                       sampling_method = self.sampling_method,
-                                      control_parametrization = self.control_parametrization,
+                                      control_parametrization = self.mpc_parameters['control_parametrization'],
                                       device="gpu",
-                                      controller_params = self.mpc_parameters)
+                                      mpc_parameters = self.mpc_parameters)
             
             self.best_control_parameters = jnp.zeros((self.controller.num_control_parameters, ))
             self.jitted_compute_control = jax.jit(self.controller.compute_control, device=self.controller.device)
@@ -242,7 +216,7 @@ class SingleRigidBodyController:
 
         # in the case of nonuniform discretization, we need to subsample the contact sequence
         if self.use_nonuniform_discretization==True:
-            self.contact_sequence = self.pgg.sample_contact_sequence(self.contact_sequence, self.mpc_dt, self.dt_fine_grained, self.horizon_fine_grained)
+            self.contact_sequence = self.pgg.sample_contact_sequence(self.contact_sequence, self.mpc_dt, self.mpc_parameters['dt_fine_grained'], self.mpc_parameters['horizon_fine_grained'])
         
 
         previous_contact = self.current_contact
@@ -359,11 +333,11 @@ class SingleRigidBodyController:
             #this comes as inout from env
         else:
             inertia = self.inertia.flatten()
-        if (self.optimize_step_frequency == True):
+        if (self.optimize_step_freq == True):
             # we can always optimize the step freq, or just at the apex of the swing
             # to avoid possible jittering in the solution
             optimize_swing = 0  # 1 for always, 0 for apex
-            for leg_id in range(8): #two robote edit
+            for leg_id in range(4): 
                 # Swing time check
                 if (self.current_contact[leg_id] == 0):
                     if ((self.stc.swing_time[leg_id] > (self.swing_period / 2.) - 0.02) and \
@@ -374,11 +348,7 @@ class SingleRigidBodyController:
             optimize_swing = 0
         # If we use sampling
         if (self.controller_type == 'sampling'):
-            # Shift the previous solution ahead
-            # if (self.shift_solution == True):
-            #     index_shift = 1./self.mpc_frequency
-            #     best_control_parameters = self.controller.shift_solution(self.best_control_parameters, index_shift)
-            
+
             # Convert data to jax and shift previous solution
             state_current_jax, \
             reference_state_jax, = self.controller.prepare_state_and_reference(self.state_current,
@@ -420,7 +390,7 @@ class SingleRigidBodyController:
             nmpc_footholds = np.array([ref_feet_pos['FL'], ref_feet_pos['FR'], ref_feet_pos['RL'], ref_feet_pos['RR']])
             nmpc_GRFs = np.array(nmpc_GRFs)       
 
-            # if ((self.optimize_step_frequency==True) and (optimize_swing == 1)):
+            # if ((self.optimize_step_freq==True) and (optimize_swing == 1)):
             #     self.pgg.step_freq = np.array([best_sample_freq])[0]
             #     nominal_sample_freq = self.pgg.step_freq
             #     self.stance_time = (1 / self.pgg.step_freq) * self.duty_factor
@@ -451,22 +421,24 @@ class SingleRigidBodyController:
                 self.state_current,
                 self.reference_state,
                 self.contact_sequence,
-                inertia=inertia)            
+                inertia=inertia,
+                mass=self.mass)            
             # optimizer_cost = controller.acados_ocp_solver.get_cost()
-            if (self.optimize_step_frequency==True)  and optimize_swing == 1:
+            if (self.optimize_step_freq==True)  and optimize_swing == 1:
                 contact_sequence_temp = np.zeros((len(self.step_freq_available), 4, self.horizon * 2))
                 for j in range(len(self.step_freq_available)):
-                    pgg_temp = PeriodicGaitGenerator(duty_factor=self.duty_factor,
+                    self.pgg_temp = PeriodicGaitGenerator(duty_factor=self.duty_factor,
                                                      step_freq=self.step_freq_available[j],
                                                      gait_type=self.gait_type,
-                                                     horizon=self.horizon * 2)
-                    pgg_temp.phase_signal = self.pgg.phase_signal
-                    pgg_temp.init = self.pgg.init
-                    contact_sequence_temp[j] = pgg_temp.compute_contact_sequence()
+                                                     horizon=self.horizon * 2,
+                                                     contact_sequence_dt=self.mpc_dt/2.)
+                    self.pgg_temp.phase_signal = self.pgg.phase_signal
+                    self.pgg_temp.init = self.pgg.init
+                    contact_sequence_temp[j] = self.pgg_temp.compute_contact_sequence()
                     
                     # in the case of nonuniform discretization, we need to subsample the contact sequence
                     if (self.use_nonuniform_discretization==True):
-                        contact_sequence_temp[j] = self.pgg.sample_contact_sequence(self.contact_sequence, self.mpc_dt, self.dt_fine_grained, self.horizon_fine_grained)
+                        contact_sequence_temp[j] = self.pgg.sample_contact_sequence(self.contact_sequence, self.mpc_dt,self.mpc_parameters['dt_fine_grained'], self.mpc_parameters['horizon_fine_grained'])
     
                 costs,\
                 best_sample_freq = self.batched_controller.compute_batch_control(self.state_current, 
@@ -480,13 +452,13 @@ class SingleRigidBodyController:
             # If the controller is using RTI, we need to linearize the mpc after its computation
             # this helps to minize the delay between new state->control, but only in a real case.
             # Here we are in simulation and does not make any difference for now
-            if (self.controller.use_RTI):
+            if (self.mpc_parameters['use_RTI']==True):
                 # preparation phase
                 self.controller.acados_ocp_solver.options_set('rti_phase', 1)
                 status = self.controller.acados_ocp_solver.solve()
                 # print("preparation phase time: ", controller.acados_ocp_solver.get_stats('time_tot'))
                 # If we have optimized the gait, we set all the timing parameters
-            if (self.optimize_step_frequency==True)  and optimize_swing == 1:
+            if (self.optimize_step_freq==True)  and optimize_swing == 1:
                 self.pgg.step_freq = np.array([best_sample_freq])[0]
                 self.nominal_sample_freq = self.pgg.step_freq
                 self.frg.stance_time = (1 / self.pgg.step_freq) * self.pgg.duty_factor

@@ -28,7 +28,6 @@ if __name__ == '__main__':
     scene_name = cfg.simulation_params['scene']
     simulation_dt = cfg.simulation_params['dt']
     feet_traj_geom_ids, feet_GRF_geom_ids = None, LegsAttr(FL=-1,FR=-1,RL=-1,RR=-1)
-    gait_name="full_stance" # 'trot', 'pace', 'crawl', 'bound', 'full_stance'
     legs_order = ["FL", "FR", "RL", "RR"]
     mpc_frequency = cfg.simulation_params['mpc_frequency']
 
@@ -69,13 +68,15 @@ if __name__ == '__main__':
     # _______________________________________________________________________________________________________________
     # Controller initialization ______________________________________________________________________________________
     #firest create or select the controller type and the dictionary with the entries needed in this case we use the config file
-    if cfg.mpc_params['type'] == 'nominal':
+    if cfg.mpc_params['type'] == 'nominal' or cfg.mpc_params['type'] == 'input_rates':
         mpc_params =cfg.mpc_params.update(cfg.mpc_nominal_params)
     if cfg.mpc_params['type'] == 'sampling':
         mpc_params =cfg.mpc_params.update(cfg.mpc_sampling_params)
+
     controller= Controller(hip_height=hip_height,
                            legs_order = ["FL", "FR", "RL", "RR"],
                            inertia=cfg.inertia,
+                           mass=cfg.mass,
                            lift_off_positions=lift_off_positions,
                            simulation_parameters=cfg.simulation_params,
                            mpc_parameters=cfg.mpc_params,
