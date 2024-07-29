@@ -14,7 +14,6 @@ sys.path.append(dir_path)
 sys.path.append(dir_path + '/../')
 sys.path.append(dir_path + '/../helpers/')
 
-from quadruped_pympc import config
 from centroidal_model_jax import Centroidal_Model_JAX
 from quadruped_pympc.helpers.periodic_gait_generator_jax import PeriodicGaitGeneratorJax
 
@@ -33,7 +32,7 @@ class Sampling_MPC:
     """This is a small class that implements a sampling based control law"""
 
 
-    def __init__(self, horizon = 200, dt = 0.01, num_parallel_computations = 10000, sampling_method = 'random_sampling', control_parametrization = "linear_spline_1", device="gpu"):
+    def __init__(self, horizon = 200, dt = 0.01, num_parallel_computations = 10000, sampling_method = 'random_sampling', control_parametrization = "linear_spline_1", device="gpu",mpc_parameters = None):
         """
         Args:
             horizon (int): how much to look into the future for optimizing the gains 
@@ -55,7 +54,9 @@ class Sampling_MPC:
         self.inputs_dim = 24
 
 
-        
+        ## parameters for the controller this are set from a dictionary
+        self.mpc_parameters = mpc_parameters
+
         if(device=="gpu"):
             self.device = gpu_device
         else:
@@ -136,13 +137,13 @@ class Sampling_MPC:
 
         if(sampling_method == 'random_sampling'):
             self.compute_control = self.compute_control_random_sampling
-            self.sigma_random_sampling = config.mpc_params['sigma_random_sampling']
+            self.sigma_random_sampling = self.mpc_parameters['sigma_random_sampling']
         elif(sampling_method == 'mppi'):
             self.compute_control = self.compute_control_mppi    
-            self.sigma_mppi = config.mpc_params['sigma_mppi']
+            self.sigma_mppi = self.mpc_parameters['sigma_mppi']
         elif(sampling_method == 'cem_mppi'):
             self.compute_control = self.compute_control_cem_mppi
-            self.sigma_cem_mppi = jnp.ones(self.num_control_parameters, dtype=dtype_general) * config.mpc_params['sigma_cem_mppi']
+            self.sigma_cem_mppi = jnp.ones(self.num_control_parameters, dtype=dtype_general) * self.mpc_parameters['sigma_cem_mppi']
         else:
             # return error and stop execution
             print("Error: sampling method not recognized")
@@ -200,11 +201,11 @@ class Sampling_MPC:
         self.R = self.R.at[23,23].set(0.001) #foot_force_z_RR
  
         # mu is the friction coefficient
-        self.mu = config.mpc_params['mu']
+        self.mu = self.mpc_parameters['mu']
 
         # maximum allowed z contact forces 
-        self.f_z_max = config.mpc_params['grf_max']
-        self.f_z_min = config.mpc_params['grf_min']
+        self.f_z_max = self.mpc_parameters['grf_max']
+        self.f_z_min = self.mpc_parameters['grf_min']
 
 
 
@@ -242,7 +243,7 @@ class Sampling_MPC:
                                     temp3)
         
 
-        self.step_freq_delta = jnp.array(config.mpc_params['step_freq_available'])
+        self.step_freq_delta = jnp.array(self.mpc_parameters['step_freq_available'])
         
         
         
@@ -628,7 +629,7 @@ class Sampling_MPC:
         """    
 
         # Shift the previous solution ahead
-        if (config.mpc_params['shift_solution']):
+        if (self.mpc_parameters['shift_solution']):
             index_shift = 1./mpc_frequency
             self.best_control_parameters = self.shift_solution(self.best_control_parameters, index_shift)
          
