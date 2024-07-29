@@ -190,8 +190,8 @@ if __name__ == '__main__':
             # Update the robot state --------------------------------
             feet_pos = env.feet_pos(frame='world')
             hip_pos = env.hip_positions(frame='world')
-            base_lin_vel = env.base_lin_vel
-            base_ang_vel = env.base_ang_vel
+            base_lin_vel = env.base_lin_vel(frame='world')
+            base_ang_vel = env.base_ang_vel(frame='world')
 
             state_current = dict(
                 position=env.base_pos,
