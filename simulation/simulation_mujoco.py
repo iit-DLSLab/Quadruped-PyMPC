@@ -101,8 +101,8 @@ if __name__ == '__main__':
             # update reference state
             ref_base_lin_vel, ref_base_ang_vel = env.target_base_vel()
             ####
-            base_lin_vel=env.base_lin_vel
-            base_ang_vel = env.base_ang_vel
+            base_lin_vel=env.base_lin_vel(frame='world')
+            base_ang_vel = env.base_ang_vel(frame='world')
             ###
             base_ori_euler_xyz_leader=env.base_ori_euler_xyz
             base_pos_leader=env.base_pos
@@ -175,7 +175,7 @@ if __name__ == '__main__':
             base_lin_vel_err = ref_base_lin_vel - base_lin_vel
             base_ang_vel_err = ref_base_ang_vel - base_ang_vel
             base_poz_z_err = controller.ref_pos[2] - env.base_pos[2]
-            ctrl_state = np.concatenate((base_lin_vel_err, base_ang_vel_err, [base_poz_z_err], controller.pgg._phase_signal))
+            ctrl_state = np.concatenate((base_lin_vel_err, base_ang_vel_err, [base_poz_z_err], controller.pgg.phase_signal))
             ep_ctrl_state_history.append(ctrl_state)
             # ___________________________________________________________________________________________________________
             # # Render only at a certain frequency

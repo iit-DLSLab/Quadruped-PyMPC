@@ -432,18 +432,18 @@ class SingleRigidBodyController:
                                                      gait_type=self.gait_type,
                                                      horizon=self.horizon * 2,
                                                      contact_sequence_dt=self.mpc_dt/2.)
-                    self.pgg_temp.phase_signal = self.pgg.phase_signal
-                    self.pgg_temp.init = self.pgg.init
+                    self.pgg_temp.set_phase_signal(self.pgg.phase_signal, init=self.pgg._init) # TODO: Need init?
                     contact_sequence_temp[j] = self.pgg_temp.compute_contact_sequence()
                     
                     # in the case of nonuniform discretization, we need to subsample the contact sequence
                     if (self.use_nonuniform_discretization==True):
                         contact_sequence_temp[j] = self.pgg.sample_contact_sequence(self.contact_sequence, self.mpc_dt,self.mpc_parameters['dt_fine_grained'], self.mpc_parameters['horizon_fine_grained'])
     
-                costs,\
-                best_sample_freq = self.batched_controller.compute_batch_control(self.state_current, 
-                                                                                 self.reference_state,
-                                                                                 contact_sequence_temp)
+                costs, best_sample_freq = self.batched_controller.compute_batch_control(
+                    self.state_current,
+                    self.reference_state,
+                    contact_sequence_temp,
+                    inertia=inertia,)
                 self.pgg.step_freq = best_sample_freq
                 self.stance_time = (1 / self.pgg.step_freq) * self.duty_factor
                 self.frg.stance_time = self.stance_time
