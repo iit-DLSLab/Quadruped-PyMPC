@@ -150,8 +150,8 @@ mpc_sampling_params = {
     # ----- START properties only for the sampling-based mpc -----
     # this is used only in the case 'sampling'.
     'sampling_method':                         'random_sampling',  # 'random_sampling', 'mppi', 'cem_mppi'
-    'control_parametrization':                 'cubic_spline',
-    # 'cubic_spline', 'linear_spline_1', 'linear_spline_2', 'zero_order'
+    'control_parametrization':                 'cubic_spline_1',
+    # 'cubic_spline_1', 'cubic_spline_2', 'linear_spline_1', 'linear_spline_2', 'zero_order'
     'num_parallel_computations':               10000,  # More is better, but slower computation!
     'num_sampling_iterations':                 1,  # More is better, but slower computation!
     # convariances for the sampling methods

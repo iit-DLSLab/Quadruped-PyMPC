@@ -91,7 +91,7 @@ class PeriodicGaitGenerator:
 
     def compute_contact_sequence(self):
         # TODO: This function can be vectorized and computed with numpy vectorized operations
-        if (self.gait_type == GaitType.FULL_STANCE):
+        if (self.gait_type == GaitType.FULL_STANCE.value):
             contact_sequence = np.ones((4, self.horizon * 2))
             return contact_sequence
 
