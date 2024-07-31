@@ -10,12 +10,11 @@ import copy
 from typing import Tuple
 # TODO: Check acados installation and trow error + instructions if needed ->  pip install quadruped_pympc[acados]
 from acados_template import AcadosOcp, AcadosOcpSolver
-from quadruped_pympc import config
 from .centroidal_model_input_rates import Centroidal_Model_InputRates
 
 # Class for the Acados NMPC, the model is in another file!
 class Acados_NMPC_InputRates:
-    def __init__(self):
+    def __init__(self,mpc_parameters=None,inertia=None,mass=None,robot_name=None):
         """
         Initialize the Centroidal_NMPC_InputRates class.
 
@@ -26,24 +25,29 @@ class Acados_NMPC_InputRates:
             use_warm_start (bool): Flag indicating whether to use warm start.
             use_integrators (bool): Flag indicating whether to use integrators.
         """
+        self.mpc_parameters = mpc_parameters 
 
-        self.horizon = config.mpc_params['horizon']  # Define the number of discretization steps
-        self.dt = config.mpc_params['dt']
+        self.inertia=inertia
+        self.mass=mass
+        self.robot_name=robot_name #this is only used when using hyqreal robot
+
+        self.horizon = self.mpc_parameters['horizon']  # Define the number of discretization steps
+        self.dt = self.mpc_parameters['dt']
         self.T_horizon = self.horizon*self.dt
-        self.use_RTI = config.mpc_params['use_RTI']
-        self.use_integrators = config.mpc_params['use_integrators']
-        self.use_warm_start = config.mpc_params['use_warm_start']
-        self.use_foothold_constraints = config.mpc_params['use_foothold_constraints']
+        self.use_RTI = self.mpc_parameters['use_RTI']
+        self.use_integrators = self.mpc_parameters['use_integrators']
+        self.use_warm_start = self.mpc_parameters['use_warm_start']
+        self.use_foothold_constraints = self.mpc_parameters['use_foothold_constraints']
 
 
-        self.use_static_stability = config.mpc_params['use_static_stability']
-        self.use_zmp_stability = config.mpc_params['use_zmp_stability']
+        self.use_static_stability = self.mpc_parameters['use_static_stability']
+        self.use_zmp_stability = self.mpc_parameters['use_zmp_stability']
         self.use_stability_constraints = self.use_static_stability or self.use_zmp_stability
         
-        self.use_input_prediction = config.mpc_params['use_input_prediction']
+        self.use_input_prediction = self.mpc_parameters['use_input_prediction']
 
 
-        self.use_DDP = config.mpc_params['use_DDP']
+        self.use_DDP = self.mpc_parameters['use_DDP']
 
         
         self.previous_status = -1
@@ -222,8 +226,8 @@ class Acados_NMPC_InputRates:
         init_base = np.array([0, 0, 0])
         init_base_yaw = np.array([0])
         init_external_wrench = np.array([0, 0, 0, 0, 0, 0])
-        init_inertia = config.inertia.reshape((9,))
-        init_mass = np.array([config.mass])
+        init_inertia = self.inertia.reshape((9,))
+        init_mass = np.array([self.mass])
         
         ocp.parameter_values = np.concatenate((init_contact_status, init_mu, init_stance_proximity, 
                                                init_base, init_base_yaw, init_external_wrench, 
@@ -236,7 +240,7 @@ class Acados_NMPC_InputRates:
         ocp.solver_options.integrator_type = "ERK" #ERK IRK GNSF DISCRETE
         if(self.use_DDP):
             ocp.solver_options.nlp_solver_type = 'DDP'
-            ocp.solver_options.nlp_solver_max_iter = config.mpc_params['num_qp_iterations']
+            ocp.solver_options.nlp_solver_max_iter = self.mpc_parameters['num_qp_iterations']
             #ocp.solver_options.globalization = 'MERIT_BACKTRACKING'
             ocp.solver_options.with_adaptive_levenberg_marquardt = True
 
@@ -252,32 +256,32 @@ class Acados_NMPC_InputRates:
             ocp.solver_options.nlp_solver_max_iter = 1
             # Set the RTI type for the advanced RTI method 
             # (see https://arxiv.org/pdf/2403.07101.pdf)
-            if(config.mpc_params['as_rti_type'] == "AS-RTI-A"):
+            if(self.mpc_parameters['as_rti_type'] == "AS-RTI-A"):
                 ocp.solver_options.as_rti_iter = 1
                 ocp.solver_options.as_rti_level = 0
-            elif(config.mpc_params['as_rti_type'] == "AS-RTI-B"):
+            elif(self.mpc_parameters['as_rti_type'] == "AS-RTI-B"):
                 ocp.solver_options.as_rti_iter = 1
                 ocp.solver_options.as_rti_level = 1
-            elif(config.mpc_params['as_rti_type'] == "AS-RTI-C"):
+            elif(self.mpc_parameters['as_rti_type'] == "AS-RTI-C"):
                 ocp.solver_options.as_rti_iter = 1
                 ocp.solver_options.as_rti_level = 2
-            elif(config.mpc_params['as_rti_type'] == "AS-RTI-D"):
+            elif(self.mpc_parameters['as_rti_type'] == "AS-RTI-D"):
                 ocp.solver_options.as_rti_iter = 1
                 ocp.solver_options.as_rti_level = 3
                 
         else:
             ocp.solver_options.nlp_solver_type = "SQP"  
-            ocp.solver_options.nlp_solver_max_iter = config.mpc_params['num_qp_iterations']
+            ocp.solver_options.nlp_solver_max_iter = self.mpc_parameters['num_qp_iterations']
         #ocp.solver_options.globalization = "MERIT_BACKTRACKING"  # FIXED_STEP, MERIT_BACKTRACKING
         
-        if(config.mpc_params['solver_mode'] == "balance"):
+        if(self.mpc_parameters['solver_mode'] == "balance"):
             ocp.solver_options.hpipm_mode = "BALANCE"
-        elif(config.mpc_params['solver_mode'] == "robust"):
+        elif(self.mpc_parameters['solver_mode'] == "robust"):
             ocp.solver_options.hpipm_mode = "ROBUST"
-        elif(config.mpc_params['solver_mode'] == "fast"):
+        elif(self.mpc_parameters['solver_mode'] == "fast"):
             ocp.solver_options.qp_solver_iter_max = 10
             ocp.solver_options.hpipm_mode = "SPEED"
-        elif(config.mpc_params['solver_mode'] == "crazy_speed"):
+        elif(self.mpc_parameters['solver_mode'] == "crazy_speed"):
             ocp.solver_options.qp_solver_iter_max = 5
             ocp.solver_options.hpipm_mode = "SPEED_ABS"
 
@@ -294,9 +298,9 @@ class Acados_NMPC_InputRates:
 
 
         # Nonuniform discretization
-        if(config.mpc_params['use_nonuniform_discretization']):
-            time_steps_fine_grained = np.tile(config.mpc_params['dt_fine_grained'], config.mpc_params['horizon_fine_grained'])
-            time_steps = np.concatenate((time_steps_fine_grained, np.tile(self.dt, self.horizon - config.mpc_params['horizon_fine_grained'])))
+        if(self.mpc_parameters['use_nonuniform_discretization']):
+            time_steps_fine_grained = np.tile(self.mpc_parameters['dt_fine_grained'], self.mpc_parameters['horizon_fine_grained'])
+            time_steps = np.concatenate((time_steps_fine_grained, np.tile(self.dt, self.horizon - self.mpc_parameters['horizon_fine_grained'])))
             shooting_nodes = np.zeros((self.horizon+1,))
             for i in range(len(time_steps)):
                 shooting_nodes[i+1] = shooting_nodes[i] + time_steps[i]
@@ -516,8 +520,8 @@ class Acados_NMPC_InputRates:
         t = np.array([1, 0, 0])
         b = np.array([0, 1, 0])
         mu = self.centroidal_model.mu_friction
-        f_max = config.mpc_params['grf_max']
-        f_min = config.mpc_params['grf_min']
+        f_max = self.mpc_parameters['grf_max']
+        f_min = self.mpc_parameters['grf_min']
 
         # Derivation can be found in the paper
         # "High-slope terrain locomotion for torque-controlled quadruped robots",
@@ -605,7 +609,7 @@ class Acados_NMPC_InputRates:
         Q_pitch_integral_integral = np.array([10]) #integral of pitch
         
 
-        if(config.robot == "hyqreal"):
+        if(self.robot_name == "hyqreal"):
             Q_foot_force = np.array([0.00001, 0.00001, 0.00001]) #f_x, f_y, f_z (should be 4 times this, once per foot)
         else:
             Q_foot_force = np.array([0.0001, 0.0001, 0.0001]) #f_x, f_y, f_z (should be 4 times this, once per foot)
@@ -991,7 +995,7 @@ class Acados_NMPC_InputRates:
                     elif(np.array_equal(FL_contact_sequence, RR_contact_sequence)
                        and np.array_equal(FR_contact_sequence, RL_contact_sequence)):
                         #TROT
-                        stability_margin = config.mpc_params['trot_stability_margin']
+                        stability_margin = self.mpc_parameters['trot_stability_margin']
                         if(FL_contact_sequence[j] == 1 and FR_contact_sequence[j] == 0):
                             ub_support_FL_RR = 0 + stability_margin
                             lb_support_FL_RR = 0 - stability_margin
@@ -1003,7 +1007,7 @@ class Acados_NMPC_InputRates:
                     elif(np.array_equal(FL_contact_sequence, RL_contact_sequence)
                          and np.array_equal(FR_contact_sequence, RR_contact_sequence)):
                         #PACE
-                        stability_margin = config.mpc_params['pace_stability_margin']
+                        stability_margin = self.mpc_parameters['pace_stability_margin']
                         if(FL_contact_sequence[j] == 1 and FR_contact_sequence[j] == 0):
                             ub_support_RL_FL = 0 + stability_margin
                             lb_support_RL_FL = 0 - stability_margin
@@ -1015,7 +1019,7 @@ class Acados_NMPC_InputRates:
                     
                     else:
                         #CRAWL BACKDIAGONALCRAWL ONLY
-                        stability_margin = config.mpc_params['crawl_stability_margin']
+                        stability_margin = self.mpc_parameters['crawl_stability_margin']
 
                         if(FL_contact_sequence[j] == 1):
                             if(FR_contact_sequence[j] == 1):
@@ -1207,7 +1211,7 @@ class Acados_NMPC_InputRates:
 
     # Main loop for computing the control
     def compute_control(self, state, reference, contact_sequence, constraint = None, external_wrenches = np.zeros((6,)),
-                        inertia = config.inertia.reshape((9,)), mass = config.mass):
+                        inertia = None, mass = None):
 
             
         # Take the array of the contact sequence and split it in 4 arrays, 
@@ -1315,7 +1319,7 @@ class Acados_NMPC_InputRates:
 
         # Fill stance param, friction and stance proximity 
         # (stance proximity will disable foothold optimization near a stance!!)
-        mu = config.mpc_params['mu']
+        mu = self.mpc_parameters['mu']
         yaw = state["orientation"][2]
         
         # Stance Proximity ugly routine. Basically we disable foothold optimization
@@ -1367,9 +1371,9 @@ class Acados_NMPC_InputRates:
 
             # If we have estimated an external wrench, we can compensate it for all steps
             # or less (maybe the disturbance is not costant along the horizon!)
-            if(config.mpc_params['external_wrenches_compensation'] and
-               config.mpc_params['external_wrenches_compensation_num_step'] and 
-               j < config.mpc_params['external_wrenches_compensation_num_step']):
+            if(self.mpc_parameters['external_wrenches_compensation'] and
+               self.mpc_parameters['external_wrenches_compensation_num_step'] and 
+               j < self.mpc_parameters['external_wrenches_compensation_num_step']):
                 external_wrenches_estimated_param = copy.deepcopy(external_wrenches)
                 external_wrenches_estimated_param = external_wrenches_estimated_param.reshape((6, ))
             else:
@@ -1415,7 +1419,7 @@ class Acados_NMPC_InputRates:
 
         if(self.use_integrators):
             # Compute error for integral action
-            alpha_integrator = config.mpc_params["alpha_integrator"]
+            alpha_integrator = self.mpc_parameters["alpha_integrator"]
             self.integral_errors[0] += (state["position"][2] - reference["ref_position"][2])*alpha_integrator
             self.integral_errors[1] += (state["linear_velocity"][0] - reference["ref_linear_velocity"][0])*alpha_integrator
             self.integral_errors[2] += (state["linear_velocity"][1] - reference["ref_linear_velocity"][1])*alpha_integrator
@@ -1424,12 +1428,12 @@ class Acados_NMPC_InputRates:
             self.integral_errors[5] += (state["orientation"][1] - reference["ref_orientation"][1])*alpha_integrator
             
 
-            cap_integrator_z = config.mpc_params["integrator_cap"][0]
-            cap_integrator_x_dot = config.mpc_params["integrator_cap"][1]
-            cap_integrator_y_dot = config.mpc_params["integrator_cap"][2]
-            cap_integrator_z_dot = config.mpc_params["integrator_cap"][3]
-            cap_integrator_roll = config.mpc_params["integrator_cap"][4]
-            cap_integrator_pitch = config.mpc_params["integrator_cap"][5]
+            cap_integrator_z = self.mpc_parameters["integrator_cap"][0]
+            cap_integrator_x_dot = self.mpc_parameters["integrator_cap"][1]
+            cap_integrator_y_dot = self.mpc_parameters["integrator_cap"][2]
+            cap_integrator_z_dot = self.mpc_parameters["integrator_cap"][3]
+            cap_integrator_roll = self.mpc_parameters["integrator_cap"][4]
+            cap_integrator_pitch = self.mpc_parameters["integrator_cap"][5]
 
             self.integral_errors[0] = np.where(np.abs(self.integral_errors[0]) > cap_integrator_z, cap_integrator_z*np.sign(self.integral_errors[0]), self.integral_errors[0])
             self.integral_errors[1] = np.where(np.abs(self.integral_errors[1]) > cap_integrator_x_dot, cap_integrator_x_dot*np.sign(self.integral_errors[1]), self.integral_errors[1])
@@ -1492,8 +1496,8 @@ class Acados_NMPC_InputRates:
 
         
 
-        if(config.mpc_params['dt'] <= 0.02 or (
-                config.mpc_params['use_nonuniform_discretization'] and config.mpc_params['dt_fine_grained'] <= 0.02)):
+        if(self.mpc_parameters['dt'] <= 0.02 or (
+                self.mpc_parameters['use_nonuniform_discretization'] and self.mpc_parameters['dt_fine_grained'] <= 0.02)):
             optimal_next_state_index = 2
         else:
             optimal_next_state_index = 1

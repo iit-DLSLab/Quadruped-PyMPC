@@ -6,7 +6,7 @@ from quadruped_pympc.helpers.quadruped_utils import GaitType
 
 # These are used both for a real experiment and a simulation -----------
 # These are the only attributes needed per quadruped, the rest can be computed automatically ----------------------
-robot = 'aliengo'  # 'go2', 'aliengo', 'hyqreal', 'mini_cheetah'  # TODO: Load from robot_descriptions.py
+robot = 'aliengo'  # 'go2', 'aliengo', 'hyqreal', 'mini_cheetah'  aliengo_arm # TODO: Load from robot_descriptions.py
 robot_leg_joints = dict(FL=['FL_hip_joint', 'FL_thigh_joint', 'FL_calf_joint',],  # TODO: Make configs per robot.
                         FR=['FR_hip_joint', 'FR_thigh_joint', 'FR_calf_joint',],
                         RL=['RL_hip_joint', 'RL_thigh_joint', 'RL_calf_joint',],
@@ -57,25 +57,35 @@ mpc_params = {
     # 'input_rates' optimizes the delta GRF
     # 'sampling' is a gpu-based mpc that samples the GRF
     # 'collaborative' optimized directly the GRF and has a passive arm model inside
-    'type':                                    'nominal',
-
+    'type':                                    'nominal',  # 'nominal', 'input_rates', 'sampling', 'collaborative'
     # horizon is the number of timesteps in the future that the mpc will optimize
     # dt is the discretization time used in the mpc
     'horizon':                                 12,
     'dt':                                      0.02,
+    'mu':                                      0.5,
 
     # GRF limits for each single leg
     "grf_max":                                 mass * 9.81,
     "grf_min":                                 0,
-    'mu':                                      0.5,
+    
+    # if this is true, we optimize the step frequency as well
+    # for the sampling controller, this is done in the rollout
+    # for the gradient-based controller, this is done with a batched version of the ocp
+    'optimize_step_freq':                      False,
+    'step_freq_available':                     [1.4, 2.0, 2.4],
+    'use_nonuniform_discretization':           False,
+
+    }
+mpc_nominal_params = {
 
     # ----- START properties only for the gradient-based mpc -----
-
+    "grf_max":                                 mass * 9.81,
+    "grf_min":                                 0,
     # this is used if you want to manually warm start the mpc
     'use_warm_start':                          False,
 
     # this enables integrators for height, linear velocities, roll and pitch
-    'use_integrators':                         False,
+    'use_integrators':                         True,
     'alpha_integrator':                        0.1,
     'integrator_cap':                          [0.5, 0.2, 0.2, 0.0, 0.0, 1.0],
 
@@ -133,14 +143,14 @@ mpc_params = {
     # compensate for the external wrench in the prediction (only collaborative)
     'passive_arm_compensation':                True,
 
-    # ----- END properties for the gradient-based mpc -----
-
+    # ----- END properties for the gradient-based mpc -----    
+}
+mpc_sampling_params = {
     # ----- START properties only for the sampling-based mpc -----
-
     # this is used only in the case 'sampling'.
     'sampling_method':                         'random_sampling',  # 'random_sampling', 'mppi', 'cem_mppi'
-    'control_parametrization':                 'cubic_spline_1',
-    # 'cubic_spline_1', 'cubic_spline_2', 'linear_spline_1', 'linear_spline_2', 'zero_order'
+    'control_parametrization':                 'cubic_spline',
+    # 'cubic_spline', 'linear_spline_1', 'linear_spline_2', 'zero_order'
     'num_parallel_computations':               10000,  # More is better, but slower computation!
     'num_sampling_iterations':                 1,  # More is better, but slower computation!
     # convariances for the sampling methods
@@ -148,19 +158,11 @@ mpc_params = {
     'sigma_mppi':                              3,
     'sigma_random_sampling':                   [0.2, 3, 10],
     'shift_solution':                          False,
-
-    # ----- END properties for the sampling-based mpc -----
-
-    # if this is true, we optimize the step frequency as well
-    # for the sampling controller, this is done in the rollout
-    # for the gradient-based controller, this is done with a batched version of the ocp
-    'optimize_step_freq':                      False,
-    'step_freq_available':                     [1.4, 2.0, 2.4]
-
-    }
+}
 # -----------------------------------------------------------------------
 
 simulation_params = {
+    
     'swing_generator':             'scipy',  # 'scipy', 'explicit', 'ndcurves'
     'swing_position_gain_fb':      5000,
     'swing_velocity_gain_fb':      100,
@@ -172,7 +174,7 @@ simulation_params = {
 
     'gait':                        'trot',  # 'trot', 'pace', 'crawl', 'bound', 'full_stance'
     'gait_params':                 {'trot': {'step_freq': 1.4, 'duty_factor': 0.65, 'type': GaitType.TROT.value},
-                                    'crawl': {'step_freq': 0.7, 'duty_factor': 0.9, 'type': GaitType.BACKDIAGONALCRAWL.value},
+                                    'crawl': {'step_freq': 0.7, 'duty_factor': 0.8, 'type': GaitType.BACKDIAGONALCRAWL.value}, #check the frequency and the parameters on the paper
                                     'pace': {'step_freq': 2, 'duty_factor': 0.7, 'type': GaitType.PACE.value},
                                     'bound': {'step_freq': 4, 'duty_factor': 0.65, 'type': GaitType.BOUNDING.value},
                                     'full_stance': {'step_freq': 2, 'duty_factor': 0.65, 'type': GaitType.FULL_STANCE.value},
@@ -186,7 +188,7 @@ simulation_params = {
 
     # the MPC will be called every 1/(mpc_frequency*dt) timesteps
     # this helps to evaluate more realistically the performance of the controller
-    'mpc_frequency':               200,
+    'mpc_frequency':               100,
 
     'use_inertia_recomputation':   True,
 

@@ -13,7 +13,6 @@ import sys
 sys.path.append(dir_path)
 sys.path.append(dir_path + '/../')
 
-from quadruped_pympc import config
 from centroidal_model_jax import Centroidal_Model_JAX
 
 import time
@@ -31,7 +30,7 @@ class Sampling_MPC:
     """This is a small class that implements a sampling based control law"""
 
 
-    def __init__(self, horizon = 200, dt = 0.01, num_parallel_computations = 10000, sampling_method = 'random_sampling', control_parametrization = "linear_spline_1", device="gpu"):
+    def __init__(self, horizon = 200, dt = 0.01, num_parallel_computations = 10000, sampling_method = 'random_sampling', control_parametrization = "linear_spline_1", device="gpu",mpc_parameters = None):
         """
         Args:
             horizon (int): how much to look into the future for optimizing the gains 
@@ -45,12 +44,15 @@ class Sampling_MPC:
         
         self.num_parallel_computations = num_parallel_computations
         self.max_sampling_forces = 30
-        
+    
 
         self.control_parametrization = control_parametrization
 
         self.states_dim = 24
         self.inputs_dim = 24
+
+        ## parameters for the controller this are set from a dictionary
+        self.mpc_parameters = mpc_parameters
 
 
         
@@ -89,10 +91,10 @@ class Sampling_MPC:
             self.spline_fun_RL = self.compute_linear_spline_2
             self.spline_fun_RR = self.compute_linear_spline_2
 
-        elif(self.control_parametrization == "cubic_spline_1"):
+        elif(self.control_parametrization == "cubic_spline"):
             # Along the horizon, we have 1 splines per control input (3 forces)
             # Each spline has 3 parameters
-            self.num_control_parameters_single_leg = 4*3
+            self.num_control_parameters_single_leg = 24  #should be 9
 
             # In totale we have 4 legs
             self.num_control_parameters = self.num_control_parameters_single_leg*4
@@ -102,20 +104,6 @@ class Sampling_MPC:
             self.spline_fun_FR = self.compute_cubic_spline
             self.spline_fun_RL = self.compute_cubic_spline
             self.spline_fun_RR = self.compute_cubic_spline
-        
-        elif(self.control_parametrization == "cubic_spline_2"):
-            # Along the horizon, we have 1 splines per control input (3 forces)
-            # Each spline has 3 parameters
-            self.num_control_parameters_single_leg = 4*3 + 4*3  
-
-            # In totale we have 4 legs
-            self.num_control_parameters = self.num_control_parameters_single_leg*4
-
-            # We have 4 different spline functions, one for each leg
-            self.spline_fun_FL = self.compute_cubic_spline_2
-            self.spline_fun_FR = self.compute_cubic_spline_2
-            self.spline_fun_RL = self.compute_cubic_spline_2
-            self.spline_fun_RR = self.compute_cubic_spline_2            
 
         else:
             # We have 1 parameters for every 3 force direction (x,y,z)...for each time horizon!!
@@ -134,13 +122,13 @@ class Sampling_MPC:
 
         if(sampling_method == 'random_sampling'):
             self.compute_control = self.compute_control_random_sampling
-            self.sigma_random_sampling = config.mpc_params['sigma_random_sampling']
+            self.sigma_random_sampling = self.mpc_parameters['sigma_random_sampling']
         elif(sampling_method == 'mppi'):
             self.compute_control = self.compute_control_mppi    
-            self.sigma_mppi = config.mpc_params['sigma_mppi']
+            self.sigma_mppi = self.mpc_parameters['sigma_mppi']
         elif(sampling_method == 'cem_mppi'):
             self.compute_control = self.compute_control_cem_mppi
-            self.sigma_cem_mppi = jnp.ones(self.num_control_parameters, dtype=dtype_general) * config.mpc_params['sigma_cem_mppi']
+            self.sigma_cem_mppi = jnp.ones(self.num_control_parameters, dtype=dtype_general) * self.mpc_parameters['sigma_cem_mppi']
         else:
             # return error and stop execution
             print("Error: sampling method not recognized")
@@ -198,11 +186,11 @@ class Sampling_MPC:
         self.R = self.R.at[23,23].set(0.001) #foot_force_z_RR
  
         # mu is the friction coefficient
-        self.mu = config.mpc_params['mu']
+        self.mu = self.mpc_parameters['mu']
 
         # maximum allowed z contact forces 
-        self.f_z_max = config.mpc_params['grf_max']
-        self.f_z_min = config.mpc_params['grf_min']
+        self.f_z_max = self.mpc_parameters['grf_max']
+        self.f_z_min = self.mpc_parameters['grf_min']
 
 
         self.best_control_parameters = jnp.zeros((self.num_control_parameters,), dtype=dtype_general)
@@ -280,59 +268,34 @@ class Sampling_MPC:
 
         tau = step/(horizon_leg)
         q = (tau - 0.0)/(1.0-0.0)
-        a = 2*q*q*q - 3*q*q + 1
-        b = (q*q*q - 2*q*q + q)*1.0
-        c = -2*q*q*q + 3*q*q
-        d = (q*q*q - q*q)*1.0  
+        
+        phi = (1./2.)*(((parameters[2] - parameters[1])/0.5) + ((parameters[1] - parameters[0])/0.5))
+        phi_next = (1./2.)*(((parameters[3] - parameters[2])/0.5) + ((parameters[2] - parameters[1])/0.5))
+        
+        a_x = 2*q*q*q - 3*q*q + 1
+        b_x = (q*q*q - 2*q*q + q)*0.5
+        c_x = -2*q*q*q + 3*q*q
+        d_x = (q*q*q - q*q)*0.5
+        f_x = a_x*parameters[1] + b_x*phi + c_x*parameters[2] + d_x*phi_next
 
-        phi = (1./2.)*(((parameters[2] - parameters[1])/1.0) + ((parameters[1] - parameters[0])/1.0))
-        phi_next = (1./2.)*(((parameters[3] - parameters[2])/1.0) + ((parameters[2] - parameters[1])/1.0))
-        f_x = a*parameters[1] + b*phi + c*parameters[2] + d*phi_next
-
-        phi = (1./2.)*(((parameters[6] - parameters[5])/1.0) + ((parameters[5] - parameters[4])/1.0))
-        phi_next = (1./2.)*(((parameters[7] - parameters[6])/1.0) + ((parameters[6] - parameters[5])/1.0))
-        f_y = a*parameters[5] + b*phi + c*parameters[6] + d*phi_next
-
-
-        phi = (1./2.)*(((parameters[10] - parameters[9])/1.0) + ((parameters[9] - parameters[8])/1.0))
-        phi_next = (1./2.)*(((parameters[11] - parameters[10])/1.0) + ((parameters[10] - parameters[9])/1.0))
-        f_z = a*parameters[9] + b*phi + c*parameters[10] + d*phi_next
-       
-        return f_x, f_y, f_z
-    
-
-    def compute_cubic_spline_2(self, parameters, step, horizon_leg):
-        """
-        Compute the cubic spline parametrization of the GRF
-        """  
-
-        tau = step/(horizon_leg)
-
-        index = 0
-        index = jax.numpy.where(step > self.horizon/2, 1, index)
-        tau = jax.numpy.where(step > self.horizon/2, tau-1, tau)
-
-        start_index = 10*index
+        phi = (1./2.)*(((parameters[6] - parameters[5])/0.5) + ((parameters[5] - parameters[4])/0.5))
+        phi_next = (1./2.)*(((parameters[7] - parameters[6])/0.5) + ((parameters[6] - parameters[5])/0.5))
+        
+        a_y = 2*q*q*q - 3*q*q + 1
+        b_y = (q*q*q - 2*q*q + q)*0.5
+        c_y = -2*q*q*q + 3*q*q
+        d_y = (q*q*q - q*q)*0.5
+        f_y = a_y*parameters[5] + b_y*phi + c_y*parameters[6] + d_y*phi_next
 
 
-        q = (tau - 0.0)/(1.0-0.0)
-        a = 2*q*q*q - 3*q*q + 1
-        b = (q*q*q - 2*q*q + q)*1.0
-        c = -2*q*q*q + 3*q*q
-        d = (q*q*q - q*q)*1.0  
-
-        phi = (1./2.)*(((parameters[start_index+2] - parameters[start_index+1])/1.0) + ((parameters[start_index+1] - parameters[start_index+0])/1.0))
-        phi_next = (1./2.)*(((parameters[start_index+3] - parameters[start_index+2])/1.0) + ((parameters[start_index+2] - parameters[start_index+1])/1.0))
-        f_x = a*parameters[start_index+1] + b*phi + c*parameters[start_index+2] + d*phi_next
-
-        phi = (1./2.)*(((parameters[start_index+6] - parameters[start_index+5])/1.0) + ((parameters[start_index+5] - parameters[start_index+4])/1.0))
-        phi_next = (1./2.)*(((parameters[start_index+7] - parameters[start_index+6])/1.0) + ((parameters[start_index+6] - parameters[start_index+5])/1.0))
-        f_y = a*parameters[start_index+5] + b*phi + c*parameters[start_index+6] + d*phi_next
-
-
-        phi = (1./2.)*(((parameters[start_index+10] - parameters[start_index+9])/1.0) + ((parameters[start_index+9] - parameters[start_index+8])/1.0))
-        phi_next = (1./2.)*(((parameters[start_index+11] - parameters[start_index+10])/1.0) + ((parameters[start_index+10] - parameters[start_index+9])/1.0))
-        f_z = a*parameters[start_index+9] + b*phi + c*parameters[start_index+10] + d*phi_next
+        phi = (1./2.)*(((parameters[10] - parameters[9])/0.5) + ((parameters[9] - parameters[8])/0.5))
+        phi_next = (1./2.)*(((parameters[11] - parameters[10])/0.5) + ((parameters[10] - parameters[9])/0.5))
+        
+        a_z = 2*q*q*q - 3*q*q + 1
+        b_z = (q*q*q - 2*q*q + q)*0.5
+        c_z = -2*q*q*q + 3*q*q
+        d_z = (q*q*q - q*q)*0.5
+        f_z = a_z*parameters[9] + b_z*phi + c_z*parameters[10] + d_z*phi_next
        
         return f_x, f_y, f_z
     
@@ -610,7 +573,7 @@ class Sampling_MPC:
         """    
 
         # Shift the previous solution ahead
-        if (config.mpc_params['shift_solution']):
+        if (self.mpc_parameters['shift_solution']):
             index_shift = 1./mpc_frequency
             self.best_control_parameters = self.shift_solution(self.best_control_parameters, index_shift)
          
