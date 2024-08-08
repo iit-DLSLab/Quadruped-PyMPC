@@ -121,9 +121,16 @@ if __name__ == '__main__':
     pgg = PeriodicGaitGenerator(duty_factor=duty_factor,
                                 step_freq=step_frequency,
                                 gait_type=gait_type,
-                                horizon=horizon * 2, contact_sequence_dt=mpc_dt / 2.)
-
-    contact_sequence = pgg.compute_contact_sequence()
+                                horizon=horizon)
+    # in the case of nonuniform discretization, we create a list of dts and horizons for each nonuniform discretization
+    if (cfg.mpc_params['use_nonuniform_discretization']):
+        contact_sequence_dts = [cfg.mpc_params['dt_fine_grained'], mpc_dt]
+        contact_sequence_lenghts = [cfg.mpc_params['horizon_fine_grained'], horizon]
+    else:
+        contact_sequence_dts = [mpc_dt]
+        contact_sequence_lenghts = [horizon]
+    contact_sequence = pgg.compute_contact_sequence(contact_sequence_dts=contact_sequence_dts, 
+                                                    contact_sequence_lenghts=contact_sequence_lenghts)
     nominal_sample_freq = pgg.step_freq
     
     # Create the foothold reference generator
@@ -206,14 +213,9 @@ if __name__ == '__main__':
 
             # Update the desired contact sequence ---------------------------
             pgg.run(simulation_dt, pgg.step_freq)
-            contact_sequence = pgg.compute_contact_sequence()
+            contact_sequence = pgg.compute_contact_sequence(contact_sequence_dts=contact_sequence_dts, 
+                                                    contact_sequence_lenghts=contact_sequence_lenghts)
 
-            # in the case of nonuniform discretization, we need to subsample the contact sequence
-            if (cfg.mpc_params['use_nonuniform_discretization']):
-                dt_fine_grained = cfg.mpc_params['dt_fine_grained']
-                horizon_fine_grained = cfg.mpc_params['horizon_fine_grained']
-                contact_sequence = pgg.sample_contact_sequence(contact_sequence, mpc_dt, dt_fine_grained,
-                                                               horizon_fine_grained)
 
             previous_contact = current_contact
             current_contact = np.array([contact_sequence[0][0],
@@ -345,21 +347,16 @@ if __name__ == '__main__':
 
 
                     if cfg.mpc_params['optimize_step_freq'] and optimize_swing == 1:
-                        contact_sequence_temp = np.zeros((len(cfg.mpc_params['step_freq_available']), 4, horizon * 2))
+                        contact_sequence_temp = np.zeros((len(cfg.mpc_params['step_freq_available']), 4, horizon))
                         for j in range(len(cfg.mpc_params['step_freq_available'])):
                             pgg_temp = PeriodicGaitGenerator(duty_factor=pgg.duty_factor,
                                                              step_freq=cfg.mpc_params['step_freq_available'][j],
                                                              gait_type=pgg.gait_type,
-                                                             horizon=horizon * 2,
-                                                             contact_sequence_dt=mpc_dt/2.)
+                                                             horizon=horizon)
                             pgg_temp.set_phase_signal(pgg.phase_signal)
-                            contact_sequence_temp[j] = pgg_temp.compute_contact_sequence()
+                            contact_sequence_temp[j] = pgg_temp.compute_contact_sequence(contact_sequence_dts=contact_sequence_dts, 
+                                                                                            contact_sequence_lenghts=contact_sequence_lenghts)
 
-                            # in the case of nonuniform discretization, we need to subsample the contact sequence
-                            if (cfg.mpc_params['use_nonuniform_discretization']):
-                                dt_fine_grained = cfg.mpc_params['dt_fine_grained']
-                                horizon_fine_grained = cfg.mpc_params['horizon_fine_grained']
-                                contact_sequence_temp[j] = pgg.sample_contact_sequence(contact_sequence, mpc_dt, dt_fine_grained, horizon_fine_grained)
 
 
                         costs, \

@@ -5,11 +5,10 @@ from quadruped_pympc.helpers.quadruped_utils import GaitType
 
 class PeriodicGaitGenerator:
 
-    def __init__(self, duty_factor, step_freq, gait_type: GaitType, horizon, contact_sequence_dt):
+    def __init__(self, duty_factor, step_freq, gait_type: GaitType, horizon):
         self.duty_factor = duty_factor
         self.step_freq = step_freq
         self.horizon = horizon
-        self.contact_sequence_dt = contact_sequence_dt
         self.gait_type = gait_type
 
         # Private variables
@@ -87,7 +86,7 @@ class PeriodicGaitGenerator:
     def phase_signal(self):
         return np.array(self._phase_signal)
 
-    def compute_contact_sequence(self):
+    def compute_contact_sequence(self, contact_sequence_dts, contact_sequence_lenghts):
         # TODO: This function can be vectorized and computed with numpy vectorized operations
         if (self.gait_type == GaitType.FULL_STANCE.value):
             contact_sequence = np.ones((4, self.horizon * 2))
@@ -98,24 +97,15 @@ class PeriodicGaitGenerator:
             init_init = np.array(self._init)
 
             contact_sequence = np.zeros((self.n_contact, self.horizon))
+            
+            # contact_sequence_dts contains a list of dt (usefull for nonuniform sampling)
+            # contact_sequence_lenghts contains the number of steps for each dt
+            j = 0
             for i in range(self.horizon):
-                contact_sequence[:, i] = self.run(self.contact_sequence_dt, self.step_freq)
+                if(i >= contact_sequence_lenghts[j]):
+                    j += 1
+                dt = contact_sequence_dts[j]
+                contact_sequence[:, i] = self.run(dt, self.step_freq)
             self.set_phase_signal(t_init, init_init)
             return contact_sequence
 
-    def sample_contact_sequence(self, contact_sequence, mpc_dt, dt_fine_grained, horizon_fine_grained):
-
-        subsample_step_contact_sequence = int(dt_fine_grained / self.contact_sequence_dt)
-        if (subsample_step_contact_sequence > 1):
-            contact_sequence_fine_grained = contact_sequence[:, ::subsample_step_contact_sequence][:,
-                                            0:horizon_fine_grained]
-        else:
-            contact_sequence_fine_grained = contact_sequence[:, 0:horizon_fine_grained]
-
-        subsample_step_contact_sequence = int(mpc_dt / self.contact_sequence_dt)
-        if (subsample_step_contact_sequence > 1):
-            contact_sequence = contact_sequence[:, ::subsample_step_contact_sequence]
-        contact_sequence = contact_sequence[:, 0:self.horizon]
-        contact_sequence[:, 0:horizon_fine_grained] = contact_sequence_fine_grained
-
-        return contact_sequence
