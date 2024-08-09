@@ -3,7 +3,7 @@ import pathlib
 
 # Authors: Giulio Turrisi - 
 
-from acados_template import AcadosOcp, AcadosOcpSolver
+from acados_template import AcadosOcp, AcadosOcpSolver, ACADOS_INFTY
 from .centroidal_model_nominal import Centroidal_Model_Nominal
 import numpy as np
 import scipy.linalg
@@ -333,32 +333,32 @@ class Acados_NMPC_Nominal:
         constraint_FR_RL = y - (y_RL - y_FR) * (x - x_FR) / (x_RL - x_FR + 0.001) - y_FR  # bigger than zero
 
         # upper and lower bound
-        ub = np.ones(6) * 1000
-        lb = -np.ones(6) * 1000
+        ub = np.ones(6) * ACADOS_INFTY
+        lb = -np.ones(6) * ACADOS_INFTY
 
         # constraint_FL_FR
         ub[0] = 0
-        lb[0] = -1000
+        lb[0] = -ACADOS_INFTY
 
         # constraint_FR_RR
-        ub[1] = 1000
+        ub[1] = ACADOS_INFTY
         lb[1] = 0
 
         # constraint_RR_RL
-        ub[2] = 1000
+        ub[2] = ACADOS_INFTY
         lb[2] = 0
 
         # constraint_RL_FL
         ub[3] = 0
-        lb[3] = -1000
+        lb[3] = -ACADOS_INFTY
 
         # constraint_FL_RR
         ub[4] = 0
-        lb[4] = -1000
+        lb[4] = -ACADOS_INFTY
 
         # constraint_FR_RL
         ub[5] = 0
-        lb[5] = -1000
+        lb[5] = -ACADOS_INFTY
 
         Jb = cs.vertcat(constraint_FL_FR, constraint_FR_RR,
                         constraint_RR_RL, constraint_RL_FL,
@@ -399,8 +399,8 @@ class Acados_NMPC_Nominal:
             lbu: A numpy array of shape (8,) representing the lower bounds of the foothold constraints.
         """
 
-        ubu = np.ones(12) * 1000
-        lbu = -np.ones(12) * 1000
+        ubu = np.ones(12) * ACADOS_INFTY
+        lbu = -np.ones(12) * ACADOS_INFTY
 
         # The foothold constraint in acados are in the horizontal frame,
         # but they arrive to us in the world frame. We need to rotate them
@@ -483,10 +483,10 @@ class Acados_NMPC_Nominal:
         # C matrix
         Jbu = Jbu @ cs.vertcat(self.centroidal_model.inputs[12:24])
 
-        # lower bound (-1000 is "almost" -inf)
+        # lower bound (-ACADOS_INFTY is "almost" -inf)
         lbu = np.zeros(20)
-        lbu[0] = -10000000
-        lbu[1] = -10000000
+        lbu[0] = -ACADOS_INFTY
+        lbu[1] = -ACADOS_INFTY
         lbu[2] = 0
         lbu[3] = 0
         lbu[4] = f_min
@@ -494,12 +494,12 @@ class Acados_NMPC_Nominal:
         lbu[10:15] = lbu[0:5]
         lbu[15:20] = lbu[0:5]
 
-        # upper bound (1000 is "almost" inf)
+        # upper bound (ACADOS_INFTY is "almost" inf)
         ubu = np.zeros(20)
         ubu[0] = 0
         ubu[1] = 0
-        ubu[2] = 10000000
-        ubu[3] = 10000000
+        ubu[2] = ACADOS_INFTY
+        ubu[3] = ACADOS_INFTY
         ubu[4] = f_max
         ubu[5:10] = ubu[0:5]
         ubu[10:15] = ubu[0:5]
@@ -839,23 +839,23 @@ class Acados_NMPC_Nominal:
                 # Constraints for the support polygon depending on the leg in stance
                 # all disabled at the beginning!!
                 if (self.use_stability_constraints):
-                    ub_support_FL_FR = 1000
-                    lb_support_FL_FR = -1000
+                    ub_support_FL_FR = ACADOS_INFTY
+                    lb_support_FL_FR = -ACADOS_INFTY
 
-                    ub_support_FR_RR = 1000
-                    lb_support_FR_RR = -1000
+                    ub_support_FR_RR = ACADOS_INFTY
+                    lb_support_FR_RR = -ACADOS_INFTY
 
-                    ub_support_RR_RL = 1000
-                    lb_support_RR_RL = -1000
+                    ub_support_RR_RL = ACADOS_INFTY
+                    lb_support_RR_RL = -ACADOS_INFTY
 
-                    ub_support_RL_FL = 1000
-                    lb_support_RL_FL = -1000
+                    ub_support_RL_FL = ACADOS_INFTY
+                    lb_support_RL_FL = -ACADOS_INFTY
 
-                    ub_support_FL_RR = 1000
-                    lb_support_FL_RR = -1000
+                    ub_support_FL_RR = ACADOS_INFTY
+                    lb_support_FL_RR = -ACADOS_INFTY
 
-                    ub_support_FR_RL = 1000
-                    lb_support_FR_RL = -1000
+                    ub_support_FR_RL = ACADOS_INFTY
+                    lb_support_FR_RL = -ACADOS_INFTY
 
                     # We have 4 cases for the stability constraint: trot, pace, crawl, full stance
                     if (FL_contact_sequence[j] == 1 and
@@ -863,23 +863,23 @@ class Acados_NMPC_Nominal:
                             RL_contact_sequence[j] == 1 and
                             RR_contact_sequence[j] == 1):
                         # FULL STANCE TODO
-                        ub_support_FL_FR = 1000
-                        lb_support_FL_FR = -1000
+                        ub_support_FL_FR = ACADOS_INFTY
+                        lb_support_FL_FR = -ACADOS_INFTY
 
-                        ub_support_FR_RR = 1000
-                        lb_support_FR_RR = -1000
+                        ub_support_FR_RR = ACADOS_INFTY
+                        lb_support_FR_RR = -ACADOS_INFTY
 
-                        ub_support_RR_RL = 1000
-                        lb_support_RR_RL = -1000
+                        ub_support_RR_RL = ACADOS_INFTY
+                        lb_support_RR_RL = -ACADOS_INFTY
 
-                        ub_support_RL_FL = 1000
-                        lb_support_RL_FL = -1000
+                        ub_support_RL_FL = ACADOS_INFTY
+                        lb_support_RL_FL = -ACADOS_INFTY
 
-                        ub_support_FL_RR = 1000
-                        lb_support_FL_RR = -1000
+                        ub_support_FL_RR = ACADOS_INFTY
+                        lb_support_FL_RR = -ACADOS_INFTY
 
-                        ub_support_FR_RL = 1000
-                        lb_support_FR_RL = -1000
+                        ub_support_FR_RL = ACADOS_INFTY
+                        lb_support_FR_RL = -ACADOS_INFTY
 
                     elif (np.array_equal(FL_contact_sequence, RR_contact_sequence)
                           and np.array_equal(FR_contact_sequence, RL_contact_sequence)):
@@ -912,34 +912,34 @@ class Acados_NMPC_Nominal:
                         if (FL_contact_sequence[j] == 1):
                             if (FR_contact_sequence[j] == 1):
                                 ub_support_FL_FR = -0.0 - stability_margin
-                                lb_support_FL_FR = -1000
+                                lb_support_FL_FR = -ACADOS_INFTY
                             else:
-                                ub_support_FL_RR = 1000
+                                ub_support_FL_RR = ACADOS_INFTY
                                 lb_support_FL_RR = 0.0 + stability_margin
 
                         if (FR_contact_sequence[j] == 1):
                             if (RR_contact_sequence[j] == 1):
-                                ub_support_FR_RR = 1000
+                                ub_support_FR_RR = ACADOS_INFTY
                                 lb_support_FR_RR = 0.0 + stability_margin
                             else:
-                                ub_support_FR_RL = 1000
+                                ub_support_FR_RL = ACADOS_INFTY
                                 lb_support_FR_RL = 0.0 + stability_margin
 
                         if (RR_contact_sequence[j] == 1):
                             if (RL_contact_sequence[j] == 1):
-                                ub_support_RR_RL = 1000
+                                ub_support_RR_RL = ACADOS_INFTY
                                 lb_support_RR_RL = 0.0 + stability_margin
                             else:
                                 ub_support_FL_RR = -0.0 - stability_margin
-                                lb_support_FL_RR = -1000
+                                lb_support_FL_RR = -ACADOS_INFTY
 
                         if (RL_contact_sequence[j] == 1):
                             if (FL_contact_sequence[j] == 1):
                                 ub_support_RL_FL = -0.0 - stability_margin
-                                lb_support_RL_FL = -1000
+                                lb_support_RL_FL = -ACADOS_INFTY
                             else:
                                 ub_support_FR_RL = -0.0 - stability_margin
-                                lb_support_FR_RL = -1000
+                                lb_support_FR_RL = -ACADOS_INFTY
 
                     ub_support = np.array([ub_support_FL_FR, ub_support_FR_RR, ub_support_RR_RL, ub_support_RL_FL,
                                            ub_support_FL_RR, ub_support_FR_RL])
