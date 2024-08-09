@@ -97,11 +97,14 @@ class PeriodicGaitGenerator:
             init_init = np.array(self._init)
 
             contact_sequence = np.zeros((self.n_contact, self.horizon))
+
+            # the first value is simply the current predicted contact by the timer
+            contact_sequence[:, 0] = self.run(0.0, self.step_freq)
             
             # contact_sequence_dts contains a list of dt (usefull for nonuniform sampling)
             # contact_sequence_lenghts contains the number of steps for each dt
             j = 0
-            for i in range(self.horizon):
+            for i in range(1, self.horizon):
                 if(i >= contact_sequence_lenghts[j]):
                     j += 1
                 dt = contact_sequence_dts[j]
