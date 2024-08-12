@@ -198,7 +198,7 @@ simulation_params = {
 
     'use_kind_of_real_time':       True,
 
-    'scene':                       'flat',  # flat, rough, stairs, random_boxes, random_pyramid, suspend_stairs, slope, perlin, image
+    'scene':                       'flat',  # flat, rough, stairs, random_boxes, random_pyramids, suspend_stairs, slope, perlin, image
 
     }
 # -----------------------------------------------------------------------
