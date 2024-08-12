@@ -105,15 +105,23 @@ class SwingTrajectoryController:
             else:
                 self.swing_time[leg_id] = 0
 
-    def check_apex_condition(self, current_contact):
+    def check_apex_condition(self, current_contact, interval=0.02):
         optimize_swing = 0
         for leg_id in range(4):
             # Swing time check
             if (current_contact[leg_id] == 0):
-                if ((self.swing_time[leg_id] > (self.swing_period / 2.) - 0.02) and \
-                        (self.swing_time[leg_id] < (self.swing_period / 2.) + 0.02)):
+                if ((self.swing_time[leg_id] > (self.swing_period / 2.) - interval) and \
+                        (self.swing_time[leg_id] < (self.swing_period / 2.) + interval)):
                     optimize_swing = 1
         return optimize_swing
+
+    def check_full_stance_condition(self, current_contact):
+        stance = 1
+        # If one leg is not in stance, the robot is not in full stance
+        for leg_id in range(4):
+            if (current_contact[leg_id] == 0):
+                stance = 0
+        return stance
 
 
 # Example:
