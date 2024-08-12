@@ -16,10 +16,11 @@ from quadruped_pympc.helpers.foothold_reference_generator import FootholdReferen
 from quadruped_pympc.helpers.periodic_gait_generator import PeriodicGaitGenerator
 from quadruped_pympc.helpers.swing_trajectory_controller import SwingTrajectoryController
 from quadruped_pympc.helpers.terrain_estimator import TerrainEstimator
-from quadruped_pympc.helpers.visual_foothold_adaptation import VisualFootholdAdaptation
 from quadruped_pympc.helpers.quadruped_utils import plot_swing_mujoco
 # HeightMap import
-from gym_quadruped.sensors.heightmap import HeightMap
+if(cfg.simulation_params['visual_foothold_adaptation'] != 'blind'):
+    from gym_quadruped.sensors.heightmap import HeightMap
+    from quadruped_pympc.helpers.visual_foothold_adaptation import VisualFootholdAdaptation
 from gym_quadruped.utils.mujoco.visual import render_sphere
 
 
@@ -191,13 +192,14 @@ if __name__ == '__main__':
 
 
     # Create HeightMap -----------------------------------------------------------------------
-    resolution_vfa = 0.04
-    dimension_vfa = 7
-    heightmaps = LegsAttr(FL=HeightMap(n=dimension_vfa, dist_x=resolution_vfa, dist_y=resolution_vfa, mjModel=env.mjModel, mjData=env.mjData),
-                       FR=HeightMap(n=dimension_vfa, dist_x=resolution_vfa, dist_y=resolution_vfa, mjModel=env.mjModel, mjData=env.mjData),
-                       RL=HeightMap(n=dimension_vfa, dist_x=resolution_vfa, dist_y=resolution_vfa, mjModel=env.mjModel, mjData=env.mjData),
-                       RR=HeightMap(n=dimension_vfa, dist_x=resolution_vfa, dist_y=resolution_vfa, mjModel=env.mjModel, mjData=env.mjData))
-    vfa = VisualFootholdAdaptation(legs_order=legs_order, adaptation_strategy=cfg.simulation_params['visual_foothold_adaptation'])
+    if(cfg.simulation_params['visual_foothold_adaptation'] != 'blind'):
+        resolution_vfa = 0.04
+        dimension_vfa = 7
+        heightmaps = LegsAttr(FL=HeightMap(n=dimension_vfa, dist_x=resolution_vfa, dist_y=resolution_vfa, mjModel=env.mjModel, mjData=env.mjData),
+                        FR=HeightMap(n=dimension_vfa, dist_x=resolution_vfa, dist_y=resolution_vfa, mjModel=env.mjModel, mjData=env.mjData),
+                        RL=HeightMap(n=dimension_vfa, dist_x=resolution_vfa, dist_y=resolution_vfa, mjModel=env.mjModel, mjData=env.mjData),
+                        RR=HeightMap(n=dimension_vfa, dist_x=resolution_vfa, dist_y=resolution_vfa, mjModel=env.mjModel, mjData=env.mjData))
+        vfa = VisualFootholdAdaptation(legs_order=legs_order, adaptation_strategy=cfg.simulation_params['visual_foothold_adaptation'])
 
 
 
