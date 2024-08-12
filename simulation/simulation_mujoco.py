@@ -561,7 +561,7 @@ if __name__ == '__main__':
                     ctrl_state_history.append(ep_ctrl_state_history)
                 env.reset(random=False)
                 pgg.reset()
-                vfa.reset()
+                if(cfg.simulation_params['visual_foothold_adaptation'] != 'blind'): vfa.reset()
                 frg.lift_off_positions = env.feet_pos(frame='world')
                 current_contact = np.array([0, 0, 0, 0])
                 previous_contact = np.asarray(current_contact)
