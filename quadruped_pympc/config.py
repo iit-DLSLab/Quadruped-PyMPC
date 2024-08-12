@@ -167,6 +167,9 @@ simulation_params = {
     'swing_integral_gain_fb':      0,
     'step_height':                 0.3 * hip_height,  # 0.05 go2
 
+    # Visual Foothold adapatation
+    "visual_foothold_adaptation":  'blind', #'blind', 'height', 'vfa'
+
     # this is the integration time used in the simulator
     'dt':                          0.002,
 
@@ -186,7 +189,7 @@ simulation_params = {
 
     # the MPC will be called every 1/(mpc_frequency*dt) timesteps
     # this helps to evaluate more realistically the performance of the controller
-    'mpc_frequency':               200,
+    'mpc_frequency':               100,
 
     'use_inertia_recomputation':   True,
 
@@ -195,7 +198,7 @@ simulation_params = {
 
     'use_kind_of_real_time':       True,
 
-    'scene':                       'flat',  # flat, rough, stairs, suspend_stairs, slope, perlin, image
+    'scene':                       'flat',  # flat, rough, stairs, random_boxes, random_pyramid, suspend_stairs, slope, perlin, image
 
     }
 # -----------------------------------------------------------------------

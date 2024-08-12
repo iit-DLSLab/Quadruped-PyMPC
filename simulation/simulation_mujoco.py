@@ -4,7 +4,6 @@
 # Giulio Turrisi, Daniel Ordonez
 
 import time
-import pathlib
 import numpy as np
 from tqdm import tqdm
 # Gym and Simulation related imports
@@ -17,7 +16,14 @@ from quadruped_pympc.helpers.foothold_reference_generator import FootholdReferen
 from quadruped_pympc.helpers.periodic_gait_generator import PeriodicGaitGenerator
 from quadruped_pympc.helpers.swing_trajectory_controller import SwingTrajectoryController
 from quadruped_pympc.helpers.terrain_estimator import TerrainEstimator
+from quadruped_pympc.helpers.visual_foothold_adaptation import VisualFootholdAdaptation
 from quadruped_pympc.helpers.quadruped_utils import plot_swing_mujoco
+# HeightMap import
+from gym_quadruped.sensors.heightmap import HeightMap
+from gym_quadruped.utils.mujoco.visual import render_sphere
+
+
+
 
 if __name__ == '__main__':
     np.set_printoptions(precision=3, suppress=True)
@@ -33,7 +39,8 @@ if __name__ == '__main__':
                                'qpos_js', 'qvel_js', 'tau_ctrl_setpoint',
                                'feet_pos_base', 'feet_vel_base', 'contact_state', 'contact_forces_base',)
 
-    # Create the quadruped robot environment. _______________________________________________________________________
+
+    # Create the quadruped robot environment -----------------------------------------------------------
     env = QuadrupedEnv(robot=robot_name,
                        hip_height=hip_height,
                        legs_joint_names=robot_leg_joints,  # Joint names of the legs DoF
@@ -57,6 +64,8 @@ if __name__ == '__main__':
     #                    base_vel_command_type="random",  # "forward", "random", "forward+rotate", "human"
     #                    state_obs_names=state_observables_names,  # Desired quantities in the 'state' vec
     #                    )
+
+
     # Some robots require a change in the zero joint-space configuration. If provided apply it
     if cfg.qpos0_js is not None:
         env.mjModel.qpos0 = np.concatenate((env.mjModel.qpos0[:7], cfg.qpos0_js))
@@ -64,9 +73,8 @@ if __name__ == '__main__':
     env.reset(random=False)
     env.render()  # Pass in the first render call any mujoco.viewer.KeyCallbackType
 
-    # _______________________________________________________________________________________________________________
 
-    # TODO: CONTROLLER INITIALIZATION CODE THAT SHOULD BE REMOVED FROM HERE.
+    # Controller initialization -------------------------------------------------------------
     mpc_frequency = cfg.simulation_params['mpc_frequency']
     mpc_dt = cfg.mpc_params['dt']
     horizon = cfg.mpc_params['horizon']
@@ -110,9 +118,7 @@ if __name__ == '__main__':
                                   device="gpu")
 
 
-
-
-    # Periodic gait generator _________________________________________________________________________
+    # Periodic gait generator --------------------------------------------------------------
     gait_name = cfg.simulation_params['gait']
     gait_params = cfg.simulation_params['gait_params'][gait_name]
     gait_type, duty_factor, step_frequency = gait_params['type'], gait_params['duty_factor'], gait_params['step_freq']
@@ -133,11 +139,13 @@ if __name__ == '__main__':
                                                     contact_sequence_lenghts=contact_sequence_lenghts)
     nominal_sample_freq = pgg.step_freq
     
-    # Create the foothold reference generator
+
+    # Create the foothold reference generator ------------------------------------------------
     stance_time = (1 / pgg.step_freq) * pgg.duty_factor
     frg = FootholdReferenceGenerator(stance_time=stance_time, hip_height=cfg.hip_height, lift_off_positions=env.feet_pos(frame='world'))
 
-    # Create swing trajectory generator
+
+    # Create swing trajectory generator ------------------------------------------------------
     step_height = cfg.simulation_params['step_height']
     swing_period = (1 - pgg.duty_factor) * (1 / pgg.step_freq) 
     position_gain_fb = cfg.simulation_params['swing_position_gain_fb']
@@ -147,17 +155,17 @@ if __name__ == '__main__':
                                     position_gain_fb=position_gain_fb, velocity_gain_fb=velocity_gain_fb,
                                     generator=swing_generator)
 
-    # Terrain estimator
+
+    # Terrain estimator -----------------------------------------------------------------------
     terrain_computation = TerrainEstimator()
 
 
-    # Initialization of variables used in the main control loop
-    # ____________________________________________________________
+    # Initialization of variables used in the main control loop --------------------------------
     # Set the reference for the state
     ref_pose = np.array([0, 0, cfg.hip_height])
     ref_base_lin_vel, ref_base_ang_vel = env.target_base_vel()
     ref_orientation = np.array([0.0, 0.0, 0.0])
-    # # SET REFERENCE AS DICTIONARY
+    
     # TODO: I would suggest to create a DataClass for "BaseConfig" used in the PotatoModel controllers.
     ref_state = {}
 
@@ -181,8 +189,20 @@ if __name__ == '__main__':
     feet_traj_geom_ids, feet_GRF_geom_ids = None, LegsAttr(FL=-1, FR=-1, RL=-1, RR=-1)
     legs_order = ["FL", "FR", "RL", "RR"]
 
-    # _____________________________________________________________
-    RENDER_FREQ = 20  # Hz
+
+    # Create HeightMap -----------------------------------------------------------------------
+    resolution_vfa = 0.04
+    dimension_vfa = 7
+    heightmaps = LegsAttr(FL=HeightMap(n=dimension_vfa, dist_x=resolution_vfa, dist_y=resolution_vfa, mjModel=env.mjModel, mjData=env.mjData),
+                       FR=HeightMap(n=dimension_vfa, dist_x=resolution_vfa, dist_y=resolution_vfa, mjModel=env.mjModel, mjData=env.mjData),
+                       RL=HeightMap(n=dimension_vfa, dist_x=resolution_vfa, dist_y=resolution_vfa, mjModel=env.mjModel, mjData=env.mjData),
+                       RR=HeightMap(n=dimension_vfa, dist_x=resolution_vfa, dist_y=resolution_vfa, mjModel=env.mjModel, mjData=env.mjData))
+    vfa = VisualFootholdAdaptation(legs_order=legs_order, adaptation_strategy=cfg.simulation_params['visual_foothold_adaptation'])
+
+
+
+    # --------------------------------------------------------------
+    RENDER_FREQ = 30  # Hz
     N_EPISODES = 500
     N_STEPS_PER_EPISODE = 2000 if env.base_vel_command_type != "human" else 20000
     last_render_time = time.time()
@@ -193,6 +213,7 @@ if __name__ == '__main__':
         ep_state_obs_history, ep_ctrl_state_history = [], []
         for _ in range(N_STEPS_PER_EPISODE):
             step_start = time.time()
+
 
             # Update the robot state --------------------------------
             feet_pos = env.feet_pos(frame='world')
@@ -211,6 +232,7 @@ if __name__ == '__main__':
                 foot_RR=feet_pos.RR
                 )
 
+
             # Update the desired contact sequence ---------------------------
             pgg.run(simulation_dt, pgg.step_freq)
             contact_sequence = pgg.compute_contact_sequence(contact_sequence_dts=contact_sequence_dts, 
@@ -223,6 +245,7 @@ if __name__ == '__main__':
                                         contact_sequence[2][0],
                                         contact_sequence[3][0]])
 
+
             # Compute the reference for the footholds ---------------------------------------------------
             frg.update_lift_off_positions(previous_contact, current_contact, feet_pos, legs_order)
             ref_feet_pos = frg.compute_footholds_reference(
@@ -232,6 +255,34 @@ if __name__ == '__main__':
                 ref_base_xy_lin_vel=ref_base_lin_vel[0:2],
                 hips_position=hip_pos,
                 com_height_nominal=cfg.simulation_params['ref_z'])
+            
+
+            # Adjust the footholds given the terrain -----------------------------------------------------
+            if(cfg.simulation_params['visual_foothold_adaptation'] != 'blind'):
+                
+                time_adaptation = time.time()
+                if(stc.check_apex_condition(current_contact, interval=0.01) and vfa.initialized == False):
+                    for leg_id, leg_name in enumerate(legs_order):
+                        heightmaps[leg_name].update_height_map(ref_feet_pos[leg_name], yaw=env.base_ori_euler_xyz[2])
+                    vfa.compute_adaptation(legs_order, ref_feet_pos, hip_pos, heightmaps, base_lin_vel, env.base_ori_euler_xyz, base_ang_vel)
+                    #print("Adaptation time: ", time.time() - time_adaptation)
+                
+                if(stc.check_full_stance_condition(current_contact)):
+                    vfa.reset()
+                
+                ref_feet_pos = vfa.get_footholds_adapted(ref_feet_pos)
+                
+                """step_height_modification = False
+                for leg_id, leg_name in enumerate(legs_order):
+                    if(ref_feet_pos[leg_name][2] - frg.lift_off_positions[leg_name][2] > (cfg.simulation_params['step_height'] - 0.05) 
+                       and ref_feet_pos[leg_name][2] - frg.lift_off_positions[leg_name][2] > 0.0):
+                        step_height = ref_feet_pos[leg_name][2] - frg.lift_off_positions[leg_name][2] + 0.05
+                        step_height_modification = True
+                        stc.regenerate_swing_trajectory_generator(step_height=step_height, swing_period=stc.swing_period)
+                if(step_height_modification == False):
+                    step_height = cfg.simulation_params['step_height']
+                    stc.regenerate_swing_trajectory_generator(step_height=step_height, swing_period=stc.swing_period)"""
+            
 
             # Estimate the terrain slope and elevation -------------------------------------------------------
             terrain_roll, \
@@ -245,9 +296,10 @@ if __name__ == '__main__':
             ref_pos = np.array([0, 0, cfg.hip_height])
             ref_pos[2] = cfg.simulation_params['ref_z'] + terrain_height
 
+
             # Update state reference ------------------------------------------------------------------------
-            # Update target base velocity
             ref_base_lin_vel, ref_base_ang_vel = env.target_base_vel()
+
             
             ref_state |= dict(ref_foot_FL=ref_feet_pos.FL.reshape((1, 3)),
                               ref_foot_FR=ref_feet_pos.FR.reshape((1, 3)),
@@ -260,6 +312,7 @@ if __name__ == '__main__':
                               ref_position=ref_pos
                               )
             # -------------------------------------------------------------------------------------------------
+
 
             # TODO: this should be hidden inside the controller forward/get_action method
             # Solve OCP ---------------------------------------------------------------------------------------
@@ -345,7 +398,6 @@ if __name__ == '__main__':
                                               RR=nmpc_footholds[3])
 
 
-
                     if cfg.mpc_params['optimize_step_freq'] and optimize_swing == 1:
                         contact_sequence_temp = np.zeros((len(cfg.mpc_params['step_freq_available']), 4, horizon))
                         for j in range(len(cfg.mpc_params['step_freq_available'])):
@@ -356,7 +408,6 @@ if __name__ == '__main__':
                             pgg_temp.set_phase_signal(pgg.phase_signal)
                             contact_sequence_temp[j] = pgg_temp.compute_contact_sequence(contact_sequence_dts=contact_sequence_dts, 
                                                                                             contact_sequence_lenghts=contact_sequence_lenghts)
-
 
 
                         costs, \
@@ -389,7 +440,6 @@ if __name__ == '__main__':
                                      RL=nmpc_GRFs[6:9] * current_contact[2],
                                      RR=nmpc_GRFs[9:12] * current_contact[3])
 
-            # -------------------------------------------------------------------------------------------------
 
             # Compute Stance Torque ---------------------------------------------------------------------------
             feet_jac = env.feet_jacobians(frame='world', return_rot_jac=False)
@@ -403,7 +453,7 @@ if __name__ == '__main__':
             tau.FR = -np.matmul(feet_jac.FR[:, env.legs_qvel_idx.FR].T, nmpc_GRFs.FR)
             tau.RL = -np.matmul(feet_jac.RL[:, env.legs_qvel_idx.RL].T, nmpc_GRFs.RL)
             tau.RR = -np.matmul(feet_jac.RR[:, env.legs_qvel_idx.RR].T, nmpc_GRFs.RR)
-            # ---------------------------------------------------------------------------------------------------
+
 
             # Compute Swing Torque ------------------------------------------------------------------------------
             # TODO: Move contact sequence to labels FL, FR, RL, RR instead of a fixed indexing.
@@ -430,6 +480,8 @@ if __name__ == '__main__':
                         h=legs_qfrc_bias[leg_name],
                         mass_matrix=legs_mass_matrix[leg_name]
                         )
+                    
+            
             # Set control and mujoco step ----------------------------------------------------------------------
             action = np.zeros(env.mjModel.nu)
             action[env.legs_tau_idx.FL] = tau.FL
@@ -442,18 +494,21 @@ if __name__ == '__main__':
 
             state, reward, is_terminated, is_truncated, info = env.step(action=action)
 
-            # Store the history of observations and control ___________________________________________________________
+
+            # Store the history of observations and control -------------------------------------------------------
             ep_state_obs_history.append(state)
             base_lin_vel_err = ref_base_lin_vel - base_lin_vel
             base_ang_vel_err = ref_base_ang_vel - base_ang_vel
             base_poz_z_err = ref_pos[2] - env.base_pos[2]
             ctrl_state = np.concatenate((base_lin_vel_err, base_ang_vel_err, [base_poz_z_err], pgg._phase_signal))
             ep_ctrl_state_history.append(ctrl_state)
-            # ___________________________________________________________________________________________________________
 
-            # Render only at a certain frequency
+
+            # Render only at a certain frequency -----------------------------------------------------------------
             if time.time() - last_render_time > 1.0 / RENDER_FREQ or env.step_num == 1:
                 _, _, feet_GRF = env.feet_contact_state(ground_reaction_forces=True)
+
+                # Plot the swing trajectory
                 feet_traj_geom_ids = plot_swing_mujoco(viewer=env.viewer,
                                                        swing_traj_controller=stc,
                                                        swing_period=stc.swing_period,
@@ -465,6 +520,24 @@ if __name__ == '__main__':
                                                        nmpc_footholds=nmpc_footholds,
                                                        ref_feet_pos=ref_feet_pos,
                                                        geom_ids=feet_traj_geom_ids)
+                
+                
+                # Update and Plot the heightmap
+                if(cfg.simulation_params['visual_foothold_adaptation'] != 'blind'):
+                    #if(stc.check_apex_condition(current_contact, interval=0.01)):
+                    for leg_id, leg_name in enumerate(legs_order):
+                        data = heightmaps[leg_name].data#.update_height_map(ref_feet_pos[leg_name], yaw=env.base_ori_euler_xyz[2])
+                        if(data is not None):
+                            for i in range(data.shape[0]):
+                                for j in range(data.shape[1]):
+                                        heightmaps[leg_name].geom_ids[i, j] = render_sphere(viewer=env.viewer,
+                                                                                            position=([data[i][j][0][0],data[i][j][0][1],data[i][j][0][2]]),
+                                                                                            diameter=0.01,
+                                                                                            color=[0, 1, 0, .5],
+                                                                                            geom_id=heightmaps[leg_name].geom_ids[i, j]
+                                                                                            )
+                            
+                # Plot the GRF
                 for leg_id, leg_name in enumerate(legs_order):
                     feet_GRF_geom_ids[leg_name] = render_vector(env.viewer,
                                                                 vector=feet_GRF[leg_name],
@@ -473,9 +546,11 @@ if __name__ == '__main__':
                                                                 color=np.array([0, 1, 0, .5]),
                                                                 geom_id=feet_GRF_geom_ids[leg_name])
 
-                    env.render()
-                    last_render_time = time.time()
+                env.render()
+                last_render_time = time.time()
 
+
+            # Reset the environment if the episode is terminated ------------------------------------------------
             if env.step_num > N_STEPS_PER_EPISODE or is_terminated or is_truncated:
                 if is_terminated:
                     print("Environment terminated")
@@ -484,10 +559,11 @@ if __name__ == '__main__':
                     ctrl_state_history.append(ep_ctrl_state_history)
                 env.reset(random=False)
                 pgg.reset()
+                vfa.reset()
                 frg.lift_off_positions = env.feet_pos(frame='world')
                 current_contact = np.array([0, 0, 0, 0])
                 previous_contact = np.asarray(current_contact)
-                z_foot_mean = 0.0
+                
 
     env.close()
 

@@ -115,9 +115,8 @@ class FootholdReferenceGenerator:
 
         # TODO: we should rotate them considering the terrain estimator maybe
         #   or we can just do exteroceptive height adjustement...
-        #   for now we substract 0.02cm to have a clear touch down
         for leg_id in ['FL', 'FR', 'RL', 'RR']:
-            ref_feet[leg_id][2] = self.lift_off_positions[leg_id][2] - 0.02
+            ref_feet[leg_id][2] = self.lift_off_positions[leg_id][2]# - 0.02
 
         return ref_feet
 
