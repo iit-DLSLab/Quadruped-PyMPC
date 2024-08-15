@@ -174,20 +174,20 @@ class SRBDControllerInterface:
                 # print("preparation phase time: ", controller.acados_ocp_solver.get_stats('time_tot'))
 
 
-            # If we have optimized the gait, we set all the timing parameters
-            if ((self.optimize_step_freq) and (optimize_swing == 1)):
-                pgg.step_freq = np.array([best_sample_freq])[0]
-                nominal_sample_freq = pgg.step_freq
-                frg.stance_time = (1 / pgg.step_freq) * pgg.duty_factor
-                swing_period = (1 - pgg.duty_factor) * (1 / pgg.step_freq)
-                stc.regenerate_swing_trajectory_generator(step_height=step_height, swing_period=swing_period)
+        # If we have optimized the gait, we set all the timing parameters
+        if ((self.optimize_step_freq) and (optimize_swing == 1)):
+            pgg.step_freq = np.array([best_sample_freq])[0]
+            nominal_sample_freq = pgg.step_freq
+            frg.stance_time = (1 / pgg.step_freq) * pgg.duty_factor
+            swing_period = (1 - pgg.duty_factor) * (1 / pgg.step_freq)
+            stc.regenerate_swing_trajectory_generator(step_height=step_height, swing_period=swing_period)
 
 
-            # TODO: Indexing should not be hardcoded. Env should provide indexing of leg actuator dimensions.
-            nmpc_GRFs = LegsAttr(FL=nmpc_GRFs[0:3] * current_contact[0],
-                                    FR=nmpc_GRFs[3:6] * current_contact[1],
-                                    RL=nmpc_GRFs[6:9] * current_contact[2],
-                                    RR=nmpc_GRFs[9:12] * current_contact[3])
+        # TODO: Indexing should not be hardcoded. Env should provide indexing of leg actuator dimensions.
+        nmpc_GRFs = LegsAttr(FL=nmpc_GRFs[0:3] * current_contact[0],
+                                FR=nmpc_GRFs[3:6] * current_contact[1],
+                                RL=nmpc_GRFs[6:9] * current_contact[2],
+                                RR=nmpc_GRFs[9:12] * current_contact[3])
             
 
         
