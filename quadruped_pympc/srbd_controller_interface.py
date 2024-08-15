@@ -11,7 +11,7 @@ class SRBDControllerInterface:
         
         self.type = cfg.mpc_params['type']
         self.mpc_dt = cfg.mpc_params['dt']
-        self.horizon = cfg.mpc_params['horizon'],
+        self.horizon = cfg.mpc_params['horizon']
         self.optimize_step_freq = cfg.mpc_params['optimize_step_freq']
         self.num_parallel_computations = cfg.mpc_params['num_parallel_computations']
         self.sampling_method = cfg.mpc_params['sampling_method']
