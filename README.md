@@ -89,6 +89,11 @@ The first time you run the simulation with acados, in the terminal you will be a
     ```
     pip install -e .
     ```
+8. go to Quadruped-PyMPC initial folder and install it:
+
+    ```
+    pip install -e .
+    ```
 
 ## How to run
 
