@@ -20,8 +20,6 @@ import jax
 from jax import random
 
 
-gpu_device = jax.devices('gpu')[0]
-cpu_device = jax.devices('cpu')[0]
 
 dtype_general='float32'
 
@@ -38,9 +36,13 @@ class Centroidal_Model_JAX:
         self.dt = dt
 
         if(device=="gpu"):
-            self.device = gpu_device
+            try:
+                self.device = jax.devices('gpu')[0]
+            except:
+                self.device = jax.devices('cpu')[0]
+                print("GPU not available, using CPU")
         else:
-            self.device = cpu_device
+            self.device = jax.devices('cpu')[0]
 
 
         # Mass and Inertia robot dependant

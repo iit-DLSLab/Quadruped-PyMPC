@@ -4,6 +4,7 @@ channels:
 - nvidia
 - robostack-staging
 dependencies:
+- pip
 - python
 - casadi
 - numpy

@@ -3,6 +3,7 @@ channels:
 - conda-forge
 - robostack-staging
 dependencies:
+- pip
 - python
 - casadi
 - numpy
