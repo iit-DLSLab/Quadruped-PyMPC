@@ -4,7 +4,7 @@ from quadruped_pympc.wb_interface import WBInterface
 
 from quadruped_pympc import config as cfg
 
-class ControllerWrapper:
+class Quadruped_PyMPC_Wrapper:
     def __init__(self, feet_pos, legs_order):
 
         self.mpc_frequency = cfg.simulation_params['mpc_frequency']
