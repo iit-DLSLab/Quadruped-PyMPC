@@ -120,7 +120,8 @@ if __name__ == '__main__':
 
     srbd_controller_interface = SRBDControllerInterface()
 
-    srbd_batched_controller_interface = SRBDBatchedControllerInterface()
+    if(cfg.mpc_params['type'] != 'sampling' and cfg.mpc_params['optimize_step_freq']):
+        srbd_batched_controller_interface = SRBDBatchedControllerInterface()
 
     wb_interface = WBInterface(initial_feet_pos = env.feet_pos(frame='world'),
                                legs_order = legs_order)
@@ -222,16 +223,17 @@ if __name__ == '__main__':
                 
 
                 # Update the gait
-                best_sample_freq = srbd_batched_controller_interface.optimize_gait(state_current,
-                                                                        ref_state,
-                                                                        contact_sequence,
-                                                                        inertia,
-                                                                        wb_interface.pgg,
-                                                                        ref_feet_pos,
-                                                                        contact_sequence_dts,
-                                                                        contact_sequence_lenghts,
-                                                                        step_height,
-                                                                        optimize_swing)
+                if(cfg.mpc_params['type'] != 'sampling' and cfg.mpc_params['optimize_step_freq']):
+                    best_sample_freq = srbd_batched_controller_interface.optimize_gait(state_current,
+                                                                            ref_state,
+                                                                            contact_sequence,
+                                                                            inertia,
+                                                                            wb_interface.pgg,
+                                                                            ref_feet_pos,
+                                                                            contact_sequence_dts,
+                                                                            contact_sequence_lenghts,
+                                                                            step_height,
+                                                                            optimize_swing)
 
 
             

@@ -19,6 +19,8 @@ class SRBDControllerInterface:
         self.num_sampling_iterations = cfg.mpc_params['num_sampling_iterations']
         self.sigma_cem_mppi = cfg.mpc_params['sigma_cem_mppi']
         self.step_freq_available = cfg.mpc_params['step_freq_available']
+
+        self.previous_contact_mpc = np.array([1, 1, 1, 1])
         
 
         # input_rates optimize the delta_GRF (smoooth!)
@@ -87,11 +89,11 @@ class SRBDControllerInterface:
 
             # Convert data to jax and shift previous solution
             state_current_jax, \
-            reference_state_jax, = controller.prepare_state_and_reference(state_current,
+            reference_state_jax, = self.controller.prepare_state_and_reference(state_current,
                                                                             ref_state,
                                                                             current_contact,
-                                                                            previous_contact_mpc)
-            previous_contact_mpc = current_contact
+                                                                            self.previous_contact_mpc)
+            self.previous_contact_mpc = current_contact
 
             for iter_sampling in range(self.num_sampling_iterations):
                 self.controller = self.controller.with_newkey()
@@ -110,6 +112,7 @@ class SRBDControllerInterface:
                                                                 self.controller.master_key, self.controller.sigma_cem_mppi)
                     controller = self.controller.with_newsigma(sigma_cem_mppi)
                 else:
+                    nominal_sample_freq = pgg.step_freq
                     nmpc_GRFs, \
                     nmpc_footholds, \
                     self.controller.best_control_parameters, \

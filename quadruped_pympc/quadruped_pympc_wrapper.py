@@ -11,7 +11,8 @@ class QuadrupedPyMPC_Wrapper:
 
         self.srbd_controller_interface = SRBDControllerInterface()
 
-        self.srbd_batched_controller_interface = SRBDBatchedControllerInterface()
+        if(cfg.mpc_params['type'] != 'sampling' and cfg.mpc_params['optimize_step_freq']):
+            self.srbd_batched_controller_interface = SRBDBatchedControllerInterface()
 
         self.wb_interface = WBInterface(initial_feet_pos = feet_pos(frame='world'),
                                                             legs_order = legs_order)
@@ -66,16 +67,17 @@ class QuadrupedPyMPC_Wrapper:
             
 
             # Update the gait
-            best_sample_freq = self.srbd_batched_controller_interface.optimize_gait(state_current,
-                                                                    ref_state,
-                                                                    contact_sequence,
-                                                                    inertia,
-                                                                    self.wb_interface.pgg,
-                                                                    ref_feet_pos,
-                                                                    contact_sequence_dts,
-                                                                    contact_sequence_lenghts,
-                                                                    step_height,
-                                                                    optimize_swing)
+            if(cfg.mpc_params['type'] != 'sampling' and cfg.mpc_params['optimize_step_freq']):
+                best_sample_freq = self.srbd_batched_controller_interface.optimize_gait(state_current,
+                                                                        ref_state,
+                                                                        contact_sequence,
+                                                                        inertia,
+                                                                        self.wb_interface.pgg,
+                                                                        ref_feet_pos,
+                                                                        contact_sequence_dts,
+                                                                        contact_sequence_lenghts,
+                                                                        step_height,
+                                                                        optimize_swing)
 
 
         
