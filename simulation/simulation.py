@@ -333,7 +333,7 @@ if __name__ == '__main__':
                     ctrl_state_history.append(ep_ctrl_state_history)
                 env.reset(random=False)
                 
-                wb_interface.pgg.reset(initial_feet_pos = env.feet_pos(frame='world'))
+                wb_interface.reset(initial_feet_pos = env.feet_pos(frame='world'))
                 
 
     env.close()
