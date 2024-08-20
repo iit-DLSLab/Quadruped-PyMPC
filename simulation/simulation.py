@@ -16,6 +16,7 @@ from quadruped_pympc import config as cfg
 from quadruped_pympc.helpers.quadruped_utils import plot_swing_mujoco
 
 from quadruped_pympc.srbd_controller_interface import SRBDControllerInterface
+from quadruped_pympc.srbd_batched_controller_interface import SRBDBatchedControllerInterface
 from quadruped_pympc.wb_interface import WBInterface
 
 
@@ -89,20 +90,12 @@ if __name__ == '__main__':
     # TODO: I would suggest to create a DataClass for "BaseConfig" used in the PotatoModel controllers.
     ref_state = {}
 
-    # Starting contact sequence
-    previous_contact = np.array([1, 1, 1, 1])
-    previous_contact_mpc = np.array([1, 1, 1, 1])
-    current_contact = np.array([1, 1, 1, 1])
-
-    nmpc_GRFs = np.zeros((12,))
-    nmpc_wrenches = np.zeros((6,))
-    nmpc_footholds = np.zeros((12,))
-
     # Jacobian matrices
     jac_feet_prev = LegsAttr(*[np.zeros((3, env.mjModel.nv)) for _ in range(4)])
     jac_feet_dot = LegsAttr(*[np.zeros((3, env.mjModel.nv)) for _ in range(4)])
     # Torque vector
     tau = LegsAttr(*[np.zeros((env.mjModel.nv, 1)) for _ in range(4)])
+    
     # State
     state_current, state_prev = {}, {}
     feet_pos = None
@@ -126,6 +119,8 @@ if __name__ == '__main__':
     mpc_frequency = cfg.simulation_params['mpc_frequency']
 
     srbd_controller_interface = SRBDControllerInterface()
+
+    srbd_batched_controller_interface = SRBDBatchedControllerInterface()
 
     wb_interface = WBInterface(initial_feet_pos = env.feet_pos(frame='world'),
                                legs_order = legs_order)
@@ -179,6 +174,9 @@ if __name__ == '__main__':
             # Compute feet velocities
             feet_vel = LegsAttr(**{leg_name: feet_jac[leg_name] @ env.mjData.qvel for leg_name in legs_order})
 
+            # Idx of the leg
+            legs_qvel_idx = env.legs_qvel_idx
+
 
 
 
@@ -186,11 +184,11 @@ if __name__ == '__main__':
             state_current, \
             ref_state, \
             contact_sequence, \
-            current_contact, \
             ref_feet_pos, \
             contact_sequence_dts, \
             contact_sequence_lenghts, \
-            step_height = wb_interface.update_state_and_reference(env.base_pos,
+            step_height, \
+            optimize_swing = wb_interface.update_state_and_reference(base_pos,
                                                     base_lin_vel,
                                                     base_ori_euler_xyz,
                                                     base_ang_vel,
@@ -209,36 +207,50 @@ if __name__ == '__main__':
             if env.step_num % round(1 / (mpc_frequency * simulation_dt)) == 0:
 
                 nmpc_GRFs,  \
-                nmpc_footholds = srbd_controller_interface.compute_control(state_current,
+                nmpc_footholds, \
+                optimize_swing, \
+                best_sample_freq = srbd_controller_interface.compute_control(state_current,
                                                                         ref_state,
                                                                         contact_sequence,
-                                                                        current_contact,
                                                                         inertia,
-                                                                        wb_interface.stc,
                                                                         wb_interface.pgg,
-                                                                        wb_interface.frg,
                                                                         ref_feet_pos,
                                                                         contact_sequence_dts,
                                                                         contact_sequence_lenghts,
-                                                                        step_height)
+                                                                        step_height,
+                                                                        optimize_swing)
+                
+
+                # Update the gait
+                best_sample_freq = srbd_batched_controller_interface.optimize_gait(state_current,
+                                                                        ref_state,
+                                                                        contact_sequence,
+                                                                        inertia,
+                                                                        wb_interface.pgg,
+                                                                        ref_feet_pos,
+                                                                        contact_sequence_dts,
+                                                                        contact_sequence_lenghts,
+                                                                        step_height,
+                                                                        optimize_swing)
 
 
             
             
             # Compute Swing and Stance Torque ---------------------------------------------------------------------------
-            tau = wb_interface.compute_stance_and_swing_torque(current_contact,
-                                            simulation_dt,
-                                            qvel,
-                                            feet_jac,
-                                            jac_feet_dot,
-                                            feet_pos,
-                                            feet_vel,
-                                            legs_qfrc_bias,
-                                            legs_mass_matrix,
-                                            nmpc_GRFs,
-                                            nmpc_footholds,
-                                            env.legs_qvel_idx,
-                                            tau)
+            tau = wb_interface.compute_stance_and_swing_torque(simulation_dt,
+                                                        qvel,
+                                                        feet_jac,
+                                                        jac_feet_dot,
+                                                        feet_pos,
+                                                        feet_vel,
+                                                        legs_qfrc_bias,
+                                                        legs_mass_matrix,
+                                                        nmpc_GRFs,
+                                                        nmpc_footholds,
+                                                        legs_qvel_idx,
+                                                        tau,
+                                                        optimize_swing,
+                                                        best_sample_freq)
             
 
             
@@ -259,7 +271,7 @@ if __name__ == '__main__':
             ep_state_obs_history.append(state)
             base_lin_vel_err = ref_base_lin_vel - base_lin_vel
             base_ang_vel_err = ref_base_ang_vel - base_ang_vel
-            base_poz_z_err = 0.0#ref_pos[2] - env.base_pos[2]
+            base_poz_z_err = ref_state["ref_position"][2] - base_pos[2]
             ctrl_state = np.concatenate((base_lin_vel_err, base_ang_vel_err, [base_poz_z_err], wb_interface.pgg._phase_signal))
             ep_ctrl_state_history.append(ctrl_state)
 
@@ -318,11 +330,8 @@ if __name__ == '__main__':
                     state_obs_history.append(ep_state_obs_history)
                     ctrl_state_history.append(ep_ctrl_state_history)
                 env.reset(random=False)
-                wb_interface.pgg.reset()
-                if(cfg.simulation_params['visual_foothold_adaptation'] != 'blind'): wb_interface.vfa.reset()
-                wb_interface.frg.lift_off_positions = env.feet_pos(frame='world')
-                current_contact = np.array([0, 0, 0, 0])
-                previous_contact = np.asarray(current_contact)
+                
+                wb_interface.pgg.reset(initial_feet_pos = env.feet_pos(frame='world'))
                 
 
     env.close()

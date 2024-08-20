@@ -16,6 +16,7 @@ class SRBDControllerInterface:
         self.num_parallel_computations = cfg.mpc_params['num_parallel_computations']
         self.sampling_method = cfg.mpc_params['sampling_method']
         self.control_parametrization = cfg.mpc_params['control_parametrization']
+        self.num_sampling_iterations = cfg.mpc_params['num_sampling_iterations']
         self.sigma_cem_mppi = cfg.mpc_params['sigma_cem_mppi']
         self.step_freq_available = cfg.mpc_params['step_freq_available']
         
@@ -66,26 +67,20 @@ class SRBDControllerInterface:
                         state_current,
                         ref_state,
                         contact_sequence,
-                        current_contact,
                         inertia,
-                        stc,
                         pgg,
-                        frg,
                         ref_feet_pos,
                         contact_sequence_dts,
                         contact_sequence_lenghts,
-                        step_height):
+                        step_height,
+                        optimize_swing):
     
 
-        if(self.optimize_step_freq):
-            # we can always optimize the step freq, or just at the apex of the swing
-            # to avoid possible jittering in the solution
-            #optimize_swing = 1  
-            optimize_swing = stc.check_apex_condition(current_contact)
-            if(optimize_swing == 1):
-                nominal_sample_freq = pgg.step_freq
-        else:
-            optimize_swing = 0
+        current_contact = np.array([contact_sequence[0][0],
+                                    contact_sequence[1][0],
+                                    contact_sequence[2][0],
+                                    contact_sequence[3][0]])
+
         
         # If we use sampling
         if (self.type == 'sampling'):
@@ -134,8 +129,9 @@ class SRBDControllerInterface:
         else:
 
             nmpc_GRFs, \
-            nmpc_footholds, _, \
-            status = self.controller.compute_control(state_current,
+            nmpc_footholds, \
+            _, \
+            _ = self.controller.compute_control(state_current,
                                                 ref_state,
                                                 contact_sequence,
                                                 inertia=inertia)
@@ -145,42 +141,23 @@ class SRBDControllerInterface:
                                         FR=nmpc_footholds[1],
                                         RL=nmpc_footholds[2],
                                         RR=nmpc_footholds[3])
-
-
-            if self.optimize_step_freq and optimize_swing == 1:
-                contact_sequence_temp = np.zeros((len(self.step_freq_available), 4, self.horizon))
-                for j in range(len(self.step_freq_available)):
-                    pgg_temp = PeriodicGaitGenerator(duty_factor=pgg.duty_factor,
-                                                        step_freq=self.step_freq_available[j],
-                                                        gait_type=pgg.gait_type,
-                                                        horizon=self.horizon)
-                    pgg_temp.set_phase_signal(pgg.phase_signal)
-                    contact_sequence_temp[j] = pgg_temp.compute_contact_sequence(contact_sequence_dts=contact_sequence_dts, 
-                                                                                    contact_sequence_lenghts=contact_sequence_lenghts)
-
-
-                costs, \
-                best_sample_freq = self.batched_controller.compute_batch_control(state_current,
-                                                                            ref_state,
-                                                                            contact_sequence_temp)
-
+            
+            
             # If the controller is using RTI, we need to linearize the mpc after its computation
             # this helps to minize the delay between new state->control, but only in a real case.
             # Here we are in simulation and does not make any difference for now
             if (self.controller.use_RTI):
                 # preparation phase
                 self.controller.acados_ocp_solver.options_set('rti_phase', 1)
-                status = self.controller.acados_ocp_solver.solve()
+                self.controller.acados_ocp_solver.solve()
                 # print("preparation phase time: ", controller.acados_ocp_solver.get_stats('time_tot'))
 
 
-        # If we have optimized the gait, we set all the timing parameters
-        if ((self.optimize_step_freq) and (optimize_swing == 1)):
-            pgg.step_freq = np.array([best_sample_freq])[0]
-            nominal_sample_freq = pgg.step_freq
-            frg.stance_time = (1 / pgg.step_freq) * pgg.duty_factor
-            swing_period = (1 - pgg.duty_factor) * (1 / pgg.step_freq)
-            stc.regenerate_swing_trajectory_generator(step_height=step_height, swing_period=swing_period)
+
+            best_sample_freq = pgg.step_freq
+
+
+
 
 
         # TODO: Indexing should not be hardcoded. Env should provide indexing of leg actuator dimensions.
@@ -191,5 +168,5 @@ class SRBDControllerInterface:
             
 
         
-        return nmpc_GRFs, nmpc_footholds
+        return nmpc_GRFs, nmpc_footholds, optimize_swing, best_sample_freq
         

@@ -39,9 +39,7 @@ class WBInterface:
         else:
             self.contact_sequence_dts = [mpc_dt]
             self.contact_sequence_lenghts = [horizon]
-        contact_sequence = self.pgg.compute_contact_sequence(contact_sequence_dts=self.contact_sequence_dts, 
-                                                        contact_sequence_lenghts=self.contact_sequence_lenghts)
-        nominal_sample_freq = self.pgg.step_freq
+
         
 
         # Create the foothold reference generator ------------------------------------------------
@@ -174,12 +172,18 @@ class WBInterface:
         # -------------------------------------------------------------------------------------------------
 
 
-        return state_current, ref_state, contact_sequence, self.current_contact, ref_feet_pos, self.contact_sequence_dts, self.contact_sequence_lenghts, self.step_height
+        if(cfg.mpc_params['optimize_step_freq']):
+            # we can always optimize the step freq, or just at the apex of the swing
+            # to avoid possible jittering in the solution
+            optimize_swing = self.stc.check_apex_condition(self.current_contact)
+        else:
+            optimize_swing = 0
+
+        return state_current, ref_state, contact_sequence, ref_feet_pos, self.contact_sequence_dts, self.contact_sequence_lenghts, self.step_height, optimize_swing
     
 
 
     def compute_stance_and_swing_torque(self,
-                                        current_contact,
                                         simulation_dt,
                                         qvel,
                                         feet_jac,
@@ -191,7 +195,19 @@ class WBInterface:
                                         nmpc_GRFs,
                                         nmpc_footholds,
                                         legs_qvel_idx,
-                                        tau):
+                                        tau,
+                                        optimize_swing,
+                                        best_sample_freq):
+        
+
+        # If we have optimized the gait, we set all the timing parameters
+        if (optimize_swing == 1):
+            self.pgg.step_freq = np.array([best_sample_freq])[0]
+            nominal_sample_freq = self.pgg.step_freq
+            self.frg.stance_time = (1 / self.pgg.step_freq) * self.pgg.duty_factor
+            swing_period = (1 - self.pgg.duty_factor) * (1 / self.pgg.step_freq)
+            self.stc.regenerate_swing_trajectory_generator(step_height=self.step_height, swing_period=swing_period)
+        
         
         # Compute Stance Torque ---------------------------------------------------------------------------
         tau.FL = -np.matmul(feet_jac.FL[:, legs_qvel_idx.FL].T, nmpc_GRFs.FL)
@@ -201,14 +217,14 @@ class WBInterface:
 
 
 
-        self.stc.update_swing_time(current_contact, self.legs_order, simulation_dt)
+        self.stc.update_swing_time(self.current_contact, self.legs_order, simulation_dt)
 
 
         # Compute Swing Torque ------------------------------------------------------------------------------
         # The swing controller is in the end-effector space. For its computation,
         # we save for simplicity joints position and velocities
         for leg_id, leg_name in enumerate(self.legs_order):
-            if current_contact[leg_id] == 0:  # If in swing phase, compute the swing trajectory tracking control.
+            if self.current_contact[leg_id] == 0:  # If in swing phase, compute the swing trajectory tracking control.
                 tau[leg_name], _, _ = self.stc.compute_swing_control(
                     leg_id=leg_id,
                     q_dot=qvel[legs_qvel_idx[leg_name]],
@@ -223,3 +239,15 @@ class WBInterface:
                     )
                 
         return tau
+    
+
+    def reset(self, initial_feet_pos):
+        self.pgg.reset()
+        #self.frg.reset()
+        #self.stc.reset()
+        #self.terrain_computation.reset()
+        self.frg.lift_off_positions = initial_feet_pos
+        if(cfg.simulation_params['visual_foothold_adaptation'] != 'blind'):
+            self.vfa.reset()
+        self.current_contact = np.array([1, 1, 1, 1])
+        return
