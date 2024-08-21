@@ -11,7 +11,7 @@ import numpy as np
 _DEFAULT_OBS = ('ref_base_height', 'ref_base_angles', 'nmpc_GRFs', 'nmpc_footholds', 'swing_time')
 
 class QuadrupedPyMPC_Wrapper:
-    def __init__(self, feet_pos, legs_order, quadrupedpympc_observables_names = _DEFAULT_OBS):
+    def __init__(self, initial_feet_pos, legs_order, quadrupedpympc_observables_names = _DEFAULT_OBS):
 
         self.mpc_frequency = cfg.simulation_params['mpc_frequency']
 
@@ -20,7 +20,7 @@ class QuadrupedPyMPC_Wrapper:
         if(cfg.mpc_params['type'] != 'sampling' and cfg.mpc_params['optimize_step_freq']):
             self.srbd_batched_controller_interface = SRBDBatchedControllerInterface()
 
-        self.wb_interface = WBInterface(initial_feet_pos = feet_pos(frame='world'),
+        self.wb_interface = WBInterface(initial_feet_pos = initial_feet_pos(frame='world'),
                                                             legs_order = legs_order)
         
 
@@ -154,8 +154,8 @@ class QuadrupedPyMPC_Wrapper:
 
     
 
-    def reset(self, feet_pos):
-        self.wb_interface.reset(feet_pos)
+    def reset(self, initial_feet_pos):
+        self.wb_interface.reset(initial_feet_pos)
         
 
     

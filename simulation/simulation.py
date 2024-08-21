@@ -120,7 +120,7 @@ if __name__ == '__main__':
                                         'nmpc_GRFs', 'nmpc_footholds', 
                                         'swing_time', 'phase_signal', 'lift_off_positions')
     
-    quadrupedpympc_wrapper = QuadrupedPyMPC_Wrapper(feet_pos=env.feet_pos, legs_order=legs_order,
+    quadrupedpympc_wrapper = QuadrupedPyMPC_Wrapper(initial_feet_pos=env.feet_pos, legs_order=legs_order,
                                                     quadrupedpympc_observables_names = quadrupedpympc_observables_names)
 
 
