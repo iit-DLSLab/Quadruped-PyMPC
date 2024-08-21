@@ -15,9 +15,10 @@ from quadruped_pympc import config as cfg
 
 from quadruped_pympc.helpers.quadruped_utils import plot_swing_mujoco
 
-from quadruped_pympc.srbd_controller_interface import SRBDControllerInterface
-from quadruped_pympc.srbd_batched_controller_interface import SRBDBatchedControllerInterface
-from quadruped_pympc.wb_interface import WBInterface
+#from quadruped_pympc.srbd_controller_interface import SRBDControllerInterface
+#from quadruped_pympc.srbd_batched_controller_interface import SRBDBatchedControllerInterface
+#from quadruped_pympc.wb_interface import WBInterface
+from quadruped_pympc.quadruped_pympc_wrapper import QuadrupedPyMPC_Wrapper
 
 
 # HeightMap import
@@ -115,16 +116,16 @@ if __name__ == '__main__':
         heightmaps = None
 
 
-    # Controller initialization -------------------------------------------------------------
+    # # Quadruped PyMPC controller initialization -------------------------------------------------------------
     mpc_frequency = cfg.simulation_params['mpc_frequency']
 
-    srbd_controller_interface = SRBDControllerInterface()
 
-    if(cfg.mpc_params['type'] != 'sampling' and cfg.mpc_params['optimize_step_freq']):
-        srbd_batched_controller_interface = SRBDBatchedControllerInterface()
-
-    wb_interface = WBInterface(initial_feet_pos = env.feet_pos(frame='world'),
-                               legs_order = legs_order)
+    quadrupedpympc_observables_names = ('ref_base_height', 'ref_base_angles', 'ref_feet_pos',
+                                        'nmpc_GRFs', 'nmpc_footholds', 
+                                        'swing_time', 'phase_signal', 'lift_off_positions')
+    
+    quadrupedpympc_wrapper = QuadrupedPyMPC_Wrapper(feet_pos=env.feet_pos, legs_order=legs_order,
+                                                    quadrupedpympc_observables_names = quadrupedpympc_observables_names)
 
 
     # --------------------------------------------------------------
@@ -180,79 +181,15 @@ if __name__ == '__main__':
 
 
 
-
-            # Update the state and reference -------------------------
-            state_current, \
-            ref_state, \
-            contact_sequence, \
-            ref_feet_pos, \
-            contact_sequence_dts, \
-            contact_sequence_lenghts, \
-            step_height, \
-            optimize_swing = wb_interface.update_state_and_reference(base_pos,
-                                                    base_lin_vel,
-                                                    base_ori_euler_xyz,
-                                                    base_ang_vel,
-                                                    feet_pos,
-                                                    hip_pos,
-                                                    heightmaps,
-                                                    legs_order,
-                                                    simulation_dt,
-                                                    ref_base_lin_vel,
-                                                    ref_base_ang_vel)
-
-
-
-    
-            # Solve OCP ---------------------------------------------------------------------------------------
-            if env.step_num % round(1 / (mpc_frequency * simulation_dt)) == 0:
-
-                nmpc_GRFs,  \
-                nmpc_footholds, \
-                optimize_swing, \
-                best_sample_freq = srbd_controller_interface.compute_control(state_current,
-                                                                        ref_state,
-                                                                        contact_sequence,
-                                                                        inertia,
-                                                                        wb_interface.pgg,
-                                                                        ref_feet_pos,
-                                                                        contact_sequence_dts,
-                                                                        contact_sequence_lenghts,
-                                                                        step_height,
-                                                                        optimize_swing)
-                
-
-                # Update the gait
-                if(cfg.mpc_params['type'] != 'sampling' and cfg.mpc_params['optimize_step_freq']):
-                    best_sample_freq = srbd_batched_controller_interface.optimize_gait(state_current,
-                                                                            ref_state,
-                                                                            contact_sequence,
-                                                                            inertia,
-                                                                            wb_interface.pgg,
-                                                                            ref_feet_pos,
-                                                                            contact_sequence_dts,
-                                                                            contact_sequence_lenghts,
-                                                                            step_height,
-                                                                            optimize_swing)
-
-
+            # Quadruped PyMPC controller --------------------------------------------------------------
+            tau = quadrupedpympc_wrapper.compute_actions(base_pos, base_lin_vel, base_ori_euler_xyz, base_ang_vel,
+                                                    feet_pos, hip_pos, heightmaps,
+                                                    legs_order, simulation_dt, ref_base_lin_vel, ref_base_ang_vel,
+                                                    env.step_num, qvel, feet_jac, jac_feet_dot, feet_vel, legs_qfrc_bias,
+                                                    legs_mass_matrix, legs_qvel_idx, tau, inertia)
             
-            
-            # Compute Swing and Stance Torque ---------------------------------------------------------------------------
-            tau = wb_interface.compute_stance_and_swing_torque(simulation_dt,
-                                                        qvel,
-                                                        feet_jac,
-                                                        jac_feet_dot,
-                                                        feet_pos,
-                                                        feet_vel,
-                                                        legs_qfrc_bias,
-                                                        legs_mass_matrix,
-                                                        nmpc_GRFs,
-                                                        nmpc_footholds,
-                                                        legs_qvel_idx,
-                                                        tau,
-                                                        optimize_swing,
-                                                        best_sample_freq)
+            quadrupedpympc_observables = quadrupedpympc_wrapper.get_obs()
+
             
 
             
@@ -273,8 +210,8 @@ if __name__ == '__main__':
             ep_state_obs_history.append(state)
             base_lin_vel_err = ref_base_lin_vel - base_lin_vel
             base_ang_vel_err = ref_base_ang_vel - base_ang_vel
-            base_poz_z_err = ref_state["ref_position"][2] - base_pos[2]
-            ctrl_state = np.concatenate((base_lin_vel_err, base_ang_vel_err, [base_poz_z_err], wb_interface.pgg._phase_signal))
+            base_poz_z_err = quadrupedpympc_observables["ref_base_height"] - base_pos[2]
+            ctrl_state = np.concatenate((base_lin_vel_err, base_ang_vel_err, [base_poz_z_err], quadrupedpympc_observables["phase_signal"]))
             ep_ctrl_state_history.append(ctrl_state)
 
 
@@ -284,15 +221,15 @@ if __name__ == '__main__':
 
                 # Plot the swing trajectory
                 feet_traj_geom_ids = plot_swing_mujoco(viewer=env.viewer,
-                                                       swing_traj_controller=wb_interface.stc,
-                                                       swing_period=wb_interface.stc.swing_period,
-                                                       swing_time=LegsAttr(FL=wb_interface.stc.swing_time[0],
-                                                                           FR=wb_interface.stc.swing_time[1],
-                                                                           RL=wb_interface.stc.swing_time[2],
-                                                                           RR=wb_interface.stc.swing_time[3]),
-                                                       lift_off_positions=wb_interface.frg.lift_off_positions,
-                                                       nmpc_footholds=nmpc_footholds,
-                                                       ref_feet_pos=ref_feet_pos,
+                                                       swing_traj_controller=quadrupedpympc_wrapper.wb_interface.stc,
+                                                       swing_period=quadrupedpympc_wrapper.wb_interface.stc.swing_period,
+                                                       swing_time=LegsAttr(FL=quadrupedpympc_observables["swing_time"][0],
+                                                                           FR=quadrupedpympc_observables["swing_time"][1],
+                                                                           RL=quadrupedpympc_observables["swing_time"][2],
+                                                                           RR=quadrupedpympc_observables["swing_time"][3]),
+                                                       lift_off_positions=quadrupedpympc_observables["lift_off_positions"],
+                                                       nmpc_footholds=quadrupedpympc_observables["nmpc_footholds"],
+                                                       ref_feet_pos=quadrupedpympc_observables["ref_feet_pos"],
                                                        geom_ids=feet_traj_geom_ids)
                 
                 
@@ -333,7 +270,9 @@ if __name__ == '__main__':
                     ctrl_state_history.append(ep_ctrl_state_history)
                 env.reset(random=False)
                 
-                wb_interface.reset(initial_feet_pos = env.feet_pos(frame='world'))
+                quadrupedpympc_wrapper.reset(initial_feet_pos = env.feet_pos(frame='world'))
+
+                
                 
 
     env.close()

@@ -1,7 +1,5 @@
 import numpy as np
 
-from quadruped_pympc.helpers.periodic_gait_generator import PeriodicGaitGenerator
-
 from gym_quadruped.utils.quadruped_utils import LegsAttr
 
 from quadruped_pympc import config as cfg
@@ -171,5 +169,5 @@ class SRBDControllerInterface:
             
 
         
-        return nmpc_GRFs, nmpc_footholds, optimize_swing, best_sample_freq
+        return nmpc_GRFs, nmpc_footholds, best_sample_freq
         
