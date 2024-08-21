@@ -6,20 +6,19 @@
 import time
 import numpy as np
 from tqdm import tqdm
+
 # Gym and Simulation related imports
 from gym_quadruped.quadruped_env import QuadrupedEnv
 from gym_quadruped.utils.mujoco.visual import render_vector
 from gym_quadruped.utils.quadruped_utils import LegsAttr
-# Control imports
+# Config imports
 from quadruped_pympc import config as cfg
 
+# Helper functions for plotting
 from quadruped_pympc.helpers.quadruped_utils import plot_swing_mujoco
 
-#from quadruped_pympc.srbd_controller_interface import SRBDControllerInterface
-#from quadruped_pympc.srbd_batched_controller_interface import SRBDBatchedControllerInterface
-#from quadruped_pympc.wb_interface import WBInterface
+# PyMPC controller imports
 from quadruped_pympc.quadruped_pympc_wrapper import QuadrupedPyMPC_Wrapper
-
 
 # HeightMap import
 if(cfg.simulation_params['visual_foothold_adaptation'] != 'blind'):
