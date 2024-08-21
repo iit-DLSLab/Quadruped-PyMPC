@@ -9,13 +9,15 @@ from tqdm import tqdm
 
 # Gym and Simulation related imports
 from gym_quadruped.quadruped_env import QuadrupedEnv
-from gym_quadruped.utils.mujoco.visual import render_vector
 from gym_quadruped.utils.quadruped_utils import LegsAttr
+
 # Config imports
 from quadruped_pympc import config as cfg
 
 # Helper functions for plotting
 from quadruped_pympc.helpers.quadruped_utils import plot_swing_mujoco
+from gym_quadruped.utils.mujoco.visual import render_vector
+from gym_quadruped.utils.mujoco.visual import render_sphere
 
 # PyMPC controller imports
 from quadruped_pympc.quadruped_pympc_wrapper import QuadrupedPyMPC_Wrapper
@@ -24,7 +26,6 @@ from quadruped_pympc.quadruped_pympc_wrapper import QuadrupedPyMPC_Wrapper
 if(cfg.simulation_params['visual_foothold_adaptation'] != 'blind'):
     from gym_quadruped.sensors.heightmap import HeightMap
 
-from gym_quadruped.utils.mujoco.visual import render_sphere
 
 
 
