@@ -78,9 +78,6 @@ if __name__ == '__main__':
     env.render()  # Pass in the first render call any mujoco.viewer.KeyCallbackType
 
 
-
-
-
     # Initialization of variables used in the main control loop --------------------------------
     # Set the reference for the state
     ref_pose = np.array([0, 0, cfg.hip_height])
@@ -115,7 +112,7 @@ if __name__ == '__main__':
         heightmaps = None
 
 
-    # # Quadruped PyMPC controller initialization -------------------------------------------------------------
+    # Quadruped PyMPC controller initialization -------------------------------------------------------------
     mpc_frequency = cfg.simulation_params['mpc_frequency']
 
 
