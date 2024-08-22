@@ -69,6 +69,17 @@ mpc_params = {
     "grf_min":                                 0,
     'mu':                                      0.5,
 
+    # this is used to have a smaller dt near the start of the horizon
+    'use_nonuniform_discretization':           False,
+    'horizon_fine_grained':                    2,
+    'dt_fine_grained':                         0.01,
+
+    # if this is true, we optimize the step frequency as well
+    # for the sampling controller, this is done in the rollout
+    # for the gradient-based controller, this is done with a batched version of the ocp
+    'optimize_step_freq':                      False,
+    'step_freq_available':                     [1.4, 2.0, 2.4],
+
     # ----- START properties only for the gradient-based mpc -----
 
     # this is used if you want to manually warm start the mpc
@@ -107,10 +118,6 @@ mpc_params = {
     # this is used to speeding up or robustify acados' solver (hpipm).
     'solver_mode':                             'balance',  # balance, robust, speed, crazy_speed
 
-    # this is used to have a smaller dt near the start of the horizon
-    'use_nonuniform_discretization':           False,
-    'horizon_fine_grained':                    2,
-    'dt_fine_grained':                         0.01,
 
     # these is used only for the case 'input_rates', using as GRF not the actual state
     # of the robot of the predicted one. Can be activated to compensate
@@ -135,6 +142,7 @@ mpc_params = {
 
     # ----- END properties for the gradient-based mpc -----
 
+
     # ----- START properties only for the sampling-based mpc -----
 
     # this is used only in the case 'sampling'.
@@ -150,12 +158,6 @@ mpc_params = {
     'shift_solution':                          False,
 
     # ----- END properties for the sampling-based mpc -----
-
-    # if this is true, we optimize the step frequency as well
-    # for the sampling controller, this is done in the rollout
-    # for the gradient-based controller, this is done with a batched version of the ocp
-    'optimize_step_freq':                      False,
-    'step_freq_available':                     [1.4, 2.0, 2.4]
 
     }
 # -----------------------------------------------------------------------
