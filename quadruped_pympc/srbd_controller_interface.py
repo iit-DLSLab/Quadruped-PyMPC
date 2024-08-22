@@ -11,12 +11,10 @@ class SRBDControllerInterface:
         self.mpc_dt = cfg.mpc_params['dt']
         self.horizon = cfg.mpc_params['horizon']
         self.optimize_step_freq = cfg.mpc_params['optimize_step_freq']
-        self.num_parallel_computations = cfg.mpc_params['num_parallel_computations']
-        self.sampling_method = cfg.mpc_params['sampling_method']
-        self.control_parametrization = cfg.mpc_params['control_parametrization']
-        self.num_sampling_iterations = cfg.mpc_params['num_sampling_iterations']
-        self.sigma_cem_mppi = cfg.mpc_params['sigma_cem_mppi']
         self.step_freq_available = cfg.mpc_params['step_freq_available']
+        
+        self.sigma_cem_mppi = cfg.mpc_params['sigma_cem_mppi']
+
 
         self.previous_contact_mpc = np.array([1, 1, 1, 1])
         
@@ -52,12 +50,7 @@ class SRBDControllerInterface:
             else:
                 from quadruped_pympc.controllers.sampling.centroidal_nmpc_jax import Sampling_MPC
 
-            self.controller = Sampling_MPC(horizon=self.horizon,
-                                    dt=self.mpc_dt,
-                                    num_parallel_computations=self.num_parallel_computations,
-                                    sampling_method=self.sampling_method,
-                                    control_parametrization=self.control_parametrization,
-                                    device="gpu")
+            self.controller = Sampling_MPC()
             
 
 
@@ -93,9 +86,9 @@ class SRBDControllerInterface:
                                                                             self.previous_contact_mpc)
             self.previous_contact_mpc = current_contact
 
-            for iter_sampling in range(self.num_sampling_iterations):
+            for iter_sampling in range(self.controller.num_sampling_iterations):
                 self.controller = self.controller.with_newkey()
-                if (self.sampling_method == 'cem_mppi'):
+                if (self.controller.sampling_method == 'cem_mppi'):
                     if (iter_sampling == 0):
                         self.controller = self.controller.with_newsigma(self.sigma_cem_mppi)
 

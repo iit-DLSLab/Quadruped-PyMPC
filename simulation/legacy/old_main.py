@@ -111,12 +111,7 @@ if __name__ == '__main__':
         else:
             from quadruped_pympc.controllers.sampling.centroidal_nmpc_jax import Sampling_MPC
 
-        controller = Sampling_MPC(horizon=horizon,
-                                  dt=mpc_dt,
-                                  num_parallel_computations=cfg.mpc_params['num_parallel_computations'],
-                                  sampling_method=cfg.mpc_params['sampling_method'],
-                                  control_parametrization=cfg.mpc_params['control_parametrization'],
-                                  device="gpu")
+        controller = Sampling_MPC()
 
 
     # Periodic gait generator --------------------------------------------------------------

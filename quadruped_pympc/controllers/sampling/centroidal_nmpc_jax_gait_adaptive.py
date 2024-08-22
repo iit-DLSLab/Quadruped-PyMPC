@@ -30,26 +30,28 @@ class Sampling_MPC:
     """This is a small class that implements a sampling based control law"""
 
 
-    def __init__(self, horizon = 200, dt = 0.01, num_parallel_computations = 10000, sampling_method = 'random_sampling', control_parametrization = "linear_spline_1", device="gpu"):
+    def __init__(self, device="gpu"):
         """
         Args:
             horizon (int): how much to look into the future for optimizing the gains 
             dt (int): desidered sampling time
         """
-        self.horizon = horizon
-        self.dt = dt
+
+        self.num_parallel_computations = config.mpc_params['num_parallel_computations']
+        self.sampling_method = config.mpc_params['sampling_method']
+        self.control_parametrization = config.mpc_params['control_parametrization']
+        self.num_sampling_iterations = config.mpc_params['num_sampling_iterations']
+        self.dt = config.mpc_params['dt']
+        self.horizon = config.mpc_params['horizon']
+
+
         self.state_dim = 24
         self.control_dim = 24
         self.reference_dim = self.state_dim
         
-        self.num_parallel_computations = num_parallel_computations
         self.max_sampling_forces = 30
         
-
-        self.control_parametrization = control_parametrization
-
-        self.states_dim = 24
-        self.inputs_dim = 24
+      
 
 
         
@@ -166,13 +168,13 @@ class Sampling_MPC:
 
 
 
-        if(sampling_method == 'random_sampling'):
+        if(self.sampling_method == 'random_sampling'):
             self.compute_control = self.compute_control_random_sampling
             self.sigma_random_sampling = config.mpc_params['sigma_random_sampling']
-        elif(sampling_method == 'mppi'):
+        elif(self.sampling_method == 'mppi'):
             self.compute_control = self.compute_control_mppi    
             self.sigma_mppi = config.mpc_params['sigma_mppi']
-        elif(sampling_method == 'cem_mppi'):
+        elif(self.sampling_method == 'cem_mppi'):
             self.compute_control = self.compute_control_cem_mppi
             self.sigma_cem_mppi = jnp.ones(self.num_control_parameters, dtype=dtype_general) * config.mpc_params['sigma_cem_mppi']
         else:
