@@ -195,11 +195,6 @@ simulation_params = {
 
     'use_inertia_recomputation':   True,
 
-    'use_print_debug':             False,
-    'use_visualization_debug':     True,
-
-    'use_kind_of_real_time':       True,
-
     'scene':                       'flat',  # flat, rough, stairs, random_boxes, random_pyramids, suspend_stairs, slope, perlin, image
 
     }
