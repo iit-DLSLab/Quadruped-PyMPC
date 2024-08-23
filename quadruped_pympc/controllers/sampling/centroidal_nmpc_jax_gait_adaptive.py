@@ -248,7 +248,7 @@ class Sampling_MPC:
 
 
         # Initialize the periodic gait generator and jit it!
-        self.pgg = PeriodicGaitGeneratorJax(duty_factor=0.65, step_freq=1.65, horizon=horizon, mpc_dt = self.dt)
+        self.pgg = PeriodicGaitGeneratorJax(duty_factor=0.65, step_freq=1.65, horizon=self.horizon, mpc_dt = self.dt)
         _, _ = self.pgg.compute_contact_sequence(simulation_dt=0.002, t=self.pgg.get_t(), step_freq=1.65)
         self.jitted_compute_contact_sequence = jax.jit(self.pgg.compute_contact_sequence, device=self.device)
 
@@ -916,7 +916,7 @@ class Sampling_MPC:
 
         # Sampling step frequency
         available_freq_increment = self.step_freq_delta
-        step_frequencies_vec = jax.random.choice(key, available_freq_increment, shape=(self.num_parallel_computations, ))*optimize_swing + nominal_step_frequency
+        step_frequencies_vec = jax.random.choice(key, available_freq_increment, shape=(self.num_parallel_computations, ))#*optimize_swing + nominal_step_frequency
      
 
         # Do rollout

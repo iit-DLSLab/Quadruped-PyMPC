@@ -12,8 +12,6 @@ class SRBDControllerInterface:
         self.horizon = cfg.mpc_params['horizon']
         self.optimize_step_freq = cfg.mpc_params['optimize_step_freq']
         self.step_freq_available = cfg.mpc_params['step_freq_available']
-        
-        self.sigma_cem_mppi = cfg.mpc_params['sigma_cem_mppi']
 
 
         self.previous_contact_mpc = np.array([1, 1, 1, 1])
@@ -90,7 +88,7 @@ class SRBDControllerInterface:
                 self.controller = self.controller.with_newkey()
                 if (self.controller.sampling_method == 'cem_mppi'):
                     if (iter_sampling == 0):
-                        self.controller = self.controller.with_newsigma(self.sigma_cem_mppi)
+                        self.controller = self.controller.with_newsigma(cfg.mpc_params['sigma_cem_mppi'])
 
                     nmpc_GRFs, \
                     nmpc_footholds, \
