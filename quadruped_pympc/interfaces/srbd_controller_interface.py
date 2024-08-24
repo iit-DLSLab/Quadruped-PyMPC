@@ -5,7 +5,11 @@ from gym_quadruped.utils.quadruped_utils import LegsAttr
 from quadruped_pympc import config as cfg
 
 class SRBDControllerInterface:
+    """This is an interface for a controller that uses the SRBD method to optimize the gait"""
+
+
     def __init__(self, ):
+        """ Constructor for the SRBD controller interface """
         
         self.type = cfg.mpc_params['type']
         self.mpc_dt = cfg.mpc_params['dt']
@@ -55,16 +59,35 @@ class SRBDControllerInterface:
     
 
     def compute_control(self, 
-                        state_current,
-                        ref_state,
-                        contact_sequence,
-                        inertia,
-                        pgg,
-                        ref_feet_pos,
-                        contact_sequence_dts,
-                        contact_sequence_lenghts,
-                        step_height,
-                        optimize_swing):
+                        state_current: dict,
+                        ref_state: dict,
+                        contact_sequence: np.ndarray,
+                        inertia: np.ndarray,
+                        pgg: object,
+                        ref_feet_pos: LegsAttr,
+                        contact_sequence_dts: np.ndarray,
+                        contact_sequence_lenghts: np.ndarray,
+                        step_height: float,
+                        optimize_swing: int) -> [LegsAttr, LegsAttr, float]:
+        """Compute the control using the SRBD method
+        TODO: remove the unused arguments, and not pass pgg but rather its values
+
+        Args:
+            state_current (dict): The current state of the robot
+            ref_state (dict): The reference state of the robot
+            contact_sequence (np.ndarray): The contact sequence of the robot
+            inertia (np.ndarray): The inertia of the robot
+            pgg (object): The periodic gait generator
+            ref_feet_pos (LegsAttr): The reference feet positions
+            contact_sequence_dts (np.ndarray): The contact sequence dts
+            contact_sequence_lenghts (np.ndarray): The contact sequence lengths
+            step_height (float): The step height
+            optimize_swing (int): The flag to optimize the swing
+
+        Returns:
+            tuple: The GRFs and the feet positions in world frame, 
+                   and the best sample frequency (only if the controller is sampling)
+        """
     
 
         current_contact = np.array([contact_sequence[0][0],

@@ -22,8 +22,8 @@ class QuadrupedPyMPC_Wrapper:
 
         Args:
             initial_feet_pos (LegsAttr): initial feet positions, otherwise they will be all zero.
-            legs_order (tuple[str, str, str, str], optional): _description_. Defaults to ('FL', 'FR', 'RL', 'RR').
-            quadrupedpympc_observables_names (tuple[str, ...], optional): _description_. Defaults to _DEFAULT_OBS.
+            legs_order (tuple[str, str, str, str], optional): order of the leg. Defaults to ('FL', 'FR', 'RL', 'RR').
+            quadrupedpympc_observables_names (tuple[str, ...], optional): list of observable to save. Defaults to _DEFAULT_OBS.
         """        
 
         self.mpc_frequency = cfg.simulation_params['mpc_frequency']

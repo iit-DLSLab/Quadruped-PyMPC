@@ -1,6 +1,7 @@
 import numpy as np
 import time
 
+from gym_quadruped.utils.quadruped_utils import LegsAttr
 from quadruped_pympc import config as cfg
 
 from quadruped_pympc.helpers.foothold_reference_generator import FootholdReferenceGenerator
@@ -13,9 +14,21 @@ if(cfg.simulation_params['visual_foothold_adaptation'] != 'blind'):
 
 
 class WBInterface:
+    """
+    WBInterface is responsible for interfacing with the whole body controller of a quadruped robot.
+    It initializes the necessary components for motion planning and control, including gait generation,
+    swing trajectory control, and terrain estimation.
+    """
+
     def __init__(self,
-                 initial_feet_pos,
-                 legs_order):
+                 initial_feet_pos: LegsAttr,
+                 legs_order: tuple[str, str, str, str] = ('FL', 'FR', 'RL', 'RR')):
+        """ Constructor of the WBInterface class
+
+        Args:
+            initial_feet_pos (LegsAttr): initial feet positions, otherwise they will be all zero
+            legs_order (tuple[str, str, str, str], optional): order of the leg. Defaults to ('FL', 'FR', 'RL', 'RR').
+        """        
         
         
         mpc_dt = cfg.mpc_params['dt']
@@ -41,7 +54,6 @@ class WBInterface:
             self.contact_sequence_lenghts = [horizon]
 
         
-
         # Create the foothold reference generator ------------------------------------------------
         stance_time = (1 / self.pgg.step_freq) * self.pgg.duty_factor
         self.frg = FootholdReferenceGenerator(stance_time=stance_time, hip_height=cfg.hip_height, lift_off_positions=initial_feet_pos)
@@ -68,19 +80,46 @@ class WBInterface:
 
         self.current_contact = np.array([1, 1, 1, 1])
 
+
     
     def update_state_and_reference(self,
-                                   base_pos,
-                                   base_lin_vel,
-                                   base_ori_euler_xyz,
-                                   base_ang_vel,
-                                   feet_pos,
-                                   hip_pos,
+                                   base_pos: np.ndarray,
+                                   base_lin_vel: np.ndarray,
+                                   base_ori_euler_xyz: np.ndarray,
+                                   base_ang_vel: np.ndarray,
+                                   feet_pos: LegsAttr,
+                                   hip_pos: LegsAttr,
                                    heightmaps,
-                                   legs_order,
-                                   simulation_dt,
-                                   ref_base_lin_vel,
-                                   ref_base_ang_vel):
+                                   legs_order: tuple[str, str, str, str],
+                                   simulation_dt: float,
+                                   ref_base_lin_vel: np.ndarray,
+                                   ref_base_ang_vel: np.ndarray) -> [dict, dict, list, LegsAttr, list, list, float, bool]:
+        """Update the state and reference for the whole body controller, including the contact sequence, footholds, and terrain estimation.
+
+        Args:
+            base_pos (np.ndarray): base position in world frame
+            base_lin_vel (np.ndarray): base linear velocity in world frame
+            base_ori_euler_xyz (np.ndarray): base orientation in euler angles in world frame
+            base_ang_vel (np.ndarray): base angular velocity in base frame
+            feet_pos (LegsAttr): feet positions in world frame
+            hip_pos (LegsAttr): hip positions in world frame
+            heightmaps (dict): heightmaps for each leg
+            legs_order (tuple[str, str, str, str]): order of the legs
+            simulation_dt (float): simulation time step
+            ref_base_lin_vel (np.ndarray): reference base linear velocity in world frame
+            ref_base_ang_vel (np.ndarray): reference base angular velocity in world frame
+
+        Returns:
+            state_current (dict): dictionary of the state of the robot that is used in the mpc
+            ref_state (dict):  dictionary of the reference state of the robot that is used in the mpc
+            contact_sequence (np.ndarray): this is an array, containing the contact sequence of the robot in the future
+            ref_feet_pos (LegsAttr): where to step in world frame
+            contact_sequence_dts (list): 
+            contact_sequence_lenghts (list): 
+            step_height (float): step height
+            optimize_swing (bool), boolean to inform that the robot is in the apex, hence we can optimize step freq. 
+        """
+        
         state_current = dict(
             position=base_pos,
             linear_velocity=base_lin_vel,
@@ -184,20 +223,42 @@ class WBInterface:
 
 
     def compute_stance_and_swing_torque(self,
-                                        simulation_dt,
-                                        qvel,
-                                        feet_jac,
-                                        jac_feet_dot,
-                                        feet_pos,
-                                        feet_vel,
-                                        legs_qfrc_bias,
-                                        legs_mass_matrix,
-                                        nmpc_GRFs,
-                                        nmpc_footholds,
-                                        legs_qvel_idx,
-                                        tau,
-                                        optimize_swing,
-                                        best_sample_freq):
+                                        simulation_dt: float,
+                                        qvel: np.ndarray,
+                                        feet_jac: LegsAttr,
+                                        jac_feet_dot: LegsAttr,
+                                        feet_pos: LegsAttr,
+                                        feet_vel: LegsAttr,
+                                        legs_qfrc_bias: LegsAttr,
+                                        legs_mass_matrix: LegsAttr,
+                                        nmpc_GRFs: LegsAttr,
+                                        nmpc_footholds: LegsAttr,
+                                        legs_qvel_idx: LegsAttr,
+                                        tau: LegsAttr,
+                                        optimize_swing: int,
+                                        best_sample_freq: float) -> LegsAttr:
+        """Compute the stance and swing torque.
+
+        Args:
+            simulation_dt (float): simulation time step
+            qvel (np.ndarray): joint velocities
+            feet_jac (LegsAttr): feet jacobian
+            jac_feet_dot (LegsAttr): jacobian of the feet derivative
+            feet_pos (LegsAttr): feet positions in world frame
+            feet_vel (LegsAttr): feet velocities in world frame
+            legs_qfrc_bias (LegsAttr): joint forces and torques
+            legs_mass_matrix (LegsAttr): mass matrix of the legs
+            nmpc_GRFs (LegsAttr): ground reaction forces from the MPC in world frame 
+            nmpc_footholds (LegsAttr): footholds from the MPC in world frame 
+            legs_qvel_idx (LegsAttr): joint velocities index
+            tau (LegsAttr): joint torques
+            optimize_swing (int): flag to signal that we need to update the swing trajectory time
+            best_sample_freq (float): best sample frequency obtained from the 
+                                      sampling optimization or the batched ocp
+
+        Returns:
+            LegsAttr: joint torques
+        """
         
 
         # If we have optimized the gait, we set all the timing parameters
@@ -241,7 +302,15 @@ class WBInterface:
         return tau
     
 
-    def reset(self, initial_feet_pos):
+
+    def reset(self, 
+              initial_feet_pos: LegsAttr):
+        """Reset the whole body interface
+
+        Args:
+            initial_feet_pos (LegsAttr): initial feet positions
+        """
+        
         self.pgg.reset()
         #self.frg.reset()
         #self.stc.reset()
