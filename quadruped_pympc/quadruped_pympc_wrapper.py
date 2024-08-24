@@ -1,6 +1,6 @@
-from quadruped_pympc.srbd_controller_interface import SRBDControllerInterface
-from quadruped_pympc.srbd_batched_controller_interface import SRBDBatchedControllerInterface
-from quadruped_pympc.wb_interface import WBInterface
+from quadruped_pympc.interfaces.srbd_controller_interface import SRBDControllerInterface
+from quadruped_pympc.interfaces.srbd_batched_controller_interface import SRBDBatchedControllerInterface
+from quadruped_pympc.interfaces.wb_interface import WBInterface
 
 from gym_quadruped.utils.quadruped_utils import LegsAttr
 from quadruped_pympc import config as cfg
@@ -10,8 +10,21 @@ import numpy as np
 
 _DEFAULT_OBS = ('ref_base_height', 'ref_base_angles', 'nmpc_GRFs', 'nmpc_footholds', 'swing_time')
 
+
 class QuadrupedPyMPC_Wrapper:
-    def __init__(self, initial_feet_pos, legs_order, quadrupedpympc_observables_names = _DEFAULT_OBS):
+    """A simple class wrapper of all the mpc submodules (swing, contact generator, mpc itself)."""
+
+    def __init__(self, 
+                 initial_feet_pos: LegsAttr, 
+                 legs_order: tuple[str, str, str, str] = ('FL', 'FR', 'RL', 'RR'), 
+                 quadrupedpympc_observables_names: tuple[str, ...] = _DEFAULT_OBS):
+        """ Constructor of the QuadrupedPyMPC_Wrapper class.
+
+        Args:
+            initial_feet_pos (LegsAttr): initial feet positions, otherwise they will be all zero.
+            legs_order (tuple[str, str, str, str], optional): _description_. Defaults to ('FL', 'FR', 'RL', 'RR').
+            quadrupedpympc_observables_names (tuple[str, ...], optional): _description_. Defaults to _DEFAULT_OBS.
+        """        
 
         self.mpc_frequency = cfg.simulation_params['mpc_frequency']
 
@@ -36,11 +49,58 @@ class QuadrupedPyMPC_Wrapper:
         
 
 
-    def compute_actions(self, base_pos, base_lin_vel, base_ori_euler_xyz, base_ang_vel, 
-                        feet_pos, hip_pos, heightmaps, 
-                        legs_order, simulation_dt, ref_base_lin_vel, ref_base_ang_vel, 
-                        step_num, qvel, feet_jac, jac_feet_dot, feet_vel, legs_qfrc_bias, 
-                        legs_mass_matrix, legs_qvel_idx, tau, inertia):
+    def compute_actions(self, 
+                        base_pos: np.ndarray, 
+                        base_lin_vel: np.ndarray, 
+                        base_ori_euler_xyz: np.ndarray, 
+                        base_ang_vel: np.ndarray, 
+                        feet_pos: LegsAttr, 
+                        hip_pos: LegsAttr, 
+                        heightmaps, 
+                        legs_order: tuple[str, str, str, str], 
+                        simulation_dt: float, 
+                        ref_base_lin_vel: np.ndarray, 
+                        ref_base_ang_vel: np.ndarray, 
+                        step_num: int, 
+                        qvel: np.ndarray, 
+                        feet_jac: LegsAttr, 
+                        jac_feet_dot: LegsAttr,
+                        feet_vel: LegsAttr, 
+                        legs_qfrc_bias: LegsAttr, 
+                        legs_mass_matrix: LegsAttr, 
+                        legs_qvel_idx: LegsAttr, 
+                        tau: LegsAttr, 
+                        inertia: np.ndarray) -> LegsAttr:
+        """ Given the current state of the robot (and the reference), 
+            compute the torques to be applied to the motors.
+
+        Args:
+            base_pos (np.ndarray): base position in world frame
+            base_lin_vel (np.ndarray): base velocity in world frame
+            base_ori_euler_xyz (np.ndarray): base orientation in world frame
+            base_ang_vel (np.ndarray): base angular velocity in base frame
+            feet_pos (LegsAttr): locations of the feet in world frame
+            hip_pos (LegsAttr): locations of the hip in world frame
+            heightmaps (_type_): TODO
+            legs_order (tuple[str, str, str, str]): order of the legs
+            simulation_dt (float): simulation time step
+            ref_base_lin_vel (np.ndarray): reference base linear velocity in world frame
+            ref_base_ang_vel (np.ndarray): reference base angular velocity in world frame
+            step_num (int): current step number of the environment
+            qvel (np.ndarray): joint velocities
+            feet_jac (LegsAttr): jacobian of the feet
+            jac_feet_dot (LegsAttr): time derivative of the jacobian of the feet
+            feet_vel (LegsAttr): velocity of the feet
+            legs_qfrc_bias (LegsAttr): gravity compensation, coriolis and centrifugal forces
+            legs_mass_matrix (LegsAttr): mass matrix of the legs
+            legs_qvel_idx (LegsAttr): indices of the joint velocities
+            tau (LegsAttr): joint torques
+            inertia (np.ndarray): inertia matrix of the robot (CCRBI)
+
+        Returns:
+            LegsAttr: torques to be applied to the motors
+        """        
+
                         
         # Update the state and reference -------------------------
         state_current, \
@@ -149,12 +209,20 @@ class QuadrupedPyMPC_Wrapper:
         
     
 
-    def get_obs(self,):
+    def get_obs(self,) -> dict:
+        """ Get some user-defined observables from withing the control loop.
+
+        Returns:
+            Dict: dictionary of observables
+        """
         return self.quadrupedpympc_observables
 
     
 
-    def reset(self, initial_feet_pos):
+    def reset(self, 
+              initial_feet_pos: LegsAttr):
+        """ Reset the controller."""
+
         self.wb_interface.reset(initial_feet_pos)
         
 
