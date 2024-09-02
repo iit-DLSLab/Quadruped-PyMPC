@@ -1,5 +1,5 @@
 ## Overview
-This repo contains a model predictive controller based on the **single rigid body model** and written in **Python**. It cames in two flavours: gradient-based via [acados](https://docs.acados.org/about_acados/index.html#:~:text=acados%20is%20a%20software%20package,Moritz%20Diehl) or sampling-based via [jax](https://github.com/google/jax). The controller is tested on real robots and is compatible with [Mujoco](https://mujoco.org/).  
+This repo contains a model predictive controller based on the **single rigid body model** and written in **Python**. It cames in two flavours: gradient-based via [acados](https://github.com/acados/acados) or sampling-based via [jax](https://github.com/google/jax). The controller is tested on real robots and is compatible with [Mujoco](https://mujoco.org/).  
 
 
 Features gradient-based mpc:
