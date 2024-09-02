@@ -48,7 +48,15 @@ class Centroidal_Model_JAX:
         # Mass and Inertia robot dependant
         self.mass = config.mass
         self.inertia = jnp.array(config.inertia)
-        
+
+
+        # Nonuniform discretization
+        if(config.mpc_params['use_nonuniform_discretization']):
+            time_steps_fine_grained = jnp.tile(config.mpc_params['dt_fine_grained'], config.mpc_params['horizon_fine_grained'])
+            self.dts = jnp.concatenate((time_steps_fine_grained, jnp.tile(self.dt, config.mpc_params['horizon'] - config.mpc_params['horizon_fine_grained'])))
+        else:
+            self.dts = jnp.tile(self.dt, config.mpc_params['horizon'])
+
 
 
 
@@ -159,7 +167,7 @@ class Centroidal_Model_JAX:
        
 
 
-    def integrate_jax(self, state, inputs, contact_status):
+    def integrate_jax(self, state, inputs, contact_status, n):
         """
         This method computes the forward evolution of the system.
         """
@@ -167,7 +175,8 @@ class Centroidal_Model_JAX:
 
 
         # Simple euler!
-        new_state = state[0:12] + fd*self.dt
+        dt = self.dts[n]
+        new_state = state[0:12] + fd*dt
 
         return jnp.concatenate([new_state, state[12:]])
         
