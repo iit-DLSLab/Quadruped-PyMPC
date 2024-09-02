@@ -9,6 +9,7 @@ Features gradient-based mpc:
 - optional foothold optimization
 - optional [real-time iteration](http://cse.lab.imtlucca.it/~bemporad/publications/papers/ijc_rtiltv.pdf) or [advanced-step real-time iteration](https://arxiv.org/pdf/2403.07101.pdf)
 - optional zero moment point/center of mass constraints
+- optional lyapunov-based criteria
 
 
 Features sampling-based mpc:
