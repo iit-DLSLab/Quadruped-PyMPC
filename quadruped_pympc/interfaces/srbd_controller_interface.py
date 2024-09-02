@@ -46,6 +46,15 @@ class SRBDControllerInterface:
 
                 self.batched_controller = Acados_NMPC_GaitAdaptive()
 
+        elif(cfg.mpc_params['type'] == 'lyapunov'):
+            from quadruped_pympc.controllers.gradient.lyapunov.centroidal_nmpc_lyapunov import Acados_NMPC_Lyapunov
+
+            self.controller = Acados_NMPC_Lyapunov()
+
+            if cfg.mpc_params['optimize_step_freq']:
+                from quadruped_pympc.controllers.gradient.nominal.centroidal_nmpc_gait_adaptive import Acados_NMPC_GaitAdaptive
+                self.batched_controller = Acados_NMPC_GaitAdaptive()
+
         elif self.type == 'sampling':
             if self.optimize_step_freq:
                 from quadruped_pympc.controllers.sampling.centroidal_nmpc_jax_gait_adaptive import Sampling_MPC
