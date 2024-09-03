@@ -6,7 +6,7 @@ channels:
 dependencies:
 - pip
 - python
-- casadi
+- casadi==3.6.5
 - numpy
 - matplotlib
 - jaxlib=*=*cuda*

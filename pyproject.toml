@@ -39,7 +39,7 @@ dependencies = [
     "numpy",
     "matplotlib",
     "scipy",
-    "pin",
+    #"pin",
     "cmake",
     "mujoco>=3.1.0",
     "gym_quadruped",
