@@ -1530,7 +1530,6 @@ class Acados_NMPC_Lyapunov:
         K_z1 = config.mpc_params["K_z1"]
         K_z2 = config.mpc_params["K_z2"]
         z1 = state["position"] - reference['ref_position']
-        print("z1: ", z1)
         z2 = state["linear_velocity"] - reference['ref_linear_velocity'] + K_z1*z1
         eta = np.concatenate((state["orientation"], state["angular_velocity"]))
         phi = self.phi_predicted
