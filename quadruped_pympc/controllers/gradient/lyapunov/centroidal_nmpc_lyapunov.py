@@ -1,4 +1,5 @@
 # Description: This file contains the class for the NMPC controller
+import pathlib
 
 # Authors: Giulio Turrisi -
 
@@ -8,18 +9,9 @@ import scipy.linalg
 import casadi as cs
 import copy
 
-import time
 
 
-
-import os
-dir_path = os.path.dirname(os.path.realpath(__file__))
-
-import sys
-sys.path.append(dir_path)
-sys.path.append(dir_path + '/../../')
-
-from centroidal_model_lyapunov import Centroidal_Model_Lyapunov
+from .centroidal_model_lyapunov import Centroidal_Model_Lyapunov
 
 
 import config
@@ -69,16 +61,14 @@ class Acados_NMPC_Lyapunov:
         self.inputs_dim = acados_model.u.size()[0]
 
         # Create the acados ocp solver
-        #self.ocp = self.create_ocp_solver_description(acados_model)
-        #self.acados_ocp_solver = AcadosOcpSolver(
-        #    self.ocp, json_file="centroidal_nmpc" + ".json"
-        #)
-
-        # Create the acados ocp solver
         self.ocp = self.create_ocp_solver_description(acados_model)
-        self.acados_ocp_solver = AcadosOcpSolver(
-            self.ocp, json_file="centroidal_nmpc" + ".json"
-        )
+
+        code_export_dir = pathlib.Path(__file__).parent / 'c_generated_code'
+        self.ocp.code_export_directory = str(code_export_dir)
+
+        self.acados_ocp_solver = AcadosOcpSolver(self.ocp,
+                                                 json_file=self.ocp.code_export_directory + "/centroidal_nmpc" +
+                                                           ".json")
 
 
         # Initialize solver
