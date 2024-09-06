@@ -107,6 +107,7 @@ class QuadrupedPyMPC_Wrapper:
         ref_state, \
         contact_sequence, \
         ref_feet_pos, \
+        ref_feet_constraints, \
         contact_sequence_dts, \
         contact_sequence_lenghts, \
         step_height, \
@@ -187,6 +188,8 @@ class QuadrupedPyMPC_Wrapper:
                 data = {'ref_base_angles': ref_state['ref_orientation']}
             elif obs_name == 'ref_feet_pos':
                 data = {'ref_feet_pos': ref_feet_pos}
+            elif obs_name == 'ref_feet_constraints':
+                data = {'ref_feet_constraints': ref_feet_constraints}
             elif obs_name == 'nmpc_GRFs':
                 data = {'nmpc_GRFs': self.nmpc_GRFs}
             elif obs_name == 'nmpc_footholds':

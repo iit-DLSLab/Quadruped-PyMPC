@@ -13,6 +13,7 @@ class VisualFootholdAdaptation:
                                              FR=np.array([0, 0, 0]), 
                                              RL=np.array([0, 0, 0]), 
                                              RR=np.array([0, 0, 0]))
+        self.footholds_constraints = LegsAttr(FL=None, FR=None, RL=None, RR=None)
         self.initialized = False
 
         self.adaptation_strategy = adaptation_strategy
@@ -36,9 +37,23 @@ class VisualFootholdAdaptation:
         # If the adaptation is not initialized, return the reference footholds
         if(self.initialized == False):
             self.footholds_adaptation = reference_footholds
-            return reference_footholds
+            return reference_footholds, self.footholds_constraints
         else:
-            return self.footholds_adaptation
+            return self.footholds_adaptation, self.footholds_constraints
+        
+
+
+    def get_heightmap_coordinates_foothold_id(self, heightmaps, foothold_id, leg_name):
+
+        r = round(foothold_id.item()/heightmaps[leg_name].n)
+        c = round(foothold_id.item()%heightmaps[leg_name].n)
+
+        if(r >= heightmaps[leg_name].n):
+            r = heightmaps[leg_name].n -1
+        if(c >= heightmaps[leg_name].n):
+            c = heightmaps[leg_name].n -1
+        
+        return r, c
         
 
     def compute_adaptation(self, legs_order, reference_footholds, hip_positions, heightmaps,
@@ -80,14 +95,8 @@ class VisualFootholdAdaptation:
                 
                 best_foothold_id = convex_data[0][0]
                 best_convex_area_vertices_id = [convex_data[1][0].x1, convex_data[1][0].y2]
-
-                r = round(best_foothold_id.item()/heightmaps[leg_name].n)
-                c = round(best_foothold_id.item()%heightmaps[leg_name].n)
-
-                if(r >= heightmaps[leg_name].n):
-                    r = heightmaps[leg_name].n -1
-                if(c >= heightmaps[leg_name].n):
-                    c = heightmaps[leg_name].n -1
+                
+                r, c = self.get_heightmap_coordinates_foothold_id(heightmaps, best_foothold_id, leg_name)
                 
                 reference_footholds[leg_name][0:2] = heightmap[r,c,0,:][0:2]
 
@@ -96,9 +105,18 @@ class VisualFootholdAdaptation:
                 if(height_adjustment is not None):
                     reference_footholds[leg_name][2] = height_adjustment
 
+
+                r_vertex1, c_vertex1 = self.get_heightmap_coordinates_foothold_id(heightmaps, best_convex_area_vertices_id[0], leg_name)
+                r_vertex2, c_vertex2 = self.get_heightmap_coordinates_foothold_id(heightmaps, best_convex_area_vertices_id[1], leg_name)
+                vertex1_world_frame = heightmap[r_vertex1,c_vertex1,0,:]
+                vertex2_world_frame = heightmap[r_vertex2,c_vertex2,0,:]
+
+                self.footholds_constraints[leg_name] = [vertex1_world_frame, vertex2_world_frame]
+
+
                 #print("Safe map: ", safe_map)
-            
-        
+
+           
         self.update_footholds_adaptation(reference_footholds)
         
         return True

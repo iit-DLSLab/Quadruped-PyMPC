@@ -114,6 +114,7 @@ class WBInterface:
             ref_state (dict):  dictionary of the reference state of the robot that is used in the mpc
             contact_sequence (np.ndarray): this is an array, containing the contact sequence of the robot in the future
             ref_feet_pos (LegsAttr): where to step in world frame
+            ref_feet_constraints (LegsAttr): constraints for the footholds in the world frame
             contact_sequence_dts (list): 
             contact_sequence_lenghts (list): 
             step_height (float): step height
@@ -169,18 +170,23 @@ class WBInterface:
             if(self.stc.check_full_stance_condition(self.current_contact)):
                 self.vfa.reset()
             
-            ref_feet_pos = self.vfa.get_footholds_adapted(ref_feet_pos)
-            
+            ref_feet_pos, ref_feet_constraints = self.vfa.get_footholds_adapted(ref_feet_pos)
+
+
             """step_height_modification = False
-            for leg_id, leg_name in enumerate(legs_order):
-                if(ref_feet_pos[leg_name][2] - frg.lift_off_positions[leg_name][2] > (cfg.simulation_params['step_height'] - 0.05) 
-                    and ref_feet_pos[leg_name][2] - frg.lift_off_positions[leg_name][2] > 0.0):
-                    step_height = ref_feet_pos[leg_name][2] - frg.lift_off_positions[leg_name][2] + 0.05
+            for _, leg_name in enumerate(legs_order):
+                #TODO this should be in the terrain frame
+                ref_feet_pos_height_diffence = ref_feet_pos[leg_name][2] - self.frg.lift_off_positions[leg_name][2]
+                if(ref_feet_pos_height_diffence > (cfg.simulation_params['step_height']) and ref_feet_pos_height_diffence > 0.0):
+                    step_height = ref_feet_pos_height_diffence + 0.05
                     step_height_modification = True
-                    stc.regenerate_swing_trajectory_generator(step_height=step_height, swing_period=stc.swing_period)
+                    self.stc.regenerate_swing_trajectory_generator(step_height=step_height, swing_period=self.stc.swing_period)
             if(step_height_modification == False):
                 step_height = cfg.simulation_params['step_height']
-                stc.regenerate_swing_trajectory_generator(step_height=step_height, swing_period=stc.swing_period)"""
+                self.stc.regenerate_swing_trajectory_generator(step_height=step_height, swing_period=self.stc.swing_period)"""
+        
+        else:
+            ref_feet_constraints = LegsAttr(FL=None, FR=None, RL=None, RR=None)
         
 
         # Estimate the terrain slope and elevation -------------------------------------------------------
@@ -218,7 +224,7 @@ class WBInterface:
         else:
             optimize_swing = 0
 
-        return state_current, ref_state, contact_sequence, ref_feet_pos, self.contact_sequence_dts, self.contact_sequence_lenghts, self.step_height, optimize_swing
+        return state_current, ref_state, contact_sequence, ref_feet_pos, ref_feet_constraints, self.contact_sequence_dts, self.contact_sequence_lenghts, self.step_height, optimize_swing
     
 
 
