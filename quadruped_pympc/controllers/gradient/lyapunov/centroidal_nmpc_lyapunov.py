@@ -1292,7 +1292,7 @@ class Acados_NMPC_Lyapunov:
         self.initial_base_position = copy.deepcopy(state["position"])
         reference = copy.deepcopy(reference)
         state = copy.deepcopy(state)
-
+        
         reference["ref_position"] = reference["ref_position"] - state["position"]
         reference["ref_foot_FL"] = reference["ref_foot_FL"] - state["position"]
         reference["ref_foot_FR"] = reference["ref_foot_FR"] - state["position"]
@@ -1305,6 +1305,7 @@ class Acados_NMPC_Lyapunov:
         state["foot_RL"] = state["foot_RL"] - state["position"]
         state["foot_RR"] = state["foot_RR"] - state["position"]
         state["position"] = np.array([0, 0, 0])
+        reference["ref_position"][0:2] = 0 #we do not close the loop in position
 
         return state, reference, constraint
 
@@ -1529,6 +1530,7 @@ class Acados_NMPC_Lyapunov:
         K_z1 = config.mpc_params["K_z1"]
         K_z2 = config.mpc_params["K_z2"]
         z1 = state["position"] - reference['ref_position']
+        print("z1: ", z1)
         z2 = state["linear_velocity"] - reference['ref_linear_velocity'] + K_z1*z1
         eta = np.concatenate((state["orientation"], state["angular_velocity"]))
         phi = self.phi_predicted
