@@ -106,8 +106,9 @@ class VisualFootholdAdaptation:
                     reference_footholds[leg_name][2] = height_adjustment
 
 
-                r_vertex1, c_vertex1 = self.get_heightmap_coordinates_foothold_id(heightmaps, best_convex_area_vertices_id[0], leg_name)
-                r_vertex2, c_vertex2 = self.get_heightmap_coordinates_foothold_id(heightmaps, best_convex_area_vertices_id[1], leg_name)
+                
+                r_vertex1, c_vertex1 = self.get_heightmap_coordinates_foothold_id(heightmaps, np.array([best_convex_area_vertices_id[0]]), leg_name)
+                r_vertex2, c_vertex2 = self.get_heightmap_coordinates_foothold_id(heightmaps, np.array([best_convex_area_vertices_id[1]]), leg_name)
                 vertex1_world_frame = heightmap[r_vertex1,c_vertex1,0,:]
                 vertex2_world_frame = heightmap[r_vertex2,c_vertex2,0,:]
 
