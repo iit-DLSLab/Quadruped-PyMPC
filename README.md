@@ -44,7 +44,7 @@ Gradient-based MPC: It uses [CasADI](https://web.casadi.org/) to define the mode
 
 ## Installation
 
-1. install [miniforge](https://github.com/conda-forge/miniforge/releases) (x86_64)
+1. install [miniforge](https://github.com/conda-forge/miniforge/releases) (x86_64 or arm64 depending on your platform)
 
 2. create an environment using the file in the folder [installation](https://github.com/iit-DLSLab/Quadruped-PyMPC/tree/main/installation) choosing between **nvidia and integrated gpu**, either **with or without ros** (to run the simulation, you don't need ros!):
 
@@ -76,10 +76,10 @@ Gradient-based MPC: It uses [CasADI](https://web.casadi.org/) to define the mode
     export ACADOS_SOURCE_DIR="/path_to_acados"
     ```
 
-    Notice that if you are using Mac, you should set
+    Notice that if you are using Mac, you should modify the file .zshrc adding
     
     ```
-    DYLD_LIBRARY_PATH=$LD_LIBRARY_PATH:"/path_to_acados/lib"
+    export DYLD_LIBRARY_PATH=$LD_LIBRARY_PATH:"/path_to_acados/lib"
     export ACADOS_SOURCE_DIR="/path_to_acados"
     ```
 
@@ -104,7 +104,7 @@ The first time you run the simulation with acados, in the terminal you will be a
    conda activate quadruped_pympc_env
    ```
 
-2. go in the [home folder](https://github.com/iit-DLSLab/Quadruped-PyMPC) and press
+2. go in the main Quadruped-PyMPC [folder](https://github.com/iit-DLSLab/Quadruped-PyMPC) and press
    
    ```
    python3 simulation/simulation_mujoco.py
