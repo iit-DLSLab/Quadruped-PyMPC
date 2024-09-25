@@ -126,356 +126,236 @@ class SwingTrajectoryController:
 
 # Example:
 if __name__ == "__main__":
-    import copy
+    import time
+    import numpy as np
+    from tqdm import tqdm
 
-    import mujoco
-    import mujoco.viewer
-    from swing_trajectory_controller import SwingTrajectoryController
-    import matplotlib.pyplot as plt
+    # Gym and Simulation related imports
+    from gym_quadruped.quadruped_env import QuadrupedEnv
+    from gym_quadruped.utils.quadruped_utils import LegsAttr
 
+    # Config imports
+    from quadruped_pympc import config as cfg
+
+    # Helper functions for plotting
     from quadruped_pympc.helpers.quadruped_utils import plot_swing_mujoco
+    from gym_quadruped.utils.mujoco.visual import render_vector
+    from gym_quadruped.utils.mujoco.visual import render_sphere
 
-    # Mujoco model and data
-    m = mujoco.MjModel.from_xml_path('./../external/mujoco_menagerie/unitree_go2/scene.xml')
-    d = mujoco.MjData(m)
-    mujoco.mj_resetDataKeyframe(m, d, 0)
-    simulation_dt = 0.002
 
-    # Get the ids of the contact points, useful for computing
-    # contact jacobian later
-    FL_id = mujoco.mj_name2id(m, mujoco.mjtObj.mjOBJ_GEOM, 'FL')
-    FR_id = mujoco.mj_name2id(m, mujoco.mjtObj.mjOBJ_GEOM, 'FR')
-    RL_id = mujoco.mj_name2id(m, mujoco.mjtObj.mjOBJ_GEOM, 'RL')
-    RR_id = mujoco.mj_name2id(m, mujoco.mjtObj.mjOBJ_GEOM, 'RR')
+    np.set_printoptions(precision=3, suppress=True)
 
-    FL_geom = m.geom("FL")
-    FR_geom = m.geom("FR")
-    RL_geom = m.geom("RL")
-    RR_geom = m.geom("RR")
+    robot_name = cfg.robot
+    hip_height = cfg.hip_height
+    robot_leg_joints = cfg.robot_leg_joints
+    robot_feet_geom_names = cfg.robot_feet_geom_names
+    scene_name = cfg.simulation_params['scene']
+    simulation_dt = cfg.simulation_params['dt']
 
-    FL_calf_id = mujoco.mj_name2id(m, mujoco.mjtObj.mjOBJ_BODY, 'FL_calf')
-    FR_calf_id = mujoco.mj_name2id(m, mujoco.mjtObj.mjOBJ_BODY, 'FR_calf')
-    RL_calf_id = mujoco.mj_name2id(m, mujoco.mjtObj.mjOBJ_BODY, 'RL_calf')
-    RR_calf_id = mujoco.mj_name2id(m, mujoco.mjtObj.mjOBJ_BODY, 'RR_calf')
+    state_observables_names = ('base_pos', 'base_lin_vel', 'base_ori_euler_xyz', 'base_ori_quat_wxyz', 'base_ang_vel',
+                               'qpos_js', 'qvel_js', 'tau_ctrl_setpoint',
+                               'feet_pos_base', 'feet_vel_base', 'contact_state', 'contact_forces_base',)
+
+
+    # Create the quadruped robot environment -----------------------------------------------------------
+    env = QuadrupedEnv(robot=robot_name,
+                       hip_height=hip_height,
+                       legs_joint_names=robot_leg_joints,  # Joint names of the legs DoF
+                       feet_geom_name=robot_feet_geom_names,  # Geom/Frame id of feet
+                       scene=scene_name,
+                       sim_dt=simulation_dt,
+                       ref_base_lin_vel=0.0,  # pass a float for a fixed value
+                       ground_friction_coeff=1.5,  # pass a float for a fixed value
+                       base_vel_command_type="human",  # "forward", "random", "forward+rotate", "human"
+                       state_obs_names=state_observables_names,  # Desired quantities in the 'state' vec
+                       )
+    env.reset(random=False)
+    env.render()  # Pass in the first render call any mujoco.viewer.KeyCallbackType
+    
+
+    feet_traj_geom_ids, feet_GRF_geom_ids = None, LegsAttr(FL=-1, FR=-1, RL=-1, RR=-1)
+    legs_order = ["FL", "FR", "RL", "RR"]
+    heightmaps = None
 
     # Jacobian matrices
-    jac_foot_FL = np.zeros((3, m.nv))
-    jac_foot_FR = np.zeros((3, m.nv))
-    jac_foot_RL = np.zeros((3, m.nv))
-    jac_foot_RR = np.zeros((3, m.nv))
+    jac_feet_prev = LegsAttr(*[np.zeros((3, env.mjModel.nv)) for _ in range(4)])
+    jac_feet_dot = LegsAttr(*[np.zeros((3, env.mjModel.nv)) for _ in range(4)])
+    # Torque vector
+    tau = LegsAttr(*[np.zeros((env.mjModel.nv, 1)) for _ in range(4)])
 
-    # Previous jacobian matrices
-    jac_foot_FL_prev = np.zeros((3, m.nv))
-    jac_foot_FR_prev = np.zeros((3, m.nv))
-    jac_foot_RL_prev = np.zeros((3, m.nv))
-    jac_foot_RR_prev = np.zeros((3, m.nv))
 
-    # Derivative of the jacobian matrices
-    jac_foot_FL_dot = np.zeros((3, m.nv))
-    jac_foot_FR_dot = np.zeros((3, m.nv))
-    jac_foot_RL_dot = np.zeros((3, m.nv))
-    jac_foot_RR_dot = np.zeros((3, m.nv))
 
-    # Previous foot positions
-    position_foot_FL_prev = np.zeros((3,))
-    position_foot_FR_prev = np.zeros((3,))
-    position_foot_RL_prev = np.zeros((3,))
-    position_foot_RR_prev = np.zeros((3,))
+    # Quadruped PyMPC controller initialization -------------------------------------------------------------
+    from quadruped_pympc.interfaces.srbd_controller_interface import SRBDControllerInterface
+    from quadruped_pympc.interfaces.srbd_batched_controller_interface import SRBDBatchedControllerInterface
+    from quadruped_pympc.interfaces.wb_interface import WBInterface
 
-    # Torque vectors
-    tau_FL = np.zeros((m.nv, 1))
-    tau_FR = np.zeros((m.nv, 1))
-    tau_RL = np.zeros((m.nv, 1))
-    tau_RR = np.zeros((m.nv, 1))
 
-    swing_time = [0, 0, 0, 0]
-    lift_off_positions = [np.zeros((3, 1)) for _ in range(4)]
-    step_frequency = 1.5
-    duty_factor = 0.5
-    step_height = 0.08  # + 0.3
-    # swing_period = (1 - duty_factor) * (1 / step_frequency)
-    swing_period = 1
-    position_gain_fb = 1500
-    velocity_gain_fb = 10
-    stc = SwingTrajectoryController(step_height=step_height, swing_period=swing_period,
-                                    position_gain_fb=position_gain_fb, velocity_gain_fb=velocity_gain_fb,
-                                    generator="scipy")
+    wb_interface = WBInterface(initial_feet_pos = env.feet_pos(frame='world'), legs_order = legs_order)
+    
 
-    d.qpos[2] = 0.6
-    mujoco.mj_step(m, d)
-    position_foot_FL = d.geom_xpos[FL_id]
-    position_foot_FL_prev = copy.deepcopy(position_foot_FL)
-    lift_off_positions[0] = copy.deepcopy(position_foot_FL)
-    desired_touch_down_FL = copy.deepcopy(position_foot_FL)
-    desired_touch_down_FL[0] += 0.15
+    nmpc_GRFs = LegsAttr(FL=np.zeros(3), FR=np.zeros(3),
+                                RL=np.zeros(3), RR=np.zeros(3))
+    nmpc_footholds = LegsAttr(FL=np.zeros(3), FR=np.zeros(3),
+                                    RL=np.zeros(3), RR=np.zeros(3))
+    best_sample_freq = wb_interface.pgg.step_freq
 
-    position_foot_FR = d.geom_xpos[FR_id]
-    position_foot_FR_prev = copy.deepcopy(position_foot_FR)
-    lift_off_positions[1] = copy.deepcopy(position_foot_FR)
-    desired_touch_down_FR = copy.deepcopy(position_foot_FR)
-    desired_touch_down_FR[0] += 0.15
+    import copy
+    initial_pos=copy.deepcopy(np.array([0,0,0.6]))
+    initial_angle=copy.deepcopy(env.mjData.qpos[3:7])
 
-    position_foot_RL = d.geom_xpos[RL_id]
-    position_foot_RL_prev = copy.deepcopy(position_foot_RL)
-    lift_off_positions[2] = copy.deepcopy(position_foot_RL)
-    desired_touch_down_RL = copy.deepcopy(position_foot_RL)
-    desired_touch_down_RL[0] += 0.15
+    while True:
+        env.mjData.qpos[0:3] = initial_pos
+        env.mjData.qpos[3:7] = initial_angle
+        env.mjData.qvel[0:3] = 0
+        env.mjData.qvel[3:7] = 0
+        
 
-    position_foot_RR = d.geom_xpos[RR_id]
-    position_foot_RR_prev = copy.deepcopy(position_foot_RR)
-    lift_off_positions[3] = copy.deepcopy(position_foot_RR)
-    desired_touch_down_RR = copy.deepcopy(position_foot_RR)
-    desired_touch_down_RR[0] += 0.15
+        # Update value from SE or Simulator ----------------------
+        feet_pos = env.feet_pos(frame='world')
+        hip_pos = env.hip_positions(frame='world')
+        base_lin_vel = env.base_lin_vel(frame='world')
+        base_ang_vel = env.base_ang_vel(frame='world')
+        base_ori_euler_xyz = env.base_ori_euler_xyz
+        base_pos = env.base_pos
 
-    # Plot stuff
-    swing_FL_evolution = np.zeros((6, 100))
-    swing_FL_evolution_reference = np.zeros((6, 100))
-    x = np.linspace(0, 100, 100)
-    fig, (ax_x, ax_y, ax_z, ax_x_dot, ax_y_dot, ax_z_dot) = plt.subplots(6, sharex=True)
+        # Get the reference base velocity in the world frame
+        ref_base_lin_vel, ref_base_ang_vel = env.target_base_vel()
+        
+        # Get the inertia matrix
+        if(cfg.simulation_params['use_inertia_recomputation']):
+            inertia = env.get_base_inertia().flatten()  # Reflected inertia of base at qpos, in world frame
+        else:
+            inertia = cfg.inertia.flatten()
 
-    (ln_x,) = ax_x.plot(x, np.sin(x), animated=True)
-    ax_x.set_title('LF swing tracking')
-    ax_x.set_ylabel('x')
-    ax_x.set_ylim(-0.1, 0.5)
+        # Get the qpos and qvel
+        qpos, qvel = env.mjData.qpos, env.mjData.qvel
+        
+        # Get Centrifugal, Coriolis, Gravity for the swing controller
+        legs_mass_matrix = env.legs_mass_matrix
+        legs_qfrc_bias = env.legs_qfrc_bias
 
-    (ln_y,) = ax_y.plot(x, np.sin(x), animated=True)
-    ax_y.set_ylabel('y')
-    ax_y.set_ylim(-0.1, 0.5)
+        # Compute feet jacobian
+        feet_jac = env.feet_jacobians(frame='world', return_rot_jac=False)
+        
+        # Compute jacobian derivatives of the contact points
+        jac_feet_dot = (feet_jac - jac_feet_prev) / simulation_dt  # Finite difference approximation
+        jac_feet_prev = feet_jac  # Update previous Jacobians
+        
+        # Compute feet velocities
+        feet_vel = LegsAttr(**{leg_name: feet_jac[leg_name] @ env.mjData.qvel for leg_name in legs_order})
 
-    (ln_z,) = ax_z.plot(x, np.sin(x), animated=True)
-    ax_z.set_ylabel('z')
-    ax_z.set_ylim(0.2, 0.5)
+        # Idx of the leg
+        legs_qvel_idx = env.legs_qvel_idx
 
-    (ln_x_dot,) = ax_x_dot.plot(x, np.sin(x), animated=True)
-    ax_x_dot.set_ylabel('x_dot')
 
-    (ln_y_dot,) = ax_y_dot.plot(x, np.sin(x), animated=True)
-    ax_y_dot.set_ylabel('y_dot')
 
-    (ln_z_dot,) = ax_z_dot.plot(x, np.sin(x), animated=True)
-    ax_z_dot.set_ylabel('z_dot')
-    ax_z_dot.set_ylim(-0.2, 0.2)
+        # Update the state and reference -------------------------
+        state_current, \
+        ref_state, \
+        contact_sequence, \
+        ref_feet_pos, \
+        ref_feet_constraints, \
+        contact_sequence_dts, \
+        contact_sequence_lenghts, \
+        step_height, \
+        optimize_swing = wb_interface.update_state_and_reference(base_pos,
+                                                base_lin_vel,
+                                                base_ori_euler_xyz,
+                                                base_ang_vel,
+                                                feet_pos,
+                                                hip_pos,
+                                                heightmaps,
+                                                legs_order,
+                                                simulation_dt,
+                                                ref_base_lin_vel,
+                                                ref_base_ang_vel)
+        
+        
 
-    plt.show(block=False)
-    plt.pause(0.1)
-    bg = fig.canvas.copy_from_bbox(fig.bbox)
-    ax_x.draw_artist(ln_x)
-    ax_y.draw_artist(ln_y)
-    ax_z.draw_artist(ln_z)
-    ax_x_dot.draw_artist(ln_x_dot)
-    ax_y_dot.draw_artist(ln_y_dot)
-    ax_z_dot.draw_artist(ln_z_dot)
-    fig.canvas.blit(fig.bbox)
+        ref_feet_pos.FL[2] = 0.3
+        ref_feet_pos.FR[2] = 0.3
+        ref_feet_pos.RL[2] = 0.3
+        ref_feet_pos.RR[2] = 0.3
+        wb_interface.frg.lift_off_positions.FL[2] = 0.3
+        wb_interface.frg.lift_off_positions.FR[2] = 0.3
+        wb_interface.frg.lift_off_positions.RL[2] = 0.3
+        wb_interface.frg.lift_off_positions.RR[2] = 0.3
+        nmpc_footholds = LegsAttr(FL=ref_feet_pos['FL'], FR=ref_feet_pos['FR'],
+                                    RL=ref_feet_pos['RL'], RR=ref_feet_pos['RR'])
 
-    # Main simulation loop ------------------------------------------------------------------
-    with mujoco.viewer.launch_passive(m, d) as viewer:
-        i = 0
-        while True:
-            d.qpos[2] = 0.6
-            d.qvel[0:6] = 0.0
 
-            # Compute the jacobian of the contact points
-            mujoco.mj_jac(m, d, jac_foot_FL, None, d.geom_xpos[FL_id], FL_calf_id)
-            mujoco.mj_jac(m, d, jac_foot_FR, None, d.geom_xpos[FR_id], FR_calf_id)
-            mujoco.mj_jac(m, d, jac_foot_RL, None, d.geom_xpos[RL_id], RL_calf_id)
-            mujoco.mj_jac(m, d, jac_foot_RR, None, d.geom_xpos[RR_id], RR_calf_id)
 
-            # Compute jacobian derivatives of the contact points
-            jac_foot_FL_dot = (jac_foot_FL - jac_foot_FL_prev) / simulation_dt
-            jac_foot_FR_dot = (jac_foot_FR - jac_foot_FR_prev) / simulation_dt
-            jac_foot_RL_dot = (jac_foot_RL - jac_foot_RL_prev) / simulation_dt
-            jac_foot_RR_dot = (jac_foot_RR - jac_foot_RR_prev) / simulation_dt
 
-            # Update previous jacobians
-            jac_foot_FL_prev = copy.deepcopy(jac_foot_FL)
-            jac_foot_FR_prev = copy.deepcopy(jac_foot_FR)
-            jac_foot_RL_prev = copy.deepcopy(jac_foot_RL)
-            jac_foot_RR_prev = copy.deepcopy(jac_foot_RR)
+        
+        
 
-            position_foot_FL = d.geom_xpos[FL_id]
-            position_foot_FR = d.geom_xpos[FR_id]
-            position_foot_RL = d.geom_xpos[RL_id]
-            position_foot_RR = d.geom_xpos[RR_id]
+        # Compute Swing and Stance Torque ---------------------------------------------------------------------------
+        tau = wb_interface.compute_stance_and_swing_torque(simulation_dt,
+                                                    qvel,
+                                                    feet_jac,
+                                                    jac_feet_dot,
+                                                    feet_pos,
+                                                    feet_vel,
+                                                    legs_qfrc_bias,
+                                                    legs_mass_matrix,
+                                                    nmpc_GRFs,
+                                                    nmpc_footholds,
+                                                    legs_qvel_idx,
+                                                    tau,
+                                                    optimize_swing,
+                                                    best_sample_freq)
+        
 
-            velocity_foot_FL = (position_foot_FL - position_foot_FL_prev) / simulation_dt
-            velocity_foot_FR = (position_foot_FR - position_foot_FR_prev) / simulation_dt
-            velocity_foot_RL = (position_foot_RL - position_foot_RL_prev) / simulation_dt
-            velocity_foot_RR = (position_foot_RR - position_foot_RR_prev) / simulation_dt
+        action = np.zeros(env.mjModel.nu)
+        action[env.legs_tau_idx.FL] = tau.FL
+        action[env.legs_tau_idx.FR] = tau.FR
+        action[env.legs_tau_idx.RL] = tau.RL
+        action[env.legs_tau_idx.RR] = tau.RR
+        state, reward, is_terminated, is_truncated, info = env.step(action=action)
+        
+        
 
-            # Update previous foot positions
-            position_foot_FL_prev = copy.deepcopy(position_foot_FL)
-            position_foot_FR_prev = copy.deepcopy(position_foot_FR)
-            position_foot_RL_prev = copy.deepcopy(position_foot_RL)
-            position_foot_RR_prev = copy.deepcopy(position_foot_RR)
 
-            # Compute the reference for the swing trajectory
+        _, _, feet_GRF = env.feet_contact_state(ground_reaction_forces=True)
 
-            if swing_time[0] > swing_period:
-                swing_time[0] = 0
-            else:
-                swing_time[0] = swing_time[0] + simulation_dt
+        # Plot the swing trajectory
+        feet_traj_geom_ids = plot_swing_mujoco(viewer=env.viewer,
+                                                swing_traj_controller=wb_interface.stc,
+                                                swing_period=wb_interface.stc.swing_period,
+                                                swing_time=LegsAttr(FL=wb_interface.stc.swing_time[0],
+                                                                    FR=wb_interface.stc.swing_time[1],
+                                                                    RL=wb_interface.stc.swing_time[2],
+                                                                    RR=wb_interface.stc.swing_time[3]),
+                                                lift_off_positions=wb_interface.frg.lift_off_positions,
+                                                nmpc_footholds=nmpc_footholds,
+                                                ref_feet_pos=ref_feet_pos,
+                                                geom_ids=feet_traj_geom_ids)
+        
+        
+        # Update and Plot the heightmap
+        if(cfg.simulation_params['visual_foothold_adaptation'] != 'blind'):
+            #if(stc.check_apex_condition(current_contact, interval=0.01)):
+            for leg_id, leg_name in enumerate(legs_order):
+                data = heightmaps[leg_name].data#.update_height_map(ref_feet_pos[leg_name], yaw=env.base_ori_euler_xyz[2])
+                if(data is not None):
+                    for i in range(data.shape[0]):
+                        for j in range(data.shape[1]):
+                                heightmaps[leg_name].geom_ids[i, j] = render_sphere(viewer=env.viewer,
+                                                                                    position=([data[i][j][0][0],data[i][j][0][1],data[i][j][0][2]]),
+                                                                                    diameter=0.01,
+                                                                                    color=[0, 1, 0, .5],
+                                                                                    geom_id=heightmaps[leg_name].geom_ids[i, j]
+                                                                                    )
+                    
+        # Plot the GRF
+        for leg_id, leg_name in enumerate(legs_order):
+            feet_GRF_geom_ids[leg_name] = render_vector(env.viewer,
+                                                        vector=feet_GRF[leg_name],
+                                                        pos=feet_pos[leg_name],
+                                                        scale=np.linalg.norm(feet_GRF[leg_name]) * 0.005,
+                                                        color=np.array([0, 1, 0, .5]),
+                                                        geom_id=feet_GRF_geom_ids[leg_name])
 
-            # The swing controller is in the end-effector space. For its computation,
-            # we save for simplicity joints position and velocities
-            joints_pos_FL = d.qpos[6:9]
-            joints_vel_FL = d.qvel[6:9]
-
-            joints_pos_FR = d.qpos[9:12]
-            joints_vel_FR = d.qvel[9:12]
-
-            joints_pos_RL = d.qpos[12:15]
-            joints_vel_RL = d.qvel[12:15]
-
-            joints_pos_RR = d.qpos[15:18]
-            joints_vel_RR = d.qvel[15:18]
-
-            print("d.qpos", d.qpos[6:])
-
-            # centrifugal, coriolis, gravity
-            h_FL = d.qfrc_bias[6:9]
-            h_FR = d.qfrc_bias[9:12]
-            h_RL = d.qfrc_bias[12:15]
-            h_RR = d.qfrc_bias[15:18]
-
-            # and inertia matrix
-            mass_matrix = np.zeros((m.nv, m.nv))
-            mujoco.mj_fullM(m, mass_matrix, d.qM)
-            mass_matrix_FL = mass_matrix[6:9, 6:9]
-
-            # breakpoint()
-
-            # If the foot is not in stance, we can calculate the swing controller
-            tau_FL, \
-                desired_swing_foot_position_FL, \
-                desired_swing_foot_velocity_FL = stc.compute_swing_control(m,
-                                                                           joints_pos_FL,
-                                                                           joints_vel_FL,
-                                                                           jac_foot_FL[0:3, 6:9],
-                                                                           jac_foot_FL_dot[0:3, 6:9],
-                                                                           lift_off_positions[0],
-                                                                           desired_touch_down_FL,
-                                                                           swing_time[0],
-                                                                           position_foot_FL,
-                                                                           velocity_foot_FL,
-                                                                           h_FL,
-                                                                           mass_matrix_FL)
-
-            tau_FR, \
-                desired_swing_foot_position_FR, \
-                desired_swing_foot_velocity_FR = stc.compute_swing_control(m,
-                                                                           joints_pos_FR,
-                                                                           joints_vel_FR,
-                                                                           jac_foot_FR[0:3, 9:12],
-                                                                           jac_foot_FR_dot[0:3, 9:12],
-                                                                           lift_off_positions[1],
-                                                                           desired_touch_down_FR,
-                                                                           swing_time[0],
-                                                                           position_foot_FR,
-                                                                           velocity_foot_FR,
-                                                                           h_FR,
-                                                                           mass_matrix_FL)
-
-            tau_RL, \
-                desired_swing_foot_position_RL, \
-                desired_swing_foot_velocity_RL = stc.compute_swing_control(m,
-                                                                           joints_pos_RL,
-                                                                           joints_vel_RL,
-                                                                           jac_foot_RL[0:3, 12:15],
-                                                                           jac_foot_RL_dot[0:3, 12:15],
-                                                                           lift_off_positions[2],
-                                                                           desired_touch_down_RL,
-                                                                           swing_time[0],
-                                                                           position_foot_RL,
-                                                                           velocity_foot_RL,
-                                                                           h_RL,
-                                                                           mass_matrix_FL)
-
-            tau_RR, \
-                desired_swing_foot_position_RR, \
-                desired_swing_foot_velocity_RR = stc.compute_swing_control(m,
-                                                                           joints_pos_RR,
-                                                                           joints_vel_RR,
-                                                                           jac_foot_RR[0:3, 15:18],
-                                                                           jac_foot_RR_dot[0:3, 15:18],
-                                                                           lift_off_positions[3],
-                                                                           desired_touch_down_RR,
-                                                                           swing_time[0],
-                                                                           position_foot_RR,
-                                                                           velocity_foot_RR,
-                                                                           h_RR,
-                                                                           mass_matrix_FL)
-
-            print("joint pos: \n", joints_pos_FL)
-            print("joint vel: \n", joints_vel_FL)
-            print("mass matrix: \n", mass_matrix_FL)
-            print("h: \n", h_FL)
-            print("jac: \n", jac_foot_FL[0:3, 6:9])
-            print("jac dot: \n", jac_foot_FL_dot[0:3, 6:9])
-            print("lift off: \n", lift_off_positions[0])
-            print("touch down: \n", desired_swing_foot_position_FL)
-            print("swing time: \n", swing_time[0])
-            print("foot pos: \n", position_foot_FL)
-            print("foot vel: \n", velocity_foot_FL)
-
-            nmpc_footholds = [desired_touch_down_FL, desired_swing_foot_position_FR,
-                              desired_swing_foot_position_RL, desired_swing_foot_position_RR]
-
-            # Set control and mujoco step ----------------------------------------------------------------------
-            tau = np.concatenate((tau_FR, tau_FL, tau_RR, tau_RL))
-            print("tau: \n", tau)
-            d.ctrl = tau.reshape(m.nu, )
-            mujoco.mj_step(m, d)
-
-            # Plot
-            if (i % 5 == 0):
-                plot_swing_mujoco(mujoco, stc, swing_period, lift_off_positions, nmpc_footholds, viewer)
-
-                desired_swing_foot_position_FL = desired_swing_foot_position_FL.reshape((3,))
-                desired_swing_foot_velocity_FL = desired_swing_foot_velocity_FL.reshape((3,))
-                swing_FL_evolution_new = np.array([position_foot_FL[0],
-                                                   position_foot_FL[1],
-                                                   position_foot_FL[2],
-                                                   velocity_foot_FL[0],
-                                                   velocity_foot_FL[1],
-                                                   velocity_foot_FL[2]])
-                swing_FL_evolution_new = swing_FL_evolution_new.reshape((6, 1))
-                first, swing_FL_evolution = swing_FL_evolution[:, 0], swing_FL_evolution[:, 1:]
-                swing_FL_evolution = np.concatenate((swing_FL_evolution, swing_FL_evolution_new), axis=1)
-
-                swing_FL_evolution_reference_new = np.array([desired_swing_foot_position_FL[0],
-                                                             desired_swing_foot_position_FL[1],
-                                                             desired_swing_foot_position_FL[2],
-                                                             desired_swing_foot_velocity_FL[0],
-                                                             desired_swing_foot_velocity_FL[1],
-                                                             desired_swing_foot_velocity_FL[2]])
-                swing_FL_evolution_reference_new = swing_FL_evolution_reference_new.reshape((6, 1))
-                first, swing_FL_evolution_reference = swing_FL_evolution_reference[:, 0], swing_FL_evolution_reference[
-                                                                                          :, 1:]
-                swing_FL_evolution_reference = np.concatenate(
-                    (swing_FL_evolution_reference, swing_FL_evolution_reference_new), axis=1)
-
-                fig.canvas.restore_region(bg)
-                ln_x.set_ydata(swing_FL_evolution[0][:])
-                ln_y.set_ydata(swing_FL_evolution[1][:])
-                ln_z.set_ydata(swing_FL_evolution[2][:])
-                ln_x_dot.set_ydata(swing_FL_evolution[3][:])
-                ln_y_dot.set_ydata(swing_FL_evolution[4][:])
-                ln_z_dot.set_ydata(swing_FL_evolution_reference[5][:])
-
-                ax_x.draw_artist(ln_x)
-                ax_y.draw_artist(ln_y)
-                ax_z.draw_artist(ln_z)
-                ax_x_dot.draw_artist(ln_x_dot)
-                ax_y_dot.draw_artist(ln_y_dot)
-                ax_z_dot.draw_artist(ln_z_dot)
-
-                fig.canvas.blit(fig.bbox)
-                fig.canvas.flush_events()
-
-            # Pick up changes to the physics state, apply perturbations, update options from GUI.
-            viewer.sync()
-            # ---------------------------------------------------------------------------------------------------
-
-            i = i + 1
-
-            print("############")
+        env.render()
+        last_render_time = time.time()

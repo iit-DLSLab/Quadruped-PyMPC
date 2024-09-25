@@ -57,18 +57,7 @@ if __name__ == '__main__':
                        base_vel_command_type="human",  # "forward", "random", "forward+rotate", "human"
                        state_obs_names=state_observables_names,  # Desired quantities in the 'state' vec
                        )
-    # env = QuadrupedEnv(robot=robot_name,
-    #                    hip_height=hip_height,
-    #                    legs_joint_names=LegsAttr(**robot_leg_joints),  # Joint names of the legs DoF
-    #                    feet_geom_name=LegsAttr(**robot_feet_geom_names),  # Geom/Frame id of feet
-    #                    scene=scene_name,
-    #                    sim_dt=simulation_dt,
-    #                    ref_base_lin_vel=(-4.0 * hip_height, 4.0 * hip_height),  # pass a float for a fixed value
-    #                    ref_base_ang_vel=(-np.pi * 3 / 4, np.pi * 3 / 4),  # pass a float for a fixed value
-    #                    ground_friction_coeff=(0.3, 1.5),  # pass a float for a fixed value
-    #                    base_vel_command_type="random",  # "forward", "random", "forward+rotate", "human"
-    #                    state_obs_names=state_observables_names,  # Desired quantities in the 'state' vec
-    #                    )
+
 
 
     # Some robots require a change in the zero joint-space configuration. If provided apply it
@@ -80,13 +69,6 @@ if __name__ == '__main__':
 
 
     # Initialization of variables used in the main control loop --------------------------------
-    # Set the reference for the state
-    ref_pose = np.array([0, 0, cfg.hip_height])
-    ref_base_lin_vel, ref_base_ang_vel = env.target_base_vel()
-    ref_orientation = np.array([0.0, 0.0, 0.0])
-    
-    # TODO: I would suggest to create a DataClass for "BaseConfig" used in the PotatoModel controllers.
-    ref_state = {}
 
     # Jacobian matrices
     jac_feet_prev = LegsAttr(*[np.zeros((3, env.mjModel.nv)) for _ in range(4)])
@@ -94,8 +76,7 @@ if __name__ == '__main__':
     # Torque vector
     tau = LegsAttr(*[np.zeros((env.mjModel.nv, 1)) for _ in range(4)])
     
-    # State
-    state_current, state_prev = {}, {}
+    # Feet positions and Legs order
     feet_pos = None
     feet_traj_geom_ids, feet_GRF_geom_ids = None, LegsAttr(FL=-1, FR=-1, RL=-1, RR=-1)
     legs_order = ["FL", "FR", "RL", "RR"]
