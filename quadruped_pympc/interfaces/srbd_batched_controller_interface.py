@@ -4,25 +4,26 @@ from quadruped_pympc.helpers.periodic_gait_generator import PeriodicGaitGenerato
 
 from gym_quadruped.utils.quadruped_utils import LegsAttr
 
-from quadruped_pympc import config as cfg
+# from quadruped_pympc import config as cfg 
 
 class SRBDBatchedControllerInterface:
     """This is an interface for a batched controller that uses the SRBD method to optimize the gait"""
 
 
-    def __init__(self, ):
+    def __init__(self, mpc_cfg):
         """ Constructor for the SRBD batched controller interface """
-        
-        self.type = cfg.mpc_params['type']
-        self.mpc_dt = cfg.mpc_params['dt']
-        self.horizon = cfg.mpc_params['horizon']
-        self.optimize_step_freq = cfg.mpc_params['optimize_step_freq']
-        self.num_parallel_computations = cfg.mpc_params['num_parallel_computations']
-        self.sampling_method = cfg.mpc_params['sampling_method']
-        self.control_parametrization = cfg.mpc_params['control_parametrization']
-        self.num_sampling_iterations = cfg.mpc_params['num_sampling_iterations']
-        self.sigma_cem_mppi = cfg.mpc_params['sigma_cem_mppi']
-        self.step_freq_available = cfg.mpc_params['step_freq_available']
+        self._mpc_cfg = mpc_cfg
+
+        self.type = self._mpc_cfg['type']
+        self.mpc_dt = self._mpc_cfg['dt']
+        self.horizon = self._mpc_cfg['horizon']
+        self.optimize_step_freq = self._mpc_cfg['optimize_step_freq']
+        self.num_parallel_computations = self._mpc_cfg['num_parallel_computations']
+        self.sampling_method = self._mpc_cfg['sampling_method']
+        self.control_parametrization = self._mpc_cfg['control_parametrization']
+        self.num_sampling_iterations = self._mpc_cfg['num_sampling_iterations']
+        self.sigma_cem_mppi = self._mpc_cfg['sigma_cem_mppi']
+        self.step_freq_available = self._mpc_cfg['step_freq_available']
 
 
         from quadruped_pympc.controllers.gradient.nominal.centroidal_nmpc_gait_adaptive import \

@@ -2,20 +2,19 @@ import numpy as np
 
 from gym_quadruped.utils.quadruped_utils import LegsAttr
 
-from quadruped_pympc import config as cfg
 
 class SRBDControllerInterface:
     """This is an interface for a controller that uses the SRBD method to optimize the gait"""
 
 
-    def __init__(self, ):
+    def __init__(self, mpc_cfg):
         """ Constructor for the SRBD controller interface """
-        
-        self.type = cfg.mpc_params['type']
-        self.mpc_dt = cfg.mpc_params['dt']
-        self.horizon = cfg.mpc_params['horizon']
-        self.optimize_step_freq = cfg.mpc_params['optimize_step_freq']
-        self.step_freq_available = cfg.mpc_params['step_freq_available']
+        self._mpc_cfg = mpc_cfg
+        self.type = self._mpc_cfg['type']
+        self.mpc_dt = self._mpc_cfg['dt']
+        self.horizon = self._mpc_cfg['horizon']
+        self.optimize_step_freq = self._mpc_cfg['optimize_step_freq']
+        self.step_freq_available = self._mpc_cfg['step_freq_available']
 
 
         self.previous_contact_mpc = np.array([1, 1, 1, 1])
@@ -46,12 +45,12 @@ class SRBDControllerInterface:
 
                 self.batched_controller = Acados_NMPC_GaitAdaptive()
 
-        elif(cfg.mpc_params['type'] == 'lyapunov'):
+        elif(self._mpc_cfg['type'] == 'lyapunov'):
             from quadruped_pympc.controllers.gradient.lyapunov.centroidal_nmpc_lyapunov import Acados_NMPC_Lyapunov
 
             self.controller = Acados_NMPC_Lyapunov()
 
-            if cfg.mpc_params['optimize_step_freq']:
+            if self._mpc_cfg['optimize_step_freq']:
                 from quadruped_pympc.controllers.gradient.nominal.centroidal_nmpc_gait_adaptive import Acados_NMPC_GaitAdaptive
                 self.batched_controller = Acados_NMPC_GaitAdaptive()
 
@@ -120,7 +119,7 @@ class SRBDControllerInterface:
                 self.controller = self.controller.with_newkey()
                 if (self.controller.sampling_method == 'cem_mppi'):
                     if (iter_sampling == 0):
-                        self.controller = self.controller.with_newsigma(cfg.mpc_params['sigma_cem_mppi'])
+                        self.controller = self.controller.with_newsigma(self._mpc_cfg['sigma_cem_mppi'])
 
                     nmpc_GRFs, \
                     nmpc_footholds, \

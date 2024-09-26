@@ -2,15 +2,12 @@ import numpy as np
 import time
 
 from gym_quadruped.utils.quadruped_utils import LegsAttr
-from quadruped_pympc import config as cfg
 
 from quadruped_pympc.helpers.foothold_reference_generator import FootholdReferenceGenerator
 from quadruped_pympc.helpers.periodic_gait_generator import PeriodicGaitGenerator
 from quadruped_pympc.helpers.swing_trajectory_controller import SwingTrajectoryController
 from quadruped_pympc.helpers.terrain_estimator import TerrainEstimator
 
-if(cfg.simulation_params['visual_foothold_adaptation'] != 'blind'):
-    from quadruped_pympc.helpers.visual_foothold_adaptation import VisualFootholdAdaptation
 
 
 class WBInterface:
@@ -21,6 +18,8 @@ class WBInterface:
     """
 
     def __init__(self,
+                 mpc_cfg,
+                 sim_cfg,
                  initial_feet_pos: LegsAttr,
                  legs_order: tuple[str, str, str, str] = ('FL', 'FR', 'RL', 'RR')):
         """ Constructor of the WBInterface class
@@ -30,14 +29,16 @@ class WBInterface:
             legs_order (tuple[str, str, str, str], optional): order of the leg. Defaults to ('FL', 'FR', 'RL', 'RR').
         """        
         
+        self._mpc_cfg = mpc_cfg
+        self._sim_cfg = sim_cfg
         
-        mpc_dt = cfg.mpc_params['dt']
-        horizon = cfg.mpc_params['horizon']
+        mpc_dt = self._mpc_cfg['dt']
+        horizon = self._mpc_cfg['horizon']
         self.legs_order = legs_order
         
         # Periodic gait generator --------------------------------------------------------------
-        gait_name = cfg.simulation_params['gait']
-        gait_params = cfg.simulation_params['gait_params'][gait_name]
+        gait_name = self._sim_cfg['gait']
+        gait_params = self._sim_cfg['gait_params'][gait_name]
         gait_type, duty_factor, step_frequency = gait_params['type'], gait_params['duty_factor'], gait_params['step_freq']
         # Given the possibility to use nonuniform discretization,
         # we generate a contact sequence two times longer and with a dt half of the one of the mpc
@@ -46,9 +47,9 @@ class WBInterface:
                                     gait_type=gait_type,
                                     horizon=horizon)
         # in the case of nonuniform discretization, we create a list of dts and horizons for each nonuniform discretization
-        if (cfg.mpc_params['use_nonuniform_discretization']):
-            self.contact_sequence_dts = [cfg.mpc_params['dt_fine_grained'], mpc_dt]
-            self.contact_sequence_lenghts = [cfg.mpc_params['horizon_fine_grained'], horizon]
+        if (self._mpc_cfg['use_nonuniform_discretization']):
+            self.contact_sequence_dts = [self._mpc_cfg['dt_fine_grained'], mpc_dt]
+            self.contact_sequence_lenghts = [self._mpc_cfg['horizon_fine_grained'], horizon]
         else:
             self.contact_sequence_dts = [mpc_dt]
             self.contact_sequence_lenghts = [horizon]
@@ -56,15 +57,15 @@ class WBInterface:
         
         # Create the foothold reference generator ------------------------------------------------
         stance_time = (1 / self.pgg.step_freq) * self.pgg.duty_factor
-        self.frg = FootholdReferenceGenerator(stance_time=stance_time, hip_height=cfg.hip_height, lift_off_positions=initial_feet_pos)
+        self.frg = FootholdReferenceGenerator(stance_time=stance_time, hip_height=self._sim_cfg['ref_z'], lift_off_positions=initial_feet_pos)
 
 
         # Create swing trajectory generator ------------------------------------------------------
-        self.step_height = cfg.simulation_params['step_height']
+        self.step_height = self._sim_cfg['step_height']
         swing_period = (1 - self.pgg.duty_factor) * (1 / self.pgg.step_freq) 
-        position_gain_fb = cfg.simulation_params['swing_position_gain_fb']
-        velocity_gain_fb = cfg.simulation_params['swing_velocity_gain_fb']
-        swing_generator = cfg.simulation_params['swing_generator']
+        position_gain_fb = self._sim_cfg['swing_position_gain_fb']
+        velocity_gain_fb = self._sim_cfg['swing_velocity_gain_fb']
+        swing_generator = self._sim_cfg['swing_generator']
         self.stc = SwingTrajectoryController(step_height=self.step_height, swing_period=swing_period,
                                         position_gain_fb=position_gain_fb, velocity_gain_fb=velocity_gain_fb,
                                         generator=swing_generator)
@@ -73,9 +74,12 @@ class WBInterface:
         # Terrain estimator -----------------------------------------------------------------------
         self.terrain_computation = TerrainEstimator()
 
-        if(cfg.simulation_params['visual_foothold_adaptation'] != 'blind'):
-            # Visual foothold adaptation -------------------------------------------------------------
-            self.vfa = VisualFootholdAdaptation(legs_order=self.legs_order, adaptation_strategy=cfg.simulation_params['visual_foothold_adaptation'])
+        # Visual foothold adaptation -------------------------------------------------------------
+        if(self._sim_cfg['visual_foothold_adaptation'] != 'blind'):
+            from quadruped_pympc.helpers.visual_foothold_adaptation import VisualFootholdAdaptation
+            self.vfa = VisualFootholdAdaptation(
+                legs_order=self.legs_order, adaptation_strategy=self._sim_cfg['visual_foothold_adaptation']
+                )
 
 
         self.current_contact = np.array([1, 1, 1, 1])
@@ -154,11 +158,11 @@ class WBInterface:
             base_xy_lin_vel=base_lin_vel[0:2],
             ref_base_xy_lin_vel=ref_base_lin_vel[0:2],
             hips_position=hip_pos,
-            com_height_nominal=cfg.simulation_params['ref_z'])
+            com_height_nominal=self._sim_cfg['ref_z'])
         
 
         # Adjust the footholds given the terrain -----------------------------------------------------
-        if(cfg.simulation_params['visual_foothold_adaptation'] != 'blind'):
+        if(self._sim_cfg['visual_foothold_adaptation'] != 'blind'):
             
             time_adaptation = time.time()
             if(self.stc.check_apex_condition(self.current_contact, interval=0.01) and self.vfa.initialized == False):
@@ -177,12 +181,12 @@ class WBInterface:
             for _, leg_name in enumerate(legs_order):
                 #TODO this should be in the terrain frame
                 ref_feet_pos_height_diffence = ref_feet_pos[leg_name][2] - self.frg.lift_off_positions[leg_name][2]
-                if(ref_feet_pos_height_diffence > (cfg.simulation_params['step_height']) and ref_feet_pos_height_diffence > 0.0):
+                if(ref_feet_pos_height_diffence > (self._sim_cfg['step_height']) and ref_feet_pos_height_diffence > 0.0):
                     step_height = ref_feet_pos_height_diffence + 0.05
                     step_height_modification = True
                     self.stc.regenerate_swing_trajectory_generator(step_height=step_height, swing_period=self.stc.swing_period)
             if(step_height_modification == False):
-                step_height = cfg.simulation_params['step_height']
+                step_height = self._sim_cfg['step_height']
                 self.stc.regenerate_swing_trajectory_generator(step_height=step_height, swing_period=self.stc.swing_period)"""
         
         else:
@@ -198,8 +202,8 @@ class WBInterface:
             feet_pos=self.frg.lift_off_positions,
             current_contact=self.current_contact)
 
-        ref_pos = np.array([0, 0, cfg.hip_height])
-        ref_pos[2] = cfg.simulation_params['ref_z'] + terrain_height
+        ref_pos = np.array([0, 0, self._sim_cfg['ref_z']])
+        ref_pos[2] = self._sim_cfg['ref_z'] + terrain_height
 
 
         # Update state reference ------------------------------------------------------------------------
@@ -217,7 +221,7 @@ class WBInterface:
         # -------------------------------------------------------------------------------------------------
 
 
-        if(cfg.mpc_params['optimize_step_freq']):
+        if(self._mpc_cfg['optimize_step_freq']):
             # we can always optimize the step freq, or just at the apex of the swing
             # to avoid possible jittering in the solution
             optimize_swing = self.stc.check_apex_condition(self.current_contact)
@@ -322,7 +326,7 @@ class WBInterface:
         #self.stc.reset()
         #self.terrain_computation.reset()
         self.frg.lift_off_positions = initial_feet_pos
-        if(cfg.simulation_params['visual_foothold_adaptation'] != 'blind'):
+        if(self._sim_cfg['visual_foothold_adaptation'] != 'blind'):
             self.vfa.reset()
         self.current_contact = np.array([1, 1, 1, 1])
         return
