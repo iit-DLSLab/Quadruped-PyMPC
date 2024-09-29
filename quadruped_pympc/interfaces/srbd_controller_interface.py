@@ -131,7 +131,7 @@ class SRBDControllerInterface:
                                                                 self.controller.master_key, self.controller.sigma_cem_mppi)
                     controller = self.controller.with_newsigma(sigma_cem_mppi)
                 else:
-                    nominal_sample_freq = pgg.step_freq
+                    nominal_sample_freq = pgg_step_freq
                     nmpc_GRFs, \
                     nmpc_footholds, \
                     self.controller.best_control_parameters, \
