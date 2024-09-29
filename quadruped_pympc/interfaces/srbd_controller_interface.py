@@ -72,10 +72,9 @@ class SRBDControllerInterface:
                         ref_state: dict,
                         contact_sequence: np.ndarray,
                         inertia: np.ndarray,
-                        pgg: object,
+                        pgg_phase_signal: np.ndarray,
+                        pgg_step_freq: float,
                         ref_feet_pos: LegsAttr,
-                        contact_sequence_dts: np.ndarray,
-                        contact_sequence_lenghts: np.ndarray,
                         step_height: float,
                         optimize_swing: int) -> [LegsAttr, LegsAttr, float]:
         """Compute the control using the SRBD method
@@ -86,10 +85,9 @@ class SRBDControllerInterface:
             ref_state (dict): The reference state of the robot
             contact_sequence (np.ndarray): The contact sequence of the robot
             inertia (np.ndarray): The inertia of the robot
-            pgg (object): The periodic gait generator
+            pgg_phase_signal (np.ndarray): The periodic gait generator phase signal of the legs (from 0 to 1)
+            pgg_step_freq (float): The step frequency of the periodic gait generator
             ref_feet_pos (LegsAttr): The reference feet positions
-            contact_sequence_dts (np.ndarray): The contact sequence dts
-            contact_sequence_lenghts (np.ndarray): The contact sequence lengths
             step_height (float): The step height
             optimize_swing (int): The flag to optimize the swing
 
@@ -141,7 +139,7 @@ class SRBDControllerInterface:
                     best_sample_freq, \
                     costs = self.controller.jitted_compute_control(state_current_jax, reference_state_jax,
                                                         contact_sequence, self.controller.best_control_parameters,
-                                                        self.controller.master_key, pgg.phase_signal,
+                                                        self.controller.master_key, pgg_phase_signal,
                                                         nominal_sample_freq, optimize_swing)
 
 
@@ -178,7 +176,7 @@ class SRBDControllerInterface:
 
 
 
-            best_sample_freq = pgg.step_freq
+            best_sample_freq = pgg_step_freq
 
 
 

@@ -135,10 +135,9 @@ class QuadrupedPyMPC_Wrapper:
                                                                     ref_state,
                                                                     contact_sequence,
                                                                     inertia,
-                                                                    self.wb_interface.pgg,
+                                                                    self.wb_interface.pgg.phase_signal,
+                                                                    self.wb_interface.pgg.step_freq,
                                                                     ref_feet_pos,
-                                                                    contact_sequence_dts,
-                                                                    contact_sequence_lenghts,
                                                                     step_height,
                                                                     optimize_swing)
             
