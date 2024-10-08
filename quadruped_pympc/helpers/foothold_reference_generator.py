@@ -23,6 +23,10 @@ class FootholdReferenceGenerator:
         self.hip_height = hip_height
         self.lift_off_positions = lift_off_positions
 
+        # The footholds are wrt the hip position, so if we want to change
+        # the default foothold, we need to use a variable to add an offset
+        self.hip_offset = 0.1
+
     def compute_footholds_reference(self,
                                     com_position: np.ndarray,
                                     base_ori_euler_xyz: np.ndarray,
@@ -97,10 +101,10 @@ class FootholdReferenceGenerator:
         # Offsets to the X axis result in spread/crossed legs (+x values lead to spread legs in front/back)
         # TODO: This should not be hardcoded, should be a property of the robot cofiguration and passed as argment
         #  to this function, not loaded from the config file.
-        ref_feet.FL[1] += 0.1
-        ref_feet.FR[1] -= 0.1
-        ref_feet.RL[1] += 0.1
-        ref_feet.RR[1] -= 0.1
+        ref_feet.FL[1] += self.hip_offset
+        ref_feet.FR[1] -= self.hip_offset
+        ref_feet.RL[1] += self.hip_offset
+        ref_feet.RR[1] -= self.hip_offset
 
         
 

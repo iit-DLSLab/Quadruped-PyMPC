@@ -74,11 +74,8 @@ class SRBDControllerInterface:
                         inertia: np.ndarray,
                         pgg_phase_signal: np.ndarray,
                         pgg_step_freq: float,
-                        ref_feet_pos: LegsAttr,
-                        step_height: float,
                         optimize_swing: int) -> [LegsAttr, LegsAttr, float]:
         """Compute the control using the SRBD method
-        TODO: remove the unused arguments, and not pass pgg but rather its values
 
         Args:
             state_current (dict): The current state of the robot
@@ -87,8 +84,6 @@ class SRBDControllerInterface:
             inertia (np.ndarray): The inertia of the robot
             pgg_phase_signal (np.ndarray): The periodic gait generator phase signal of the legs (from 0 to 1)
             pgg_step_freq (float): The step frequency of the periodic gait generator
-            ref_feet_pos (LegsAttr): The reference feet positions
-            step_height (float): The step height
             optimize_swing (int): The flag to optimize the swing
 
         Returns:
@@ -101,8 +96,7 @@ class SRBDControllerInterface:
                                     contact_sequence[1][0],
                                     contact_sequence[2][0],
                                     contact_sequence[3][0]])
-
-        
+       
         # If we use sampling
         if (self.type == 'sampling'):
 
@@ -142,8 +136,10 @@ class SRBDControllerInterface:
                                                         self.controller.master_key, pgg_phase_signal,
                                                         nominal_sample_freq, optimize_swing)
 
-
-            nmpc_footholds = ref_feet_pos
+            nmpc_footholds = LegsAttr(FL=ref_state["ref_foot_FL"][0],
+                                        FR=ref_state["ref_foot_FR"][0],
+                                        RL=ref_state["ref_foot_RL"][0],
+                                        RR=ref_state["ref_foot_RR"][0])
             nmpc_GRFs = np.array(nmpc_GRFs)
 
 

@@ -137,8 +137,6 @@ class QuadrupedPyMPC_Wrapper:
                                                                     inertia,
                                                                     self.wb_interface.pgg.phase_signal,
                                                                     self.wb_interface.pgg.step_freq,
-                                                                    ref_feet_pos,
-                                                                    step_height,
                                                                     optimize_swing)
             
 
@@ -147,13 +145,13 @@ class QuadrupedPyMPC_Wrapper:
             if(cfg.mpc_params['type'] != 'sampling' and cfg.mpc_params['optimize_step_freq']):
                 self.best_sample_freq = self.srbd_batched_controller_interface.optimize_gait(state_current,
                                                                         ref_state,
-                                                                        contact_sequence,
                                                                         inertia,
-                                                                        self.wb_interface.pgg,
-                                                                        ref_feet_pos,
+                                                                        self.wb_interface.pgg.phase_signal,
+                                                                        self.wb_interface.pgg.step_freq,
+                                                                        self.wb_interface.pgg.duty_factor,
+                                                                        self.wb_interface.pgg.gait_type,
                                                                         contact_sequence_dts,
                                                                         contact_sequence_lenghts,
-                                                                        step_height,
                                                                         optimize_swing)
 
 

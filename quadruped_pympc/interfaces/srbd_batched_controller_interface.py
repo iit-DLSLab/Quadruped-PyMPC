@@ -2,8 +2,6 @@ import numpy as np
 
 from quadruped_pympc.helpers.periodic_gait_generator import PeriodicGaitGenerator
 
-from gym_quadruped.utils.quadruped_utils import LegsAttr
-
 from quadruped_pympc import config as cfg
 
 class SRBDBatchedControllerInterface:
@@ -17,11 +15,6 @@ class SRBDBatchedControllerInterface:
         self.mpc_dt = cfg.mpc_params['dt']
         self.horizon = cfg.mpc_params['horizon']
         self.optimize_step_freq = cfg.mpc_params['optimize_step_freq']
-        self.num_parallel_computations = cfg.mpc_params['num_parallel_computations']
-        self.sampling_method = cfg.mpc_params['sampling_method']
-        self.control_parametrization = cfg.mpc_params['control_parametrization']
-        self.num_sampling_iterations = cfg.mpc_params['num_sampling_iterations']
-        self.sigma_cem_mppi = cfg.mpc_params['sigma_cem_mppi']
         self.step_freq_available = cfg.mpc_params['step_freq_available']
 
 
@@ -37,13 +30,13 @@ class SRBDBatchedControllerInterface:
     def optimize_gait(self, 
                         state_current: dict,
                         ref_state: dict,
-                        contact_sequence: np.ndarray,
                         inertia: np.ndarray,
-                        pgg,
-                        ref_feet_pos: LegsAttr,
+                        pgg_phase_signal: np.ndarray,
+                        pgg_step_freq: float,
+                        pgg_duty_factor: float,
+                        pgg_gait_type: int,
                         contact_sequence_dts: np.ndarray,
                         contact_sequence_lenghts: np.ndarray,
-                        step_height: float,
                         optimize_swing: int) -> float:
         """Optimize the gait using the SRBD method
         TODO: remove the unused arguments, and not pass pgg but rather its values
@@ -51,13 +44,13 @@ class SRBDBatchedControllerInterface:
         Args:
             state_current (dict): The current state of the robot
             ref_state (dict): The reference state of the robot
-            contact_sequence (np.ndarray): The contact sequence of the robot
             inertia (np.ndarray): The inertia of the robot
-            pgg (PeriodicGaitGenerator): The periodic gait generator
-            ref_feet_pos (LegsAttr): The reference feet positions
+            pgg_phase_signal (np.ndarray): The periodic gait generator phase signal of the legs (from 0 to 1)
+            pgg_step_freq (float): The step frequency of the periodic gait generator
+            pgg_duty_factor (float): The duty factor of the periodic gait generator
+            pgg_gait_type (int): The gait type of the periodic gait generator
             contact_sequence_dts (np.ndarray): The contact sequence dts
             contact_sequence_lenghts (np.ndarray): The contact sequence lengths
-            step_height (float): The step height
             optimize_swing (int): The flag to optimize the swing
 
         Returns:
@@ -67,15 +60,15 @@ class SRBDBatchedControllerInterface:
 
         
 
-        best_sample_freq = pgg.step_freq
+        best_sample_freq = pgg_step_freq
         if self.optimize_step_freq and optimize_swing == 1:
             contact_sequence_temp = np.zeros((len(self.step_freq_available), 4, self.horizon))
             for j in range(len(self.step_freq_available)):
-                pgg_temp = PeriodicGaitGenerator(duty_factor=pgg.duty_factor,
+                pgg_temp = PeriodicGaitGenerator(duty_factor=pgg_duty_factor,
                                                     step_freq=self.step_freq_available[j],
-                                                    gait_type=pgg.gait_type,
+                                                    gait_type=pgg_gait_type,
                                                     horizon=self.horizon)
-                pgg_temp.set_phase_signal(pgg.phase_signal)
+                pgg_temp.set_phase_signal(pgg_phase_signal)
                 contact_sequence_temp[j] = pgg_temp.compute_contact_sequence(contact_sequence_dts=contact_sequence_dts, 
                                                                                 contact_sequence_lenghts=contact_sequence_lenghts)
 
