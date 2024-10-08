@@ -123,7 +123,7 @@ class SRBDControllerInterface:
                     sigma_cem_mppi = self.controller.jitted_compute_control(state_current_jax, reference_state_jax,
                                                                 contact_sequence, self.controller.best_control_parameters,
                                                                 self.controller.master_key, self.controller.sigma_cem_mppi)
-                    controller = self.controller.with_newsigma(sigma_cem_mppi)
+                    self.controller = self.controller.with_newsigma(sigma_cem_mppi)
                 else:
                     nominal_sample_freq = pgg_step_freq
                     nmpc_GRFs, \
