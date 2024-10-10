@@ -51,7 +51,15 @@ class SRBDControllerInterface:
 
             self.controller = Acados_NMPC_Lyapunov()
 
-            if cfg.mpc_params['optimize_step_freq']:
+            if self.optimize_step_freq:
+                from quadruped_pympc.controllers.gradient.nominal.centroidal_nmpc_gait_adaptive import Acados_NMPC_GaitAdaptive
+                self.batched_controller = Acados_NMPC_GaitAdaptive()
+
+        elif(cfg.mpc_params['type'] == 'kinodynamic'):
+            from quadruped_pympc.controllers.gradient.kinodynamic.kinodynamic_nmpc import Acados_NMPC_KinoDynamic
+            self.controller = Acados_NMPC_KinoDynamic()
+
+            if self.optimize_step_freq:
                 from quadruped_pympc.controllers.gradient.nominal.centroidal_nmpc_gait_adaptive import Acados_NMPC_GaitAdaptive
                 self.batched_controller = Acados_NMPC_GaitAdaptive()
 
@@ -74,7 +82,7 @@ class SRBDControllerInterface:
                         inertia: np.ndarray,
                         pgg_phase_signal: np.ndarray,
                         pgg_step_freq: float,
-                        optimize_swing: int) -> [LegsAttr, LegsAttr, float]:
+                        optimize_swing: int) -> [LegsAttr, LegsAttr, LegsAttr, LegsAttr, LegsAttr, float]:
         """Compute the control using the SRBD method
 
         Args:
@@ -141,18 +149,56 @@ class SRBDControllerInterface:
                                         RL=ref_state["ref_foot_RL"][0],
                                         RR=ref_state["ref_foot_RR"][0])
             nmpc_GRFs = np.array(nmpc_GRFs)
-
+            
+            nmpc_joints_pos = None
+            nmpc_joints_vel = None
+            nmpc_joints_acc = None
 
         # If we use Gradient-Based MPC
         else:
+            if(self.type == 'kinodynamic'):
 
-            nmpc_GRFs, \
-            nmpc_footholds, \
-            _, \
-            _ = self.controller.compute_control(state_current,
-                                                ref_state,
-                                                contact_sequence,
-                                                inertia=inertia)
+                nmpc_GRFs, \
+                nmpc_footholds, \
+                nmpc_joints_pos, \
+                nmpc_joints_vel, \
+                nmpc_joints_acc, \
+                nmpc_predicted_state, \
+                status = self.controller.compute_control(state_current,
+                                                    ref_state,
+                                                    contact_sequence,
+                                                    inertia=inertia)
+
+
+                
+    
+                nmpc_joints_pos = LegsAttr(FL=nmpc_joints_pos[0:3],
+                                           FR=nmpc_joints_pos[3:6],
+                                           RL=nmpc_joints_pos[6:9],
+                                           RR=nmpc_joints_pos[9:12])
+                
+                nmpc_joints_vel = LegsAttr(FL=nmpc_joints_vel[0:3],
+                                           FR=nmpc_joints_vel[3:6],
+                                           RL=nmpc_joints_vel[6:9],
+                                           RR=nmpc_joints_vel[9:12])
+
+                nmpc_joints_acc = LegsAttr(FL=nmpc_joints_acc[0:3],
+                                           FR=nmpc_joints_acc[3:6],
+                                           RL=nmpc_joints_acc[6:9],
+                                           RR=nmpc_joints_acc[9:12])
+            
+            else:
+                nmpc_GRFs, \
+                nmpc_footholds, \
+                _, \
+                _ = self.controller.compute_control(state_current,
+                                                    ref_state,
+                                                    contact_sequence,
+                                                    inertia=inertia)
+                
+                nmpc_joints_pos = None
+                nmpc_joints_vel = None
+                nmpc_joints_acc = None
 
 
             nmpc_footholds = LegsAttr(FL=nmpc_footholds[0],
@@ -186,5 +232,5 @@ class SRBDControllerInterface:
             
 
         
-        return nmpc_GRFs, nmpc_footholds, best_sample_freq
+        return nmpc_GRFs, nmpc_footholds, nmpc_joints_pos, nmpc_joints_vel, nmpc_joints_acc, best_sample_freq
         

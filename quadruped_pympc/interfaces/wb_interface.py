@@ -89,6 +89,7 @@ class WBInterface:
                                    base_ang_vel: np.ndarray,
                                    feet_pos: LegsAttr,
                                    hip_pos: LegsAttr,
+                                   joints_pos: LegsAttr,
                                    heightmaps,
                                    legs_order: tuple[str, str, str, str],
                                    simulation_dt: float,
@@ -103,6 +104,7 @@ class WBInterface:
             base_ang_vel (np.ndarray): base angular velocity in base frame
             feet_pos (LegsAttr): feet positions in world frame
             hip_pos (LegsAttr): hip positions in world frame
+            joints_pos (LegsAttr): joint positions
             heightmaps (dict): heightmaps for each leg
             legs_order (tuple[str, str, str, str]): order of the legs
             simulation_dt (float): simulation time step
@@ -129,7 +131,11 @@ class WBInterface:
             foot_FL=feet_pos.FL,
             foot_FR=feet_pos.FR,
             foot_RL=feet_pos.RL,
-            foot_RR=feet_pos.RR
+            foot_RR=feet_pos.RR,
+            joint_FL=joints_pos.FL,
+            joint_FR=joints_pos.FR,
+            joint_RL=joints_pos.RL,
+            joint_RR=joints_pos.RR,
             )
 
 
@@ -203,17 +209,107 @@ class WBInterface:
 
 
         # Update state reference ------------------------------------------------------------------------
-        ref_state = {}
-        ref_state |= dict(ref_foot_FL=ref_feet_pos.FL.reshape((1, 3)),
-                            ref_foot_FR=ref_feet_pos.FR.reshape((1, 3)),
-                            ref_foot_RL=ref_feet_pos.RL.reshape((1, 3)),
-                            ref_foot_RR=ref_feet_pos.RR.reshape((1, 3)),
-                            # Also update the reference base linear velocity and
-                            ref_linear_velocity=ref_base_lin_vel,
-                            ref_angular_velocity=ref_base_ang_vel,
-                            ref_orientation=np.array([terrain_roll, terrain_pitch, 0.0]),
-                            ref_position=ref_pos
-                            )
+        if(cfg.mpc_params['type'] != 'kinodynamic'):
+            ref_state = {}
+            ref_state |= dict(ref_foot_FL=ref_feet_pos.FL.reshape((1, 3)),
+                                ref_foot_FR=ref_feet_pos.FR.reshape((1, 3)),
+                                ref_foot_RL=ref_feet_pos.RL.reshape((1, 3)),
+                                ref_foot_RR=ref_feet_pos.RR.reshape((1, 3)),
+                                # Also update the reference base linear velocity and
+                                ref_linear_velocity=ref_base_lin_vel,
+                                ref_angular_velocity=ref_base_ang_vel,
+                                ref_orientation=np.array([terrain_roll, terrain_pitch, 0.0]),
+                                ref_position=ref_pos
+                                )
+        else:
+            # In the case of the kinodynamic model,
+            # we should pass as a reference the X-Y-Z spline of the feet for the horizon, 
+            # since in the kynodimic model we are using the feet position as a reference
+            desired_foot_position_FL = np.zeros((cfg.mpc_params['horizon'], 3))
+            desired_foot_position_FR = np.zeros((cfg.mpc_params['horizon'], 3))
+            desired_foot_position_RL = np.zeros((cfg.mpc_params['horizon'], 3))
+            desired_foot_position_RR = np.zeros((cfg.mpc_params['horizon'], 3))
+            for leg_id, leg_name in enumerate(legs_order):
+                lifted_off = [False, False, False, False]
+                for n in range(cfg.mpc_params['horizon']):
+                    dt_increment_swing = (n)*cfg.mpc_params['dt']
+                    
+                    if(lifted_off[leg_id] == False and n >= 0):
+                        if(contact_sequence[leg_id][n-1] == 1 and contact_sequence[leg_id][n] == 0):
+                            lifted_off[leg_id] = True 
+
+                    if(leg_id == 0):
+                       
+                        if(contact_sequence[leg_id][n] == 1 and lifted_off[leg_id] == False):
+                            desired_foot_position_FL[n] = feet_pos.FL
+                        elif(contact_sequence[leg_id][n] == 1 and lifted_off[leg_id] == True):
+                            desired_foot_position_FL[n] = ref_feet_pos.FL
+                        else:
+                            desired_foot_position, \
+                            desired_foot_velocity, \
+                            _ = self.stc.swing_generator.compute_trajectory_references(self.stc.swing_time[leg_id] + dt_increment_swing, 
+                                                                                  self.frg.lift_off_positions[leg_name], 
+                                                                                  ref_feet_pos.FL)
+                            desired_foot_position_FL[n] = desired_foot_position
+
+                    elif(leg_id == 1):
+                     
+                        if(contact_sequence[leg_id][n] == 1 and lifted_off[leg_id] == False):
+                            desired_foot_position_FR[n] = feet_pos.FR
+                        elif(contact_sequence[leg_id][n] == 1 and lifted_off[leg_id] == True):
+                            desired_foot_position_FR[n] = ref_feet_pos.FR
+                        else:
+                            desired_foot_position, \
+                            desired_foot_velocity, \
+                            _ = self.stc.swing_generator.compute_trajectory_references(self.stc.swing_time[leg_id]  + dt_increment_swing, 
+                                                                                  self.frg.lift_off_positions[leg_name], 
+                                                                                  ref_feet_pos.FR)
+                            desired_foot_position_FR[n] = desired_foot_position
+
+                    elif(leg_id == 2):
+                       
+                        if(contact_sequence[leg_id][n] == 1 and lifted_off[leg_id] == False):
+                            desired_foot_position_RL[n] = feet_pos.RL
+                        elif(contact_sequence[leg_id][n] == 1 and lifted_off[leg_id] == True):
+                            desired_foot_position_RL[n] = ref_feet_pos.RL
+                        else:
+                            desired_foot_position, \
+                            desired_foot_velocity, \
+                            _ = self.stc.swing_generator.compute_trajectory_references(self.stc.swing_time[leg_id]  + dt_increment_swing, 
+                                                                                  self.frg.lift_off_positions[leg_name], 
+                                                                                  ref_feet_pos.RL)
+                            desired_foot_position_RL[n] = desired_foot_position
+
+                    elif(leg_id == 3):
+                      
+                        if(contact_sequence[leg_id][n] == 1 and lifted_off[leg_id] == False):
+                            desired_foot_position_RR[n] = feet_pos.RR
+                        elif(contact_sequence[leg_id][n] == 1 and lifted_off[leg_id] == True):
+                            desired_foot_position_RR[n] = ref_feet_pos.RR
+                        else:
+                            desired_foot_position, \
+                            desired_foot_velocity, \
+                            _ = self.stc.swing_generator.compute_trajectory_references(self.stc.swing_time[leg_id]  + dt_increment_swing, 
+                                                                                  self.frg.lift_off_positions[leg_name], 
+                                                                                  ref_feet_pos.RR)
+                            desired_foot_position_RR[n] = desired_foot_position
+            
+            #TODO make this more general
+            ref_state = {}
+            init_qpos = np.array([0, 0.9, -1.8, 0, 0.9, -1.8, 0, 0.9, -1.8, 0, 0.9, -1.8])
+            ref_state |= dict(ref_foot_FL=desired_foot_position_FL,
+                                ref_foot_FR=desired_foot_position_FR,
+                                ref_foot_RL=desired_foot_position_RL,
+                                ref_foot_RR=desired_foot_position_RR,
+                                # Also update the reference base linear velocity and
+                                ref_linear_velocity=ref_base_lin_vel,
+                                ref_angular_velocity=ref_base_ang_vel,
+                                ref_orientation=np.array([terrain_roll, terrain_pitch, 0.0]),
+                                ref_position=ref_pos,
+                                ref_joints=init_qpos
+                                )
+
+    
         # -------------------------------------------------------------------------------------------------
 
 
@@ -230,6 +326,7 @@ class WBInterface:
 
     def compute_stance_and_swing_torque(self,
                                         simulation_dt: float,
+                                        qpos: np.ndarray,
                                         qvel: np.ndarray,
                                         feet_jac: LegsAttr,
                                         jac_feet_dot: LegsAttr,
@@ -239,10 +336,14 @@ class WBInterface:
                                         legs_mass_matrix: LegsAttr,
                                         nmpc_GRFs: LegsAttr,
                                         nmpc_footholds: LegsAttr,
+                                        legs_qpos_idx: LegsAttr,
                                         legs_qvel_idx: LegsAttr,
                                         tau: LegsAttr,
                                         optimize_swing: int,
-                                        best_sample_freq: float) -> LegsAttr:
+                                        best_sample_freq: float,
+                                        nmpc_joints_pos,
+                                        nmpc_joints_vel,
+                                        nmpc_joints_acc) -> LegsAttr:
         """Compute the stance and swing torque.
 
         Args:
@@ -288,22 +389,39 @@ class WBInterface:
 
 
         # Compute Swing Torque ------------------------------------------------------------------------------
-        # The swing controller is in the end-effector space. For its computation,
-        # we save for simplicity joints position and velocities
-        for leg_id, leg_name in enumerate(self.legs_order):
-            if self.current_contact[leg_id] == 0:  # If in swing phase, compute the swing trajectory tracking control.
-                tau[leg_name], _, _ = self.stc.compute_swing_control(
-                    leg_id=leg_id,
-                    q_dot=qvel[legs_qvel_idx[leg_name]],
-                    J=feet_jac[leg_name][:, legs_qvel_idx[leg_name]],
-                    J_dot=jac_feet_dot[leg_name][:, legs_qvel_idx[leg_name]],
-                    lift_off=self.frg.lift_off_positions[leg_name],
-                    touch_down=nmpc_footholds[leg_name],
-                    foot_pos=feet_pos[leg_name],
-                    foot_vel=feet_vel[leg_name],
-                    h=legs_qfrc_bias[leg_name],
-                    mass_matrix=legs_mass_matrix[leg_name]
-                    )
+        if(cfg.mpc_params['type'] != 'kinodynamic'):
+            # The swing controller is in the end-effector space. For its computation,
+            # we save for simplicity joints position and velocities
+            for leg_id, leg_name in enumerate(self.legs_order):
+                if self.current_contact[leg_id] == 0:  # If in swing phase, compute the swing trajectory tracking control.
+                    tau[leg_name], _, _ = self.stc.compute_swing_control(
+                        leg_id=leg_id,
+                        q_dot=qvel[legs_qvel_idx[leg_name]],
+                        J=feet_jac[leg_name][:, legs_qvel_idx[leg_name]],
+                        J_dot=jac_feet_dot[leg_name][:, legs_qvel_idx[leg_name]],
+                        lift_off=self.frg.lift_off_positions[leg_name],
+                        touch_down=nmpc_footholds[leg_name],
+                        foot_pos=feet_pos[leg_name],
+                        foot_vel=feet_vel[leg_name],
+                        h=legs_qfrc_bias[leg_name],
+                        mass_matrix=legs_mass_matrix[leg_name]
+                        )
+        else:
+            for leg_id, leg_name in enumerate(self.legs_order):
+                if self.current_contact[leg_id] == 0:
+                    error_position = nmpc_joints_pos[leg_name] - qpos[legs_qpos_idx[leg_name]]
+                    error_position = error_position.reshape((3, ))
+
+                    error_velocity = nmpc_joints_vel[leg_name] - qvel[legs_qvel_idx[leg_name]]
+                    error_velocity = error_velocity.reshape((3, ))
+
+                    accelleration = nmpc_joints_acc[leg_name] 
+                    accelleration = accelleration.reshape((3,))
+                    
+                    # Feedback linearization
+                    tau_pd = legs_mass_matrix[leg_name]@(accelleration + 100*error_position + 10*error_velocity) + legs_qfrc_bias[leg_name]
+                    tau_pd += 100*error_position + 10*error_velocity
+                    tau[leg_name] += tau_pd
                 
         return tau
     

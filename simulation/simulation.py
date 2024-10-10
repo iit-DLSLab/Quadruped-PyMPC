@@ -139,6 +139,8 @@ if __name__ == '__main__':
 
             # Get the qpos and qvel
             qpos, qvel = env.mjData.qpos, env.mjData.qvel
+            joints_pos = LegsAttr(FL=qpos[7:10], FR=qpos[10:13],
+                                  RL=qpos[13:16], RR=qpos[16:19])
             
             # Get Centrifugal, Coriolis, Gravity for the swing controller
             legs_mass_matrix = env.legs_mass_matrix
@@ -156,15 +158,17 @@ if __name__ == '__main__':
 
             # Idx of the leg
             legs_qvel_idx = env.legs_qvel_idx
+            legs_qpos_idx = env.legs_qpos_idx
 
 
 
             # Quadruped PyMPC controller --------------------------------------------------------------
             tau = quadrupedpympc_wrapper.compute_actions(base_pos, base_lin_vel, base_ori_euler_xyz, base_ang_vel,
-                                                    feet_pos, hip_pos, heightmaps,
+                                                    feet_pos, hip_pos, joints_pos,
+                                                    heightmaps,
                                                     legs_order, simulation_dt, ref_base_lin_vel, ref_base_ang_vel,
-                                                    env.step_num, qvel, feet_jac, jac_feet_dot, feet_vel, legs_qfrc_bias,
-                                                    legs_mass_matrix, legs_qvel_idx, tau, inertia)
+                                                    env.step_num, qpos, qvel, feet_jac, jac_feet_dot, feet_vel, legs_qfrc_bias,
+                                                    legs_mass_matrix, legs_qpos_idx, legs_qvel_idx, tau, inertia)
             
             quadrupedpympc_observables = quadrupedpympc_wrapper.get_obs()
 

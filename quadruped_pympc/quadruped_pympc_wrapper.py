@@ -41,6 +41,12 @@ class QuadrupedPyMPC_Wrapper:
                                   RL=np.zeros(3), RR=np.zeros(3))
         self.nmpc_footholds = LegsAttr(FL=np.zeros(3), FR=np.zeros(3),
                                         RL=np.zeros(3), RR=np.zeros(3))
+        self.nmpc_joints_pos = LegsAttr(FL=np.zeros(3), FR=np.zeros(3),
+                                        RL=np.zeros(3), RR=np.zeros(3))
+        self.nmpc_joints_vel = LegsAttr(FL=np.zeros(3), FR=np.zeros(3),
+                                        RL=np.zeros(3), RR=np.zeros(3))
+        self.nmpc_joints_acc = LegsAttr(FL=np.zeros(3), FR=np.zeros(3),
+                                        RL=np.zeros(3), RR=np.zeros(3))
         self.best_sample_freq = self.wb_interface.pgg.step_freq
         
 
@@ -56,18 +62,21 @@ class QuadrupedPyMPC_Wrapper:
                         base_ang_vel: np.ndarray, 
                         feet_pos: LegsAttr, 
                         hip_pos: LegsAttr, 
+                        joints_pos: LegsAttr,
                         heightmaps, 
                         legs_order: tuple[str, str, str, str], 
                         simulation_dt: float, 
                         ref_base_lin_vel: np.ndarray, 
                         ref_base_ang_vel: np.ndarray, 
                         step_num: int, 
+                        qpos: np.ndarray,
                         qvel: np.ndarray, 
                         feet_jac: LegsAttr, 
                         jac_feet_dot: LegsAttr,
                         feet_vel: LegsAttr, 
                         legs_qfrc_bias: LegsAttr, 
                         legs_mass_matrix: LegsAttr, 
+                        legs_qpos_idx: LegsAttr,
                         legs_qvel_idx: LegsAttr, 
                         tau: LegsAttr, 
                         inertia: np.ndarray) -> LegsAttr:
@@ -87,6 +96,7 @@ class QuadrupedPyMPC_Wrapper:
             ref_base_lin_vel (np.ndarray): reference base linear velocity in world frame
             ref_base_ang_vel (np.ndarray): reference base angular velocity in world frame
             step_num (int): current step number of the environment
+            qpos (np.ndarray): joint positions
             qvel (np.ndarray): joint velocities
             feet_jac (LegsAttr): jacobian of the feet
             jac_feet_dot (LegsAttr): time derivative of the jacobian of the feet
@@ -117,6 +127,7 @@ class QuadrupedPyMPC_Wrapper:
                                                 base_ang_vel,
                                                 feet_pos,
                                                 hip_pos,
+                                                joints_pos,
                                                 heightmaps,
                                                 legs_order,
                                                 simulation_dt,
@@ -131,6 +142,9 @@ class QuadrupedPyMPC_Wrapper:
 
             self.nmpc_GRFs,  \
             self.nmpc_footholds, \
+            self.nmpc_joints_pos, \
+            self.nmpc_joints_vel, \
+            self.nmpc_joints_acc, \
             self.best_sample_freq = self.srbd_controller_interface.compute_control(state_current,
                                                                     ref_state,
                                                                     contact_sequence,
@@ -159,6 +173,7 @@ class QuadrupedPyMPC_Wrapper:
         
         # Compute Swing and Stance Torque ---------------------------------------------------------------------------
         tau = self.wb_interface.compute_stance_and_swing_torque(simulation_dt,
+                                                    qpos,
                                                     qvel,
                                                     feet_jac,
                                                     jac_feet_dot,
@@ -168,10 +183,14 @@ class QuadrupedPyMPC_Wrapper:
                                                     legs_mass_matrix,
                                                     self.nmpc_GRFs,
                                                     self.nmpc_footholds,
+                                                    legs_qpos_idx,
                                                     legs_qvel_idx,
                                                     tau,
                                                     optimize_swing,
-                                                    self.best_sample_freq)
+                                                    self.best_sample_freq,
+                                                    self.nmpc_joints_pos,
+                                                    self.nmpc_joints_vel,
+                                                    self.nmpc_joints_acc)
         
 
 
