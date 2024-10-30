@@ -1,5 +1,6 @@
 import numpy as np
 import time
+from scipy.spatial.transform import Rotation as R
 
 from gym_quadruped.utils.quadruped_utils import LegsAttr
 from quadruped_pympc import config as cfg
@@ -206,6 +207,8 @@ class WBInterface:
 
         ref_pos = np.array([0, 0, cfg.hip_height])
         ref_pos[2] = cfg.simulation_params['ref_z'] + terrain_height
+        # Rotate the reference base linear velocity to the terrain frame
+        ref_base_lin_vel = R.from_euler('xyz', [terrain_roll, terrain_pitch, 0]).as_matrix() @ ref_base_lin_vel
 
 
         # Update state reference ------------------------------------------------------------------------
