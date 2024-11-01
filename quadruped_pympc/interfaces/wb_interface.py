@@ -374,7 +374,6 @@ class WBInterface:
         # If we have optimized the gait, we set all the timing parameters
         if (optimize_swing == 1):
             self.pgg.step_freq = np.array([best_sample_freq])[0]
-            nominal_sample_freq = self.pgg.step_freq
             self.frg.stance_time = (1 / self.pgg.step_freq) * self.pgg.duty_factor
             swing_period = (1 - self.pgg.duty_factor) * (1 / self.pgg.step_freq)
             self.stc.regenerate_swing_trajectory_generator(step_height=self.step_height, swing_period=swing_period)
@@ -393,38 +392,32 @@ class WBInterface:
 
         # Compute Swing Torque ------------------------------------------------------------------------------
         if(cfg.mpc_params['type'] != 'kinodynamic'):
-            # The swing controller is in the end-effector space. For its computation,
-            # we save for simplicity joints position and velocities
+            # The swing controller is in the end-effector space 
             for leg_id, leg_name in enumerate(self.legs_order):
                 if self.current_contact[leg_id] == 0:  # If in swing phase, compute the swing trajectory tracking control.
-                    tau[leg_name], _, _ = self.stc.compute_swing_control(
-                        leg_id=leg_id,
-                        q_dot=qvel[legs_qvel_idx[leg_name]],
-                        J=feet_jac[leg_name][:, legs_qvel_idx[leg_name]],
-                        J_dot=jac_feet_dot[leg_name][:, legs_qvel_idx[leg_name]],
-                        lift_off=self.frg.lift_off_positions[leg_name],
-                        touch_down=nmpc_footholds[leg_name],
-                        foot_pos=feet_pos[leg_name],
-                        foot_vel=feet_vel[leg_name],
-                        h=legs_qfrc_bias[leg_name],
-                        mass_matrix=legs_mass_matrix[leg_name]
-                        )
+                    tau[leg_name], _, _ = self.stc.compute_swing_control_cartesian_space(
+                                leg_id=leg_id,
+                                q_dot=qvel[legs_qvel_idx[leg_name]],
+                                J=feet_jac[leg_name][:, legs_qvel_idx[leg_name]],
+                                J_dot=jac_feet_dot[leg_name][:, legs_qvel_idx[leg_name]],
+                                lift_off=self.frg.lift_off_positions[leg_name],
+                                touch_down=nmpc_footholds[leg_name],
+                                foot_pos=feet_pos[leg_name],
+                                foot_vel=feet_vel[leg_name],
+                                h=legs_qfrc_bias[leg_name],
+                                mass_matrix=legs_mass_matrix[leg_name]
+                                )
         else:
+            # The swing controller is in the joint space
             for leg_id, leg_name in enumerate(self.legs_order):
-                if self.current_contact[leg_id] == 0:
-                    error_position = nmpc_joints_pos[leg_name] - qpos[legs_qpos_idx[leg_name]]
-                    error_position = error_position.reshape((3, ))
-
-                    error_velocity = nmpc_joints_vel[leg_name] - qvel[legs_qvel_idx[leg_name]]
-                    error_velocity = error_velocity.reshape((3, ))
-
-                    accelleration = nmpc_joints_acc[leg_name] 
-                    accelleration = accelleration.reshape((3,))
-                    
-                    # Feedback linearization
-                    tau_pd = legs_mass_matrix[leg_name]@(accelleration + 100*error_position + 10*error_velocity) + legs_qfrc_bias[leg_name]
-                    tau_pd += 100*error_position + 10*error_velocity
-                    tau[leg_name] += tau_pd
+                if self.current_contact[leg_id] == 0: # If in swing phase, compute the swing trajectory tracking control.
+                    tau[leg_name], _, _ = self.stc.compute_swing_control_joint_space(nmpc_joints_pos[leg_name],
+                                                                                     nmpc_joints_vel[leg_name],
+                                                                                     nmpc_joints_acc[leg_name],
+                                                                                     qpos[legs_qpos_idx[leg_name]],
+                                                                                     qvel[legs_qvel_idx[leg_name]],
+                                                                                     legs_mass_matrix[leg_name],
+                                                                                     legs_qfrc_bias[leg_name],)
                 
         return tau
     
