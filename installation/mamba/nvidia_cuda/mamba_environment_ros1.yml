@@ -1,6 +1,7 @@
-name: quadruped_pympc_env
+name: quadruped_pympc_ros1_env
 channels:
 - conda-forge
+- nvidia
 - robostack-staging
 dependencies:
 - pip
@@ -8,8 +9,9 @@ dependencies:
 - casadi==3.6.5
 - numpy
 - matplotlib
-- jaxlib
+- jaxlib=*=*cuda*
 - jax
+- cuda-nvcc 
 - meshcat-python 
 - scipy 
 - pinocchio
@@ -29,3 +31,4 @@ dependencies:
   - mujoco
   - readchar
   - liecasadi
+
