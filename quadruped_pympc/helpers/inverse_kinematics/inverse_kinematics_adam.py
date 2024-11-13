@@ -41,19 +41,24 @@ class InverseKinematicsAdam:
 
         """
 
+
         if(config.robot == 'go2'):
-            urdf_filename = dir_path + '/../../../gym-quadruped/gym_quadruped/robot_model/go2/go2.urdf' 
-            xml_filename = dir_path + '/../../../gym-quadruped/gym_quadruped/robot_model/go2/go2.xml'
+            urdf_filename = dir_path + '/../../gym-quadruped/gym_quadruped/robot_model/go2/go2.urdf' 
+            xml_filename = dir_path + '/../../gym-quadruped/gym_quadruped/robot_model/go2/go2.xml'
+        if(config.robot == 'go1'):
+            urdf_filename = dir_path + '/../../gym-quadruped/gym_quadruped/robot_model/go1/go1.urdf' 
+            xml_filename = dir_path + '/../../gym-quadruped/gym_quadruped/robot_model/go1/go1.xml'
         elif(config.robot == 'aliengo'):
-            #urdf_filename = dir_path + '/../../../gym-quadruped/gym_quadruped/robot_model/aliengo/aliengo.urdf'
-            urdf_filename = '/home/iit.local/gturrisi/personal_ws_home/gym-quadruped/gym_quadruped/robot_model/aliengo/aliengo.urdf'
-            xml_filename = '/home/iit.local/gturrisi/personal_ws_home/gym-quadruped/gym_quadruped/robot_model/aliengo/aliengo.xml'
+            urdf_filename = dir_path + '/../../gym-quadruped/gym_quadruped/robot_model/aliengo/aliengo.urdf'
+            xml_filename = dir_path + '/../../gym-quadruped/gym_quadruped/robot_model/aliengo/aliengo.xml'
         elif(config.robot == 'hyqreal'):
-            urdf_filename = dir_path + '/../../../gym-quadruped/gym_quadruped/robot_model/hyqreal/hyqreal.urdf'
-            xml_filename = dir_path + '/../../../gym-quadruped/gym_quadruped/robot_model/hyqreal/hyqreal.xml'
+            urdf_filename = dir_path + '/../../gym-quadruped/gym_quadruped/robot_model/hyqreal/hyqreal.urdf'
+            xml_filename = dir_path + '/../../gym-quadruped/gym_quadruped/robot_model/hyqreal/hyqreal.xml'
         elif(config.robot == 'mini_cheetah'):
-            urdf_filename = dir_path + '/../../../gym-quadruped/gym_quadruped/robot_model/mini_cheetah/mini_cheetah.urdf'
-            xml_filename = dir_path + '/../../../gym-quadruped/gym_quadruped/robot_model/mini_cheetah/mini_cheetah.xml'
+            urdf_filename = dir_path + '/../../gym-quadruped/gym_quadruped/robot_model/mini_cheetah/mini_cheetah.urdf'
+            xml_filename = dir_path + '/../../gym-quadruped/gym_quadruped/robot_model/mini_cheetah/mini_cheetah.xml'
+
+
 
         self.use_adam = True
 
@@ -132,7 +137,6 @@ class InverseKinematicsAdam:
         
         i=0
 
-
         err_FL = cs.SX.zeros(3,1)
         err_FR = cs.SX.zeros(3,1)
         err_RL = cs.SX.zeros(3,1)
@@ -202,27 +206,11 @@ class InverseKinematicsAdam:
 
 
             time_solve = time.time()
-            #v_FL = J_FL.T@cs.solve(J_FL@J_FL.T + damp_matrix, err_FL)
-            #v _FR = J_FR.T@cs.solve(J_FR@J_FR.T + damp_matrix, err_FR)
-            #v_RL = J_RL.T@cs.solve(J_RL@J_RL.T + damp_matrix, err_RL)
-            #v_RR = J_RR.T@cs.solve(J_RR@J_RR.T + damp_matrix, err_RR)
+
             total_jac = cs.vertcat(J_FL, J_FR, J_RL, J_RR)
             total_err = 100.0 * cs.vertcat(err_FL, err_FR, err_RL, err_RR)
             damped_pinv = cs.inv(total_jac.T@total_jac + damp_matrix)@total_jac.T
             v =  damped_pinv @ total_err
-
-            # damped_pinv_FL = cs.inv(J_FL.T@J_FL + damp_matrix)@J_FL.T
-            # damped_pinv_FR = cs.inv(J_FR.T@J_FR + damp_matrix)@J_FR.T
-            # damped_pinv_RL = cs.inv(J_RL.T@J_RL + damp_matrix)@J_RL.T
-            # damped_pinv_RR = cs.inv(J_RR.T@J_RR + damp_matrix)@J_RR.T
-            # #err_concat = cs.vertcat(err_FL, err_FR, err_RL, err_RR)
-            # v_FL =  damped_pinv_FL@err_FL
-            # v_FR =  damped_pinv_FR@err_FR
-            # v_RL =  damped_pinv_RL@err_RL
-            # v_RR =  damped_pinv_RR@err_RR
-            # v = v_FL + v_FR + v_RL + v_RR
-                        
-            
             q_joint = q_joint + DT * v
 
             time_solve = time.time() - time_solve
@@ -232,17 +220,17 @@ class InverseKinematicsAdam:
             #print("norm_err: ", norm_err)
             
 
-
             #if not i % 10:
             #    print("q_joint: \n", q_joint)
             #    print('%d: error = %s' % (i, err.T))
+            
             i += 1
   
-        if success:
-            print("Convergence achieved in iteration: ", i)
-            print("in time: ", time.time() - initial_time)
-        else:
-            print("\nWarning: the iterative algorithm has not reached convergence to the desired precision")
+        #if success:
+        #    print("Convergence achieved in iteration: ", i)
+        #    print("in time: ", time.time() - initial_time)
+        #else:
+        #    print("\nWarning: the iterative algorithm has not reached convergence to the desired precision")
 
         return q_joint
 
@@ -253,12 +241,14 @@ class InverseKinematicsAdam:
 if __name__ == "__main__":
 
     if(config.robot == 'go2'):
-        urdf_filename = dir_path + '/../../../gym-quadruped/gym_quadruped/robot_model/go2/go2.urdf' 
-        xml_filename = dir_path + '/../../../gym-quadruped/gym_quadruped/robot_model/go2/go2.xml'
+        urdf_filename = dir_path + '/../../gym-quadruped/gym_quadruped/robot_model/go2/go2.urdf' 
+        xml_filename = dir_path + '/../../gym-quadruped/gym_quadruped/robot_model/go2/go2.xml'
+    if(config.robot == 'go1'):
+        urdf_filename = dir_path + '/../../gym-quadruped/gym_quadruped/robot_model/go1/go1.urdf' 
+        xml_filename = dir_path + '/../../gym-quadruped/gym_quadruped/robot_model/go1/go1.xml'
     elif(config.robot == 'aliengo'):
-        #urdf_filename = dir_path + '/../../../gym-quadruped/gym_quadruped/robot_model/aliengo/aliengo.urdf'
-        urdf_filename = '/home/iit.local/gturrisi/personal_ws_home/gym-quadruped/gym_quadruped/robot_model/aliengo/aliengo.urdf'
-        xml_filename = '/home/iit.local/gturrisi/personal_ws_home/gym-quadruped/gym_quadruped/robot_model/aliengo/aliengo.xml'
+        urdf_filename = dir_path + '/../../gym-quadruped/gym_quadruped/robot_model/aliengo/aliengo.urdf'
+        xml_filename = dir_path + '/../../gym-quadruped/gym_quadruped/robot_model/aliengo/aliengo.xml'
     elif(config.robot == 'hyqreal'):
         urdf_filename = dir_path + '/../../../gym-quadruped/gym_quadruped/robot_model/hyqreal/hyqreal.urdf'
         xml_filename = dir_path + '/../../../gym-quadruped/gym_quadruped/robot_model/hyqreal/hyqreal.xml'
@@ -269,10 +259,6 @@ if __name__ == "__main__":
     
     ik = InverseKinematicsAdam()   
 
-    #FL_foot_target_position = np.array([0.1, 0, -0.4])
-    #FR_foot_target_position = np.array([-0.08, 0, -0.4])
-    #RL_foot_target_position = np.array([-0.12, 0, -0.4])
-    #RR_foot_target_position = np.array([0, 0.2, -0.4])
 
 
     # Check consistency in mujoco
@@ -286,7 +272,6 @@ if __name__ == "__main__":
     rand_quat = np.random.rand(4,)
     rand_quat = rand_quat / np.linalg.norm(rand_quat)
     d.qpos[3:7] = rand_quat
-
 
     mujoco.mj_step(m, d)
 
@@ -311,12 +296,10 @@ if __name__ == "__main__":
     H = cs.DM.eye(4)
     H[0:3, 0:3] = R
     H[0:3, 3] = d.qpos[0:3]
-    print("FL foot position", ik.forward_kinematics_FL_fun(H, random_q_joint)[0:3, 3])
-    print("FR foot position", ik.forward_kinematics_FR_fun(H, random_q_joint)[0:3, 3])
-    print("RL foot position", ik.forward_kinematics_RL_fun(H, random_q_joint)[0:3, 3])
-    print("RR foot position", ik.forward_kinematics_RR_fun(H, random_q_joint)[0:3, 3])
-
-    # print(cacca)
+    print("FL foot start position", ik.forward_kinematics_FL_fun(H, random_q_joint)[0:3, 3])
+    print("FR foot start position", ik.forward_kinematics_FR_fun(H, random_q_joint)[0:3, 3])
+    print("RL foot start position", ik.forward_kinematics_RL_fun(H, random_q_joint)[0:3, 3])
+    print("RR foot start position", ik.forward_kinematics_RR_fun(H, random_q_joint)[0:3, 3])
 
 
     initial_time = time.time()
@@ -340,6 +323,7 @@ if __name__ == "__main__":
     print("RL foot position:  ", foot_position_RL)
     print("RR foot position: ", foot_position_RR)
     
+    
     print("\n")
     print("ADAM SOLUTION")
     print("joints: ", solution)
@@ -353,8 +337,6 @@ if __name__ == "__main__":
     print("FR foot position", ik.forward_kinematics_FR_fun(H, solution)[0:3, 3])
     print("RL foot position", ik.forward_kinematics_RL_fun(H, solution)[0:3, 3])
     print("RR foot position", ik.forward_kinematics_RR_fun(H, solution)[0:3, 3])
-
-
 
 
     with mujoco.viewer.launch_passive(m, d) as viewer:

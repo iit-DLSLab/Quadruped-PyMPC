@@ -9,6 +9,7 @@ from quadruped_pympc.helpers.foothold_reference_generator import FootholdReferen
 from quadruped_pympc.helpers.periodic_gait_generator import PeriodicGaitGenerator
 from quadruped_pympc.helpers.swing_trajectory_controller import SwingTrajectoryController
 from quadruped_pympc.helpers.terrain_estimator import TerrainEstimator
+from quadruped_pympc.helpers.inverse_kinematics.inverse_kinematics_adam import InverseKinematicsAdam
 
 if(cfg.simulation_params['visual_foothold_adaptation'] != 'blind'):
     from quadruped_pympc.helpers.visual_foothold_adaptation import VisualFootholdAdaptation
@@ -73,6 +74,10 @@ class WBInterface:
 
         # Terrain estimator -----------------------------------------------------------------------
         self.terrain_computation = TerrainEstimator()
+
+
+        # Inverse Kinematics ---------------------------------------------------------------------
+        self.ik = InverseKinematicsAdam() 
 
         if(cfg.simulation_params['visual_foothold_adaptation'] != 'blind'):
             # Visual foothold adaptation -------------------------------------------------------------
@@ -391,11 +396,12 @@ class WBInterface:
 
 
         # Compute Swing Torque ------------------------------------------------------------------------------
+        des_foot_pos = LegsAttr(*[np.zeros((3, 1)) for _ in range(4)])
         if(cfg.mpc_params['type'] != 'kinodynamic'):
             # The swing controller is in the end-effector space 
             for leg_id, leg_name in enumerate(self.legs_order):
                 if self.current_contact[leg_id] == 0:  # If in swing phase, compute the swing trajectory tracking control.
-                    tau[leg_name], _, _ = self.stc.compute_swing_control_cartesian_space(
+                    tau[leg_name], des_foot_pos[leg_name], _ = self.stc.compute_swing_control_cartesian_space(
                                 leg_id=leg_id,
                                 q_dot=qvel[legs_qvel_idx[leg_name]],
                                 J=feet_jac[leg_name][:, legs_qvel_idx[leg_name]],
@@ -407,6 +413,8 @@ class WBInterface:
                                 h=legs_qfrc_bias[leg_name],
                                 mass_matrix=legs_mass_matrix[leg_name]
                                 )
+                else:
+                    des_foot_pos[leg_name] = nmpc_footholds[leg_name]
         else:
             # The swing controller is in the joint space
             for leg_id, leg_name in enumerate(self.legs_order):
@@ -418,8 +426,34 @@ class WBInterface:
                                                                                      qvel[legs_qvel_idx[leg_name]],
                                                                                      legs_mass_matrix[leg_name],
                                                                                      legs_qfrc_bias[leg_name],)
-                
-        return tau
+                    
+        
+        # Compute PD targets for the joints ----------------------------------------------------------------
+        pd_target_joints_pos = LegsAttr(*[np.zeros((3, 1)) for _ in range(4)])
+        pd_target_joints_vel = LegsAttr(*[np.zeros((3, 1)) for _ in range(4)])
+        if(cfg.mpc_params['type'] != 'kinodynamic'):
+            temp = self.ik.compute_solution(qpos, 
+                                            des_foot_pos["FL"], des_foot_pos["FR"], 
+                                            des_foot_pos["RL"], des_foot_pos["RR"])
+            pd_target_joints_pos.FL = temp[0:3]
+            pd_target_joints_pos.FR = temp[3:6]
+            pd_target_joints_pos.RL = temp[6:9]
+            pd_target_joints_pos.RR = temp[9:12]
+            
+            for leg_id, leg_name in enumerate(self.legs_order):
+                J_dot=jac_feet_dot[leg_name][:, legs_qvel_idx[leg_name]]
+                q_dot=qvel[legs_qvel_idx[leg_name]]
+                pd_target_joints_vel[leg_name] = J_dot @ q_dot
+            
+            
+
+        else:
+            #TODO
+            pd_target_joints_pos = nmpc_joints_pos
+            pd_target_joints_vel = nmpc_joints_vel
+
+
+        return tau, pd_target_joints_pos, pd_target_joints_vel
     
 
 

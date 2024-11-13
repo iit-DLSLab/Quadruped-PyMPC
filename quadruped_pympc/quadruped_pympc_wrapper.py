@@ -172,7 +172,7 @@ class QuadrupedPyMPC_Wrapper:
         
         
         # Compute Swing and Stance Torque ---------------------------------------------------------------------------
-        tau = self.wb_interface.compute_stance_and_swing_torque(simulation_dt,
+        tau, _, _ = self.wb_interface.compute_stance_and_swing_torque(simulation_dt,
                                                     qpos,
                                                     qvel,
                                                     feet_jac,
