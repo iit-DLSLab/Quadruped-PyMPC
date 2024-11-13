@@ -77,7 +77,7 @@ class TerrainEstimator:
         z_foot_FR = feet_pos['FR'][2]
         z_foot_RL = feet_pos['RL'][2]
         z_foot_RR = feet_pos['RR'][2]
-        number_foot_in_contact = current_contact[0] + \
+        """number_foot_in_contact = current_contact[0] + \
                                  current_contact[1] + \
                                  current_contact[2] + \
                                  current_contact[3]
@@ -86,6 +86,19 @@ class TerrainEstimator:
                                 z_foot_FR * current_contact[1] + \
                                 z_foot_RL * current_contact[2] + \
                                 z_foot_RR * current_contact[3]) / number_foot_in_contact
-            self.terrain_height = self.terrain_height * 0.6 + z_foot_mean_temp * 0.4
+            self.terrain_height = self.terrain_height * 0.6 + z_foot_mean_temp * 0.4"""
+        
+        z_foot_mean_temp = (z_foot_FL + \
+                            z_foot_FR + \
+                            z_foot_RL + \
+                            z_foot_RR) / 4
+        self.terrain_height = self.terrain_height * 0.6 + z_foot_mean_temp * 0.4
+
+
+        #print("current_contact: ", current_contact)
+        #print("z_foot_FL: ", z_foot_FL)
+        #print("z_foot_FR: ", z_foot_FR)
+        #print("z_foot_RL: ", z_foot_RL)
+        #print("z_foot_RR: ", z_foot_RR)
 
         return self.terrain_roll, self.terrain_pitch, self.terrain_height

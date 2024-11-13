@@ -4,6 +4,8 @@ import mujoco
 import numpy as np
 from gym_quadruped.utils.quadruped_utils import LegsAttr
 
+from quadruped_pympc.helpers.quadruped_utils import GaitType
+
 
 # Class for the generation of the reference footholds
 # TODO: @Giulio Should we convert this to a single function instead of a class? Stance time, can be passed as argument
@@ -124,10 +126,13 @@ class FootholdReferenceGenerator:
 
         return ref_feet
 
-    def update_lift_off_positions(self, previous_contact, current_contact, feet_pos, legs_order):
+    def update_lift_off_positions(self, previous_contact, current_contact, feet_pos, legs_order, gait_type):
         for leg_id, leg_name in enumerate(legs_order):
             # Set lif-offs
             if previous_contact[leg_id] == 1 and current_contact[leg_id] == 0:
+                self.lift_off_positions[leg_name] = feet_pos[leg_name]
+
+            if(gait_type == GaitType.FULL_STANCE.value):
                 self.lift_off_positions[leg_name] = feet_pos[leg_name]
 
 

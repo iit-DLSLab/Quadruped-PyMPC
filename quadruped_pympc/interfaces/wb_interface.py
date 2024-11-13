@@ -154,7 +154,7 @@ class WBInterface:
 
 
         # Compute the reference for the footholds ---------------------------------------------------
-        self.frg.update_lift_off_positions(previous_contact, self.current_contact, feet_pos, legs_order)
+        self.frg.update_lift_off_positions(previous_contact, self.current_contact, feet_pos, legs_order, self.pgg.gait_type)
         ref_feet_pos = self.frg.compute_footholds_reference(
             com_position=base_pos,
             base_ori_euler_xyz=base_ori_euler_xyz,
