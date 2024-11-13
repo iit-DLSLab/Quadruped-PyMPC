@@ -105,7 +105,7 @@ class SwingTrajectoryGenerator:
         desired_foot_acceleration = 6 * (1 - self.bezier_time_factor * bezier_swing_time) * (cp3 - 2 * cp2 + cp1) + \
                                6 * (self.bezier_time_factor * bezier_swing_time) * (cp4 - 2 * cp3 + cp2)
 
-        return desired_foot_position, desired_foot_velocity, desired_foot_acceleration
+        return desired_foot_position.reshape((3,)), desired_foot_velocity.reshape((3,)), desired_foot_acceleration.reshape((3,))
 
 
 # Example:
