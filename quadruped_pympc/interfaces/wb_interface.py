@@ -439,9 +439,14 @@ class WBInterface:
         pd_target_joints_pos = LegsAttr(*[np.zeros((3, 1)) for _ in range(4)])
         pd_target_joints_vel = LegsAttr(*[np.zeros((3, 1)) for _ in range(4)])
         if(cfg.mpc_params['type'] != 'kinodynamic'):
-            temp = self.ik.compute_solution(qpos, 
-                                            des_foot_pos["FL"], des_foot_pos["FR"], 
-                                            des_foot_pos["RL"], des_foot_pos["RR"])
+            #temp = self.ik.compute_solution(qpos, 
+            #                                des_foot_pos["FL"], des_foot_pos["FR"], 
+            #                                des_foot_pos["RL"], des_foot_pos["RR"])
+            #time_ik = time.time()
+            temp = self.ik.fun_compute_solution(qpos,
+                                                des_foot_pos.FL, des_foot_pos.FR,
+                                                des_foot_pos.RL, des_foot_pos.RR)
+            #print("IK time: ", time.time() - time_ik)
             pd_target_joints_pos.FL = temp[0:3]
             pd_target_joints_pos.FR = temp[3:6]
             pd_target_joints_pos.RL = temp[6:9]
