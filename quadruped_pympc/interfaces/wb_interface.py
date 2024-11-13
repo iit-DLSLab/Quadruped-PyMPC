@@ -396,36 +396,43 @@ class WBInterface:
 
 
         # Compute Swing Torque ------------------------------------------------------------------------------
-        des_foot_pos = LegsAttr(*[np.zeros((3, 1)) for _ in range(4)])
+        des_foot_pos = LegsAttr(*[np.zeros((3,)) for _ in range(4)])
+        des_foot_vel = LegsAttr(*[np.zeros((3,)) for _ in range(4)])
+        
         if(cfg.mpc_params['type'] != 'kinodynamic'):
             # The swing controller is in the end-effector space 
             for leg_id, leg_name in enumerate(self.legs_order):
                 if self.current_contact[leg_id] == 0:  # If in swing phase, compute the swing trajectory tracking control.
-                    tau[leg_name], des_foot_pos[leg_name], _ = self.stc.compute_swing_control_cartesian_space(
-                                leg_id=leg_id,
-                                q_dot=qvel[legs_qvel_idx[leg_name]],
-                                J=feet_jac[leg_name][:, legs_qvel_idx[leg_name]],
-                                J_dot=jac_feet_dot[leg_name][:, legs_qvel_idx[leg_name]],
-                                lift_off=self.frg.lift_off_positions[leg_name],
-                                touch_down=nmpc_footholds[leg_name],
-                                foot_pos=feet_pos[leg_name],
-                                foot_vel=feet_vel[leg_name],
-                                h=legs_qfrc_bias[leg_name],
-                                mass_matrix=legs_mass_matrix[leg_name]
-                                )
+                    tau[leg_name], \
+                    des_foot_pos[leg_name], \
+                    des_foot_vel[leg_name] = self.stc.compute_swing_control_cartesian_space(
+                                                        leg_id=leg_id,
+                                                        q_dot=qvel[legs_qvel_idx[leg_name]],
+                                                        J=feet_jac[leg_name][:, legs_qvel_idx[leg_name]],
+                                                        J_dot=jac_feet_dot[leg_name][:, legs_qvel_idx[leg_name]],
+                                                        lift_off=self.frg.lift_off_positions[leg_name],
+                                                        touch_down=nmpc_footholds[leg_name],
+                                                        foot_pos=feet_pos[leg_name],
+                                                        foot_vel=feet_vel[leg_name],
+                                                        h=legs_qfrc_bias[leg_name],
+                                                        mass_matrix=legs_mass_matrix[leg_name]
+                                                        )
                 else:
                     des_foot_pos[leg_name] = nmpc_footholds[leg_name]
+                    des_foot_vel[leg_name] = des_foot_vel[leg_name]*0.0
         else:
             # The swing controller is in the joint space
             for leg_id, leg_name in enumerate(self.legs_order):
                 if self.current_contact[leg_id] == 0: # If in swing phase, compute the swing trajectory tracking control.
-                    tau[leg_name], _, _ = self.stc.compute_swing_control_joint_space(nmpc_joints_pos[leg_name],
-                                                                                     nmpc_joints_vel[leg_name],
-                                                                                     nmpc_joints_acc[leg_name],
-                                                                                     qpos[legs_qpos_idx[leg_name]],
-                                                                                     qvel[legs_qvel_idx[leg_name]],
-                                                                                     legs_mass_matrix[leg_name],
-                                                                                     legs_qfrc_bias[leg_name],)
+                    tau[leg_name], \
+                    _, \
+                    _ = self.stc.compute_swing_control_joint_space(nmpc_joints_pos[leg_name],
+                                                                    nmpc_joints_vel[leg_name],
+                                                                    nmpc_joints_acc[leg_name],
+                                                                    qpos[legs_qpos_idx[leg_name]],
+                                                                    qvel[legs_qvel_idx[leg_name]],
+                                                                    legs_mass_matrix[leg_name],
+                                                                    legs_qfrc_bias[leg_name],)
                     
         
         # Compute PD targets for the joints ----------------------------------------------------------------
@@ -441,11 +448,8 @@ class WBInterface:
             pd_target_joints_pos.RR = temp[9:12]
             
             for leg_id, leg_name in enumerate(self.legs_order):
-                J_dot=jac_feet_dot[leg_name][:, legs_qvel_idx[leg_name]]
-                q_dot=qvel[legs_qvel_idx[leg_name]]
-                pd_target_joints_vel[leg_name] = J_dot @ q_dot
-            
-            
+                J = feet_jac[leg_name][:, legs_qvel_idx[leg_name]]
+                pd_target_joints_vel[leg_name] = np.linalg.pinv(J) @ des_foot_vel[leg_name]
 
         else:
             #TODO
