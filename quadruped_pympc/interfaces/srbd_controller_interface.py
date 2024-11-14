@@ -153,6 +153,7 @@ class SRBDControllerInterface:
             nmpc_joints_pos = None
             nmpc_joints_vel = None
             nmpc_joints_acc = None
+            nmpc_predicted_state = None
 
         # If we use Gradient-Based MPC
         else:
@@ -190,7 +191,7 @@ class SRBDControllerInterface:
             else:
                 nmpc_GRFs, \
                 nmpc_footholds, \
-                _, \
+                nmpc_predicted_state, \
                 _ = self.controller.compute_control(state_current,
                                                     ref_state,
                                                     contact_sequence,
@@ -232,5 +233,5 @@ class SRBDControllerInterface:
             
 
         
-        return nmpc_GRFs, nmpc_footholds, nmpc_joints_pos, nmpc_joints_vel, nmpc_joints_acc, best_sample_freq
+        return nmpc_GRFs, nmpc_footholds, nmpc_joints_pos, nmpc_joints_vel, nmpc_joints_acc, best_sample_freq, nmpc_predicted_state
         

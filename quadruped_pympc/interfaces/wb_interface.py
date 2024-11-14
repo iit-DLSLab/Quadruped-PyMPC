@@ -1,6 +1,7 @@
 import numpy as np
 import time
 from scipy.spatial.transform import Rotation as R
+import copy
 
 from gym_quadruped.utils.quadruped_utils import LegsAttr
 from quadruped_pympc import config as cfg
@@ -351,7 +352,8 @@ class WBInterface:
                                         best_sample_freq: float,
                                         nmpc_joints_pos,
                                         nmpc_joints_vel,
-                                        nmpc_joints_acc) -> LegsAttr:
+                                        nmpc_joints_acc,
+                                        nmpc_predicted_state) -> LegsAttr:
         """Compute the stance and swing torque.
 
         Args:
@@ -439,11 +441,10 @@ class WBInterface:
         pd_target_joints_pos = LegsAttr(*[np.zeros((3, 1)) for _ in range(4)])
         pd_target_joints_vel = LegsAttr(*[np.zeros((3, 1)) for _ in range(4)])
         if(cfg.mpc_params['type'] != 'kinodynamic'):
-            #temp = self.ik.compute_solution(qpos, 
-            #                                des_foot_pos["FL"], des_foot_pos["FR"], 
-            #                                des_foot_pos["RL"], des_foot_pos["RR"])
-            #time_ik = time.time()
-            temp = self.ik.fun_compute_solution(qpos,
+            qpos_predicted = copy.deepcopy(qpos)
+            #TODO use predicted rotation too
+            qpos_predicted[0:3] = nmpc_predicted_state[0:3]
+            temp = self.ik.fun_compute_solution(qpos_predicted,
                                                 des_foot_pos.FL, des_foot_pos.FR,
                                                 des_foot_pos.RL, des_foot_pos.RR)
             #print("IK time: ", time.time() - time_ik)
@@ -452,9 +453,12 @@ class WBInterface:
             pd_target_joints_pos.RL = temp[6:9]
             pd_target_joints_pos.RR = temp[9:12]
             
-            for leg_id, leg_name in enumerate(self.legs_order):
-                J = feet_jac[leg_name][:, legs_qvel_idx[leg_name]]
-                pd_target_joints_vel[leg_name] = np.linalg.pinv(J) @ des_foot_vel[leg_name]
+            #TODO fix dt
+            pd_target_joints_vel.FL = (pd_target_joints_pos.FL - qpos[legs_qpos_idx.FL])/0.02
+            pd_target_joints_vel.FR = (pd_target_joints_pos.FR - qpos[legs_qpos_idx.FR])/0.02
+            pd_target_joints_vel.RL = (pd_target_joints_pos.RL - qpos[legs_qpos_idx.RL])/0.02
+            pd_target_joints_vel.RR = (pd_target_joints_pos.RR - qpos[legs_qpos_idx.RR])/0.02
+
 
         else:
             #TODO

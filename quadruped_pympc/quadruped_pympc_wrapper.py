@@ -47,6 +47,7 @@ class QuadrupedPyMPC_Wrapper:
                                         RL=np.zeros(3), RR=np.zeros(3))
         self.nmpc_joints_acc = LegsAttr(FL=np.zeros(3), FR=np.zeros(3),
                                         RL=np.zeros(3), RR=np.zeros(3))
+        self.nmpc_predicted_state = np.zeros(12)
         self.best_sample_freq = self.wb_interface.pgg.step_freq
         
 
@@ -145,7 +146,8 @@ class QuadrupedPyMPC_Wrapper:
             self.nmpc_joints_pos, \
             self.nmpc_joints_vel, \
             self.nmpc_joints_acc, \
-            self.best_sample_freq = self.srbd_controller_interface.compute_control(state_current,
+            self.best_sample_freq, \
+            self.nmpc_predicted_state = self.srbd_controller_interface.compute_control(state_current,
                                                                     ref_state,
                                                                     contact_sequence,
                                                                     inertia,
@@ -190,7 +192,8 @@ class QuadrupedPyMPC_Wrapper:
                                                     self.best_sample_freq,
                                                     self.nmpc_joints_pos,
                                                     self.nmpc_joints_vel,
-                                                    self.nmpc_joints_acc)
+                                                    self.nmpc_joints_acc,
+                                                    self.nmpc_predicted_state)
         
 
 
