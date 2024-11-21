@@ -29,7 +29,7 @@ from quadruped_pympc import config
 
 
 # Class for solving a generic inverse kinematics problem
-class InverseKinematicsNumerical:
+class InverseKinematicsNumeric:
     def __init__(self,) -> None:
         """
         This method initializes the inverse kinematics solver class.
@@ -195,7 +195,7 @@ if __name__ == "__main__":
         xml_filename = dir_path + '/../../../gym-quadruped/gym_quadruped/robot_model/mini_cheetah/mini_cheetah.xml'
     
     
-    ik = InverseKinematicsNumerical()   
+    ik = InverseKinematicsNumeric()   
 
 
 
