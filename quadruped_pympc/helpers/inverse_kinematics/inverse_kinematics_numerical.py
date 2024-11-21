@@ -15,9 +15,6 @@ from adam.casadi import KinDynComputations
 from adam import Representations
 from liecasadi import SO3
 
-# Pinocchio magic
-import pinocchio as pin
-from pinocchio import casadi as cpin
 
 import os 
 dir_path = os.path.dirname(os.path.realpath(__file__))
@@ -32,7 +29,7 @@ from quadruped_pympc import config
 
 
 # Class for solving a generic inverse kinematics problem
-class InverseKinematicsAdam:
+class InverseKinematicsNumerical:
     def __init__(self,) -> None:
         """
         This method initializes the inverse kinematics solver class.
@@ -59,55 +56,29 @@ class InverseKinematicsAdam:
             xml_filename = dir_path + '/../../gym-quadruped/gym_quadruped/robot_model/mini_cheetah/mini_cheetah.xml'
 
 
-        self.use_adam = True
 
-        if(self.use_adam):
-            joint_list = ['FL_hip_joint', 'FL_thigh_joint', 'FL_calf_joint',
-                        'FR_hip_joint', 'FR_thigh_joint', 'FR_calf_joint', 
-                        'RL_hip_joint', 'RL_thigh_joint', 'RL_calf_joint',
-                        'RR_hip_joint', 'RR_thigh_joint', 'RR_calf_joint']
+        joint_list = ['FL_hip_joint', 'FL_thigh_joint', 'FL_calf_joint',
+                    'FR_hip_joint', 'FR_thigh_joint', 'FR_calf_joint', 
+                    'RL_hip_joint', 'RL_thigh_joint', 'RL_calf_joint',
+                    'RR_hip_joint', 'RR_thigh_joint', 'RR_calf_joint']
 
-            
-            self.kindyn = KinDynComputations(urdfstring=urdf_filename, joints_name_list=joint_list)
-            self.kindyn.set_frame_velocity_representation(representation=Representations.MIXED_REPRESENTATION)
-
-
-
-            self.forward_kinematics_FL_fun = self.kindyn.forward_kinematics_fun("FL_foot")
-            self.forward_kinematics_FR_fun = self.kindyn.forward_kinematics_fun("FR_foot")
-            self.forward_kinematics_RL_fun = self.kindyn.forward_kinematics_fun("RL_foot")
-            self.forward_kinematics_RR_fun = self.kindyn.forward_kinematics_fun("RR_foot")
-
-            self.jacobian_FL_fun = self.kindyn.jacobian_fun("FL_foot")
-            self.jacobian_FR_fun = self.kindyn.jacobian_fun("FR_foot")
-            self.jacobian_RL_fun = self.kindyn.jacobian_fun("RL_foot")
-            self.jacobian_RR_fun = self.kindyn.jacobian_fun("RR_foot")
         
-        else:
-            self.model = pin.buildModelFromUrdf(urdf_filename)
-            #self.model = pin.buildModelFromXML(xml_filename)
-            self.data = self.model.createData()
-            
-            # generate the casadi graph
-            cmodel = cpin.Model(self.model)
-            cdata = cmodel.createData()
-            cq = cs.SX.sym("q", self.model.nq, 1)
-            
-            # precompute the forward kinematics graph
-            cpin.framesForwardKinematics(cmodel, cdata, cq)
+        self.kindyn = KinDynComputations(urdfstring=urdf_filename, joints_name_list=joint_list)
+        self.kindyn.set_frame_velocity_representation(representation=Representations.MIXED_REPRESENTATION)
 
-            # takes the ID of the feet, and generate a casadi function for a generic forward kinematics
-            self.FL_foot_id = self.model.getFrameId("FL_foot_fixed")
-            self.FR_foot_id = self.model.getFrameId("FR_foot_fixed")
-            self.RL_foot_id = self.model.getFrameId("RL_foot_fixed")
-            self.RR_foot_id = self.model.getFrameId("RR_foot_fixed")
-            #self.FL_foot_id = self.model.getJointId("FL_foot_fixed")
-            
-            self.forward_kinematics_FL_fun = cs.Function("FR_foot_pos", [cq], [cdata.oMf[self.FR_foot_id].translation])
-            self.forward_kinematics_FR_fun = cs.Function("FL_foot_pos", [cq], [cdata.oMf[self.FL_foot_id].translation])
-            self.forward_kinematics_RL_fun = cs.Function("RR_foot_pos", [cq], [cdata.oMf[self.RR_foot_id].translation])
-            self.forward_kinematics_RR_fun = cs.Function("RL_foot_pos", [cq], [cdata.oMf[self.RL_foot_id].translation])
 
+
+        self.forward_kinematics_FL_fun = self.kindyn.forward_kinematics_fun("FL_foot")
+        self.forward_kinematics_FR_fun = self.kindyn.forward_kinematics_fun("FR_foot")
+        self.forward_kinematics_RL_fun = self.kindyn.forward_kinematics_fun("RL_foot")
+        self.forward_kinematics_RR_fun = self.kindyn.forward_kinematics_fun("RR_foot")
+
+        self.jacobian_FL_fun = self.kindyn.jacobian_fun("FL_foot")
+        self.jacobian_FR_fun = self.kindyn.jacobian_fun("FR_foot")
+        self.jacobian_RL_fun = self.kindyn.jacobian_fun("RL_foot")
+        self.jacobian_RR_fun = self.kindyn.jacobian_fun("RR_foot")
+        
+        
         q = cs.SX.sym('q', 12+7)
         FL_foot_target_position = cs.SX.sym('FL_foot_target_position', 3)
         FR_foot_target_position = cs.SX.sym('FR_foot_target_position', 3)
@@ -164,18 +135,10 @@ class InverseKinematicsAdam:
               
         while i <= IT_MAX:
             
-            if(self.use_adam):
-                FL_foot_actual_pos = self.forward_kinematics_FL_fun(H, q_joint)[0:3, 3]
-                FR_foot_actual_pos = self.forward_kinematics_FR_fun(H, q_joint)[0:3, 3]
-                RL_foot_actual_pos = self.forward_kinematics_RL_fun(H, q_joint)[0:3, 3]
-                RR_foot_actual_pos = self.forward_kinematics_RR_fun(H, q_joint)[0:3, 3]
-            else:
-                pin.forwardKinematics(self.model, self.data, q)
-                pin.computeJointJacobians(self.model, self.data, q)
-                FL_foot_actual_pos = self.forward_kinematics_FL_fun(q)[0:3]
-                FR_foot_actual_pos = self.forward_kinematics_FR_fun(q)[0:3]
-                RL_foot_actual_pos = self.forward_kinematics_RL_fun(q)[0:3]
-                RR_foot_actual_pos = self.forward_kinematics_RR_fun(q)[0:3]
+            FL_foot_actual_pos = self.forward_kinematics_FL_fun(H, q_joint)[0:3, 3]
+            FR_foot_actual_pos = self.forward_kinematics_FR_fun(H, q_joint)[0:3, 3]
+            RL_foot_actual_pos = self.forward_kinematics_RL_fun(H, q_joint)[0:3, 3]
+            RR_foot_actual_pos = self.forward_kinematics_RR_fun(H, q_joint)[0:3, 3]
 
 
             err_FL = (FL_foot_target_position - FL_foot_actual_pos)
@@ -191,17 +154,11 @@ class InverseKinematicsAdam:
             #    break
 
             
-            if(self.use_adam):
-                J_FL = self.jacobian_FL_fun(H, q_joint)[0:3, 6:]
-                J_FR = self.jacobian_FR_fun(H, q_joint)[0:3, 6:]
-                J_RL = self.jacobian_RL_fun(H, q_joint)[0:3, 6:]
-                J_RR = self.jacobian_RR_fun(H, q_joint)[0:3, 6:]
-            else:
-                J_FL = pin.getFrameJacobian(self.model, self.data, self.FL_foot_id, pin.ReferenceFrame.LOCAL_WORLD_ALIGNED)  # in joint frame
-                J_FR = pin.getFrameJacobian(self.model, self.data, self.FR_foot_id, pin.ReferenceFrame.LOCAL_WORLD_ALIGNED)  # in joint frame
-                J_RL = pin.getFrameJacobian(self.model, self.data, self.RL_foot_id, pin.ReferenceFrame.LOCAL_WORLD_ALIGNED)  # in joint frame
-                J_RR = pin.getFrameJacobian(self.model, self.data, self.RR_foot_id, pin.ReferenceFrame.LOCAL_WORLD_ALIGNED)  # in joint frame
-
+            J_FL = self.jacobian_FL_fun(H, q_joint)[0:3, 6:]
+            J_FR = self.jacobian_FR_fun(H, q_joint)[0:3, 6:]
+            J_RL = self.jacobian_RL_fun(H, q_joint)[0:3, 6:]
+            J_RR = self.jacobian_RR_fun(H, q_joint)[0:3, 6:]
+ 
 
             total_jac = cs.vertcat(J_FL, J_FR, J_RL, J_RR)
             total_err = 100.0 * cs.vertcat(err_FL, err_FR, err_RL, err_RR)
@@ -238,7 +195,7 @@ if __name__ == "__main__":
         xml_filename = dir_path + '/../../../gym-quadruped/gym_quadruped/robot_model/mini_cheetah/mini_cheetah.xml'
     
     
-    ik = InverseKinematicsAdam()   
+    ik = InverseKinematicsNumerical()   
 
 
 

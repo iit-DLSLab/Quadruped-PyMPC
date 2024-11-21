@@ -10,7 +10,7 @@ from quadruped_pympc.helpers.foothold_reference_generator import FootholdReferen
 from quadruped_pympc.helpers.periodic_gait_generator import PeriodicGaitGenerator
 from quadruped_pympc.helpers.swing_trajectory_controller import SwingTrajectoryController
 from quadruped_pympc.helpers.terrain_estimator import TerrainEstimator
-from quadruped_pympc.helpers.inverse_kinematics.inverse_kinematics_adam import InverseKinematicsAdam
+from quadruped_pympc.helpers.inverse_kinematics.inverse_kinematics_numerical import InverseKinematicsNumerical
 
 if(cfg.simulation_params['visual_foothold_adaptation'] != 'blind'):
     from quadruped_pympc.helpers.visual_foothold_adaptation import VisualFootholdAdaptation
@@ -78,7 +78,7 @@ class WBInterface:
 
 
         # Inverse Kinematics ---------------------------------------------------------------------
-        self.ik = InverseKinematicsAdam() 
+        self.ik = InverseKinematicsNumerical() 
 
         if(cfg.simulation_params['visual_foothold_adaptation'] != 'blind'):
             # Visual foothold adaptation -------------------------------------------------------------
