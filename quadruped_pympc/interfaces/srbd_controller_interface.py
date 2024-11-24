@@ -82,7 +82,8 @@ class SRBDControllerInterface:
                         inertia: np.ndarray,
                         pgg_phase_signal: np.ndarray,
                         pgg_step_freq: float,
-                        optimize_swing: int) -> [LegsAttr, LegsAttr, LegsAttr, LegsAttr, LegsAttr, float]:
+                        optimize_swing: int,
+                        external_wrenches: np.ndarray = np.zeros((6,))) -> [LegsAttr, LegsAttr, LegsAttr, LegsAttr, LegsAttr, float]:
         """Compute the control using the SRBD method
 
         Args:
@@ -93,6 +94,7 @@ class SRBDControllerInterface:
             pgg_phase_signal (np.ndarray): The periodic gait generator phase signal of the legs (from 0 to 1)
             pgg_step_freq (float): The step frequency of the periodic gait generator
             optimize_swing (int): The flag to optimize the swing
+            external_wrenches (np.ndarray): The external wrench applied to the robot to compensate
 
         Returns:
             tuple: The GRFs and the feet positions in world frame, 
@@ -166,9 +168,10 @@ class SRBDControllerInterface:
                 nmpc_joints_acc, \
                 nmpc_predicted_state, \
                 status = self.controller.compute_control(state_current,
-                                                    ref_state,
-                                                    contact_sequence,
-                                                    inertia=inertia)
+                                                         ref_state,
+                                                         contact_sequence,
+                                                         inertia=inertia,
+                                                         external_wrenches=external_wrenches)
 
 
                 
@@ -195,7 +198,8 @@ class SRBDControllerInterface:
                 _ = self.controller.compute_control(state_current,
                                                     ref_state,
                                                     contact_sequence,
-                                                    inertia=inertia)
+                                                    inertia=inertia,
+                                                    external_wrenches=external_wrenches)
                 
                 nmpc_joints_pos = None
                 nmpc_joints_vel = None
