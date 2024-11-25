@@ -87,8 +87,11 @@ mpc_params = {
     # if this is true, we optimize the step frequency as well
     # for the sampling controller, this is done in the rollout
     # for the gradient-based controller, this is done with a batched version of the ocp
-    'optimize_step_freq':                      False,
+    'optimize_step_freq':                      True,
     'step_freq_available':                     [1.4, 2.0, 2.4],
+    'optimize_duty_factor':                    False,
+    'duty_factor_available':                   [0.3, 0.4, 0.5, 0.6, 0.7],
+    'optimize_full_gait':                      False,
 
     # ----- START properties only for the gradient-based mpc -----
 
@@ -192,7 +195,7 @@ simulation_params = {
     # this is the integration time used in the simulator
     'dt':                          0.002,
 
-    'gait':                        'trot',  # 'trot', 'pace', 'crawl', 'bound', 'full_stance'
+    'gait':                        'bound',  # 'trot', 'pace', 'crawl', 'bound', 'full_stance'
     'gait_params':                 {'trot': {'step_freq': 1.4, 'duty_factor': 0.65, 'type': GaitType.TROT.value},
                                     'crawl': {'step_freq': 0.5, 'duty_factor': 0.8, 'type': GaitType.BACKDIAGONALCRAWL.value},
                                     'pace': {'step_freq': 1.4, 'duty_factor': 0.7, 'type': GaitType.PACE.value},

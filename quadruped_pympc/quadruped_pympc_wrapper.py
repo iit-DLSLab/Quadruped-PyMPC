@@ -49,6 +49,7 @@ class QuadrupedPyMPC_Wrapper:
                                         RL=np.zeros(3), RR=np.zeros(3))
         self.nmpc_predicted_state = np.zeros(12)
         self.best_sample_freq = self.wb_interface.pgg.step_freq
+        self.best_duty_factor = self.wb_interface.pgg.duty_factor
         
 
         self.quadrupedpympc_observables_names = quadrupedpympc_observables_names
@@ -159,7 +160,9 @@ class QuadrupedPyMPC_Wrapper:
 
             # Update the gait
             if(cfg.mpc_params['type'] != 'sampling' and cfg.mpc_params['optimize_step_freq']):
-                self.best_sample_freq = self.srbd_batched_controller_interface.optimize_gait(state_current,
+                
+                self.best_sample_freq, \
+                self.best_duty_factor  = self.srbd_batched_controller_interface.optimize_gait(state_current,
                                                                         ref_state,
                                                                         inertia,
                                                                         self.wb_interface.pgg.phase_signal,
@@ -171,7 +174,8 @@ class QuadrupedPyMPC_Wrapper:
                                                                         optimize_swing)
 
 
-        
+        print("Best sample freq: ", self.best_sample_freq)
+        print("Best duty factor: ", self.best_duty_factor)
         
         # Compute Swing and Stance Torque ---------------------------------------------------------------------------
         tau, _, _ = self.wb_interface.compute_stance_and_swing_torque(simulation_dt,
@@ -190,6 +194,7 @@ class QuadrupedPyMPC_Wrapper:
                                                     tau,
                                                     optimize_swing,
                                                     self.best_sample_freq,
+                                                    self.best_duty_factor,
                                                     self.nmpc_joints_pos,
                                                     self.nmpc_joints_vel,
                                                     self.nmpc_joints_acc,

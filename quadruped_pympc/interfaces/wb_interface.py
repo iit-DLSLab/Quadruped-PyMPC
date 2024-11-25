@@ -350,6 +350,7 @@ class WBInterface:
                                         tau: LegsAttr,
                                         optimize_swing: int,
                                         best_sample_freq: float,
+                                        best_duty_factor: float,
                                         nmpc_joints_pos,
                                         nmpc_joints_vel,
                                         nmpc_joints_acc,
@@ -381,6 +382,7 @@ class WBInterface:
         # If we have optimized the gait, we set all the timing parameters
         if (optimize_swing == 1):
             self.pgg.step_freq = np.array([best_sample_freq])[0]
+            self.pgg.duty_factor = np.array([best_duty_factor])[0]
             self.frg.stance_time = (1 / self.pgg.step_freq) * self.pgg.duty_factor
             swing_period = (1 - self.pgg.duty_factor) * (1 / self.pgg.step_freq)
             self.stc.regenerate_swing_trajectory_generator(step_height=self.step_height, swing_period=swing_period)

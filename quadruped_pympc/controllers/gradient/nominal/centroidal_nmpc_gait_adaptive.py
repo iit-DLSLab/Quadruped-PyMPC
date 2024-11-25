@@ -54,8 +54,10 @@ class Acados_NMPC_GaitAdaptive():
             config.mpc_params['step_freq_available']))
 
         # Batch solver
-        use_batch_solver = config.mpc_params['optimize_step_freq']
-        num_batch = len(config.mpc_params['step_freq_available'])
+        if(config.mpc_params['optimize_step_freq'] and config.mpc_params['optimize_duty_factor']):
+            num_batch = len(config.mpc_params['step_freq_available'])*len(config.mpc_params['duty_factor_available'])
+        else:
+            num_batch = len(config.mpc_params['step_freq_available'])
         self.batch = num_batch
         # batch_ocp = self.create_ocp_solver_description(acados_model, num_threads_in_batch_solve)
         batch_ocp = self.ocp
@@ -1087,6 +1089,7 @@ class Acados_NMPC_GaitAdaptive():
         for n in range(self.batch):
             # Take the array of the contact sequence and split it in 4 arrays, 
             # one for each leg
+            
             FL_contact_sequence = contact_sequence[n][0]
             FR_contact_sequence = contact_sequence[n][1]
             RL_contact_sequence = contact_sequence[n][2]
@@ -1150,21 +1153,17 @@ class Acados_NMPC_GaitAdaptive():
         self.batch_solver.solve()
         t_elapsed = (time.time() - t0)
 
-        print("time_python: ", t_elapsed2)
-        print("time_solver: ", t_elapsed)
+        #print("time_python: ", t_elapsed2)
+        #print("time_solver: ", t_elapsed)
 
         for n in range(self.batch):
             cost_single_qp = self.batch_solver.ocp_solvers[n].get_cost()
-            if (n != 0):
+            """if (n != 0):
                 cost_single_qp += 3 * (
                         config.mpc_params["step_freq_available"][n] - config.mpc_params["step_freq_available"][
-                    0]) ** 2
+                    0]) ** 2"""
             costs.append(cost_single_qp)
 
-        best_freq_index = np.argmin(costs)
-        best_freq = config.mpc_params["step_freq_available"][best_freq_index]
 
-        print("costs: ", costs)
-        print("best_freq: ", best_freq)
 
-        return costs, best_freq
+        return costs

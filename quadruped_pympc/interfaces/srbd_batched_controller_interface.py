@@ -17,6 +17,12 @@ class SRBDBatchedControllerInterface:
         self.optimize_step_freq = cfg.mpc_params['optimize_step_freq']
         self.step_freq_available = cfg.mpc_params['step_freq_available']
 
+        self.optimize_duty_factor = cfg.mpc_params['optimize_duty_factor']
+        self.duty_factor_available = cfg.mpc_params['duty_factor_available']
+
+        self.optimize_full_gait = cfg.mpc_params['optimize_full_gait']
+        
+
 
         from quadruped_pympc.controllers.gradient.nominal.centroidal_nmpc_gait_adaptive import \
                     Acados_NMPC_GaitAdaptive
@@ -61,7 +67,9 @@ class SRBDBatchedControllerInterface:
         
 
         best_sample_freq = pgg_step_freq
-        if self.optimize_step_freq and optimize_swing == 1:
+        best_duty_factor = pgg_duty_factor
+
+        if self.optimize_step_freq and not self.optimize_duty_factor and optimize_swing == 1:
             contact_sequence_temp = np.zeros((len(self.step_freq_available), 4, self.horizon))
             for j in range(len(self.step_freq_available)):
                 pgg_temp = PeriodicGaitGenerator(duty_factor=pgg_duty_factor,
@@ -73,12 +81,42 @@ class SRBDBatchedControllerInterface:
                                                                                 contact_sequence_lenghts=contact_sequence_lenghts)
 
 
-            costs, \
-            best_sample_freq = self.batched_controller.compute_batch_control(state_current,
+            qps_costs = self.batched_controller.compute_batch_control(state_current,
                                                                         ref_state,
                                                                         contact_sequence_temp)
+            
+            best_sample_freq = self.step_freq_available[np.argmin(qps_costs)]
+
+        elif self.optimize_step_freq and self.optimize_duty_factor and optimize_swing == 1:
+            possibilities = len(self.step_freq_available)*len(self.duty_factor_available)
+            contact_sequence_temp = np.zeros((possibilities, 4, self.horizon))
+
+            possibilities = []
+            for j in range(len(self.step_freq_available)):
+                for d in range(len(self.duty_factor_available)):
+                    pgg_temp = PeriodicGaitGenerator(duty_factor=self.duty_factor_available[d],
+                                                    step_freq=self.step_freq_available[j],
+                                                    gait_type=pgg_gait_type,
+                                                    horizon=self.horizon)
+                    pgg_temp.set_phase_signal(pgg_phase_signal)
+                    contact_sequence_temp[j] = pgg_temp.compute_contact_sequence(contact_sequence_dts=contact_sequence_dts, 
+                                                                                    contact_sequence_lenghts=contact_sequence_lenghts)
+                    possibilities.append((j, d))
+
+            qps_costs = self.batched_controller.compute_batch_control(state_current,
+                                                                            ref_state,
+                                                                            contact_sequence_temp)
+            
+            chosen = possibilities[np.argmin(qps_costs)]
+            best_sample_freq = self.step_freq_available[chosen[0]]
+            best_duty_factor = self.duty_factor_available[chosen[1]]
+
+            
+
+        elif self.optimize_full_gait and optimize_swing == 1:
+            print("not implemented yet")
 
 
         
-        return best_sample_freq
+        return best_sample_freq, best_duty_factor
         
