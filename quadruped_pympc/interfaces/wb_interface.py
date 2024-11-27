@@ -161,6 +161,7 @@ class WBInterface:
 
         # Compute the reference for the footholds ---------------------------------------------------
         self.frg.update_lift_off_positions(previous_contact, self.current_contact, feet_pos, legs_order, self.pgg.gait_type)
+        self.frg.update_touch_down_positions(previous_contact, self.current_contact, feet_pos, legs_order, self.pgg.gait_type)
         ref_feet_pos = self.frg.compute_footholds_reference(
             com_position=base_pos,
             base_ori_euler_xyz=base_ori_euler_xyz,
@@ -420,7 +421,8 @@ class WBInterface:
                                                         mass_matrix=legs_mass_matrix[leg_name]
                                                         )
                 else:
-                    des_foot_pos[leg_name] = nmpc_footholds[leg_name]
+                    #des_foot_pos[leg_name] = nmpc_footholds[leg_name]
+                    des_foot_pos[leg_name] = self.frg.touch_down_positions[leg_name]
                     des_foot_vel[leg_name] = des_foot_vel[leg_name]*0.0
         else:
             # The swing controller is in the joint space
@@ -438,8 +440,8 @@ class WBInterface:
                     
         
         # Compute PD targets for the joints ----------------------------------------------------------------
-        pd_target_joints_pos = LegsAttr(*[np.zeros((3, 1)) for _ in range(4)])
-        pd_target_joints_vel = LegsAttr(*[np.zeros((3, 1)) for _ in range(4)])
+        des_joints_pos = LegsAttr(*[np.zeros((3, 1)) for _ in range(4)])
+        des_joints_vel = LegsAttr(*[np.zeros((3, 1)) for _ in range(4)])
         if(cfg.mpc_params['type'] != 'kinodynamic'):
             qpos_predicted = copy.deepcopy(qpos)
             #TODO use predicted rotation too
@@ -447,26 +449,26 @@ class WBInterface:
             temp = self.ik.fun_compute_solution(qpos_predicted,
                                                 des_foot_pos.FL, des_foot_pos.FR,
                                                 des_foot_pos.RL, des_foot_pos.RR)
-            #print("IK time: ", time.time() - time_ik)
-            pd_target_joints_pos.FL = temp[0:3]
-            pd_target_joints_pos.FR = temp[3:6]
-            pd_target_joints_pos.RL = temp[6:9]
-            pd_target_joints_pos.RR = temp[9:12]
             
-            #TODO fix dt
-            pd_target_joints_vel.FL = (pd_target_joints_pos.FL - qpos[legs_qpos_idx.FL])/0.02
-            pd_target_joints_vel.FR = (pd_target_joints_pos.FR - qpos[legs_qpos_idx.FR])/0.02
-            pd_target_joints_vel.RL = (pd_target_joints_pos.RL - qpos[legs_qpos_idx.RL])/0.02
-            pd_target_joints_vel.RR = (pd_target_joints_pos.RR - qpos[legs_qpos_idx.RR])/0.02
+            des_joints_pos.FL = temp[0:3]
+            des_joints_pos.FR = temp[3:6]
+            des_joints_pos.RL = temp[6:9]
+            des_joints_pos.RR = temp[9:12]
+            
+            
+            des_joints_vel.FL = (des_joints_pos.FL - qpos[legs_qpos_idx.FL])/simulation_dt
+            des_joints_vel.FR = (des_joints_pos.FR - qpos[legs_qpos_idx.FR])/simulation_dt
+            des_joints_vel.RL = (des_joints_pos.RL - qpos[legs_qpos_idx.RL])/simulation_dt
+            des_joints_vel.RR = (des_joints_pos.RR - qpos[legs_qpos_idx.RR])/simulation_dt
 
 
         else:
-            #TODO
-            pd_target_joints_pos = nmpc_joints_pos
-            pd_target_joints_vel = nmpc_joints_vel
+            # In the case of the kinodynamic model, we just use the NMPC predicted joints
+            des_joints_pos = nmpc_joints_pos
+            des_joints_pos = nmpc_joints_vel
 
 
-        return tau, pd_target_joints_pos, pd_target_joints_vel
+        return tau, des_joints_pos, des_joints_vel
     
 
 

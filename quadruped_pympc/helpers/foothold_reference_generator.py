@@ -24,6 +24,7 @@ class FootholdReferenceGenerator:
         self.stance_time = stance_time
         self.hip_height = hip_height
         self.lift_off_positions = lift_off_positions
+        self.touch_down_positions = lift_off_positions
 
         # The footholds are wrt the hip position, so if we want to change
         # the default foothold, we need to use a variable to add an offset
@@ -134,6 +135,15 @@ class FootholdReferenceGenerator:
 
             if(gait_type == GaitType.FULL_STANCE.value):
                 self.lift_off_positions[leg_name] = feet_pos[leg_name]
+
+    def update_touch_down_positions(self, previous_contact, current_contact, feet_pos, legs_order, gait_type):
+        for leg_id, leg_name in enumerate(legs_order):
+            # Set touch-downs
+            if previous_contact[leg_id] == 0 and current_contact[leg_id] == 1:
+                self.touch_down_positions[leg_name] = feet_pos[leg_name]
+
+            if(gait_type == GaitType.FULL_STANCE.value):
+                self.touch_down_positions[leg_name] = feet_pos[leg_name]
 
 
 if __name__ == "__main__":
