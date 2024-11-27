@@ -351,7 +351,7 @@ class Acados_NMPC_Lyapunov:
         angles = self.centroidal_model.states[6:9]
         eta = cs.vertcat(angles, w)
 
-        
+
         residual = eta.T@eta
         ub = np.array([config.mpc_params['residual_dynamics_upper_bound']])
         lb = np.zeros(1)
@@ -608,7 +608,7 @@ class Acados_NMPC_Lyapunov:
         phi = self.centroidal_model.states[42:45]
         squared_K_z1 = np.array([K_z1[0]*K_z1[0], K_z1[1]*K_z1[1], K_z1[2]*K_z1[2]])
         F_star = mass*(-(K_z1 + K_z2)*z2 + squared_K_z1*z1 - gravity + p_ddot)
-        F_star += phi
+        F_star -= phi
 
 
         stanceFL = self.centroidal_model.param[0]
@@ -1292,7 +1292,7 @@ class Acados_NMPC_Lyapunov:
         self.initial_base_position = copy.deepcopy(state["position"])
         reference = copy.deepcopy(reference)
         state = copy.deepcopy(state)
-        
+
         reference["ref_position"] = reference["ref_position"] - state["position"]
         reference["ref_foot_FL"] = reference["ref_foot_FL"] - state["position"]
         reference["ref_foot_FR"] = reference["ref_foot_FR"] - state["position"]
@@ -1589,6 +1589,7 @@ class Acados_NMPC_Lyapunov:
         gravity = np.array([0, 0, -9.81])
         squared_K_z1 = np.array([K_z1[0]*K_z1[0], K_z1[1]*K_z1[1], K_z1[2]*K_z1[2]])
         F_star = mass*(-(K_z1 + K_z2)*z2 + squared_K_z1*z1 - gravity + p_ddot)
+        F_star -= phi
 
 
         num_leg_contact = FL_contact_sequence[0] + FR_contact_sequence[0]

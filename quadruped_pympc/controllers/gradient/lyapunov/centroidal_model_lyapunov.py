@@ -236,7 +236,7 @@ class Centroidal_Model_Lyapunov:
         # Calculate the adaptive law
         squared_K_z1 = np.array([K_z1[0]*K_z1[0], K_z1[1]*K_z1[1], K_z1[2]*K_z1[2]])
         F_star = mass*(-(K_z1 + K_z2)*z2 + squared_K_z1*z1 - gravity + p_ddot)
-        F_star += phi
+        F_star -= phi
 
 
 
@@ -246,7 +246,7 @@ class Centroidal_Model_Lyapunov:
         F_delta += foot_force_fr@stanceFR
         F_delta += foot_force_rl@stanceRL
         F_delta += foot_force_rr@stanceRR
-        z2_dot = -K_z2*z2 + 1/mass@(F_delta + F_star) + gravity - p_ddot - phi
+        z2_dot = -K_z2*z2 + 1/mass@(F_delta + F_star) + gravity - p_ddot + phi
 
 
 
