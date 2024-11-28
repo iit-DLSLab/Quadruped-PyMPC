@@ -29,9 +29,10 @@ if(cfg.simulation_params['visual_foothold_adaptation'] != 'blind'):
 
 
 
-
-if __name__ == '__main__':
+def run_simulation(process=0, num_episodes=500, return_dict=None, seed_number=0, render=True):
+    
     np.set_printoptions(precision=3, suppress=True)
+    np.random.seed(seed_number) 
 
     robot_name = cfg.robot
     hip_height = cfg.hip_height
@@ -65,7 +66,8 @@ if __name__ == '__main__':
         env.mjModel.qpos0 = np.concatenate((env.mjModel.qpos0[:7], cfg.qpos0_js))
 
     env.reset(random=False)
-    env.render()  # Pass in the first render call any mujoco.viewer.KeyCallbackType
+    if render:
+        env.render()  # Pass in the first render call any mujoco.viewer.KeyCallbackType
 
 
     # Initialization of variables used in the main control loop --------------------------------
@@ -108,7 +110,7 @@ if __name__ == '__main__':
 
     # --------------------------------------------------------------
     RENDER_FREQ = 30  # Hz
-    N_EPISODES = 500
+    N_EPISODES = num_episodes
     N_STEPS_PER_EPISODE = 2000 if env.base_vel_command_type != "human" else 20000
     last_render_time = time.time()
 
@@ -198,7 +200,7 @@ if __name__ == '__main__':
 
 
             # Render only at a certain frequency -----------------------------------------------------------------
-            if time.time() - last_render_time > 1.0 / RENDER_FREQ or env.step_num == 1:
+            if render and (time.time() - last_render_time > 1.0 / RENDER_FREQ or env.step_num == 1):
                 _, _, feet_GRF = env.feet_contact_state(ground_reaction_forces=True)
 
                 # Plot the swing trajectory
@@ -244,7 +246,7 @@ if __name__ == '__main__':
 
 
             # Reset the environment if the episode is terminated ------------------------------------------------
-            if env.step_num > N_STEPS_PER_EPISODE or is_terminated or is_truncated:
+            if env.step_num >= N_STEPS_PER_EPISODE or is_terminated or is_truncated:
                 if is_terminated:
                     print("Environment terminated")
                 else:
@@ -253,10 +255,19 @@ if __name__ == '__main__':
                 env.reset(random=False)
                 
                 quadrupedpympc_wrapper.reset(initial_feet_pos = env.feet_pos(frame='world'))
+                
 
-                
-                
+                if(return_dict is not None):
+                    return_dict['process'+str(process)+'_ctrl_state_history_ep'+str(episode_num)] = np.array(ctrl_state_history).reshape(-1, len(ctrl_state))
+                    return_dict['process'+str(process)+'_success_rate_ep'+str(episode_num)] = int(not is_terminated or not is_truncated)
+
 
     env.close()
+    return return_dict
 
 
+
+
+if __name__ == '__main__':
+    run_simulation()
+    #run_simulation(num_episodes=1, render=False)
