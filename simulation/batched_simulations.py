@@ -1,3 +1,9 @@
+# Description: This script is used to simulate multiple MPC runs in parallel, 
+# mainly to test the performance of the MPC controller over time.
+
+# Authors:
+# Giulio Turrisi
+
 import multiprocessing
 from multiprocessing import Process
 import time
@@ -10,7 +16,6 @@ import simulation
 NUM_PROCESSES = 2
 NUM_EPISODES = 2
 NUM_ITERATIONS = 3
-
 
 
 if __name__ == '__main__':
