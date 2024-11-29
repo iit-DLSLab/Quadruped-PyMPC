@@ -467,6 +467,28 @@ class WBInterface:
             des_joints_pos = nmpc_joints_pos
             des_joints_pos = nmpc_joints_vel
 
+        # Saturate of desired joint positions and velocities
+        max_joints_pos_difference = 0.1
+        max_joints_vel_difference = 1.0
+        
+        # Calculate the difference
+        actual_joints_pos = LegsAttr(*[qpos[legs_qpos_idx[leg_name]] for leg_name in self.legs_order])
+        actual_joints_vel = LegsAttr(*[qvel[legs_qvel_idx[leg_name]] for leg_name in self.legs_order])
+        joints_pos_difference = des_joints_pos - actual_joints_pos
+        joints_vel_difference = des_joints_vel - actual_joints_vel
+
+        # Saturate the difference for each leg
+        for leg in ["FL", "FR", "RL", "RR"]:
+            joints_pos_difference = des_joints_pos[leg] - actual_joints_pos[leg]
+            saturated_joints_pos_difference = np.clip(joints_pos_difference, -max_joints_pos_difference, max_joints_pos_difference)
+            des_joints_pos[leg] = actual_joints_pos[leg] + saturated_joints_pos_difference
+
+            joints_vel_difference = des_joints_vel[leg] - actual_joints_vel[leg]
+            saturated_joints_vel_difference = np.clip(joints_vel_difference, -max_joints_vel_difference, max_joints_vel_difference)
+            des_joints_vel[leg] = actual_joints_vel[leg] + saturated_joints_vel_difference
+        
+
+
 
         return tau, des_joints_pos, des_joints_vel
     

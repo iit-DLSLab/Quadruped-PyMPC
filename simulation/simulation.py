@@ -77,6 +77,15 @@ def run_simulation(process=0, num_episodes=500, return_dict=None, seed_number=0,
     jac_feet_dot = LegsAttr(*[np.zeros((3, env.mjModel.nv)) for _ in range(4)])
     # Torque vector
     tau = LegsAttr(*[np.zeros((env.mjModel.nv, 1)) for _ in range(4)])
+    # Torque limits
+    tau_soft_limits_scalar = 0.9
+    tau_limits = LegsAttr(
+        FL=env.mjModel.actuator_ctrlrange[env.legs_tau_idx.FL]*tau_soft_limits_scalar,
+        FR=env.mjModel.actuator_ctrlrange[env.legs_tau_idx.FR]*tau_soft_limits_scalar,
+        RL=env.mjModel.actuator_ctrlrange[env.legs_tau_idx.RL]*tau_soft_limits_scalar,
+        RR=env.mjModel.actuator_ctrlrange[env.legs_tau_idx.RR]*tau_soft_limits_scalar)
+
+    
     
     # Feet positions and Legs order
     feet_pos = None
@@ -171,7 +180,11 @@ def run_simulation(process=0, num_episodes=500, return_dict=None, seed_number=0,
                                                     legs_order, simulation_dt, ref_base_lin_vel, ref_base_ang_vel,
                                                     env.step_num, qpos, qvel, feet_jac, jac_feet_dot, feet_vel, legs_qfrc_bias,
                                                     legs_mass_matrix, legs_qpos_idx, legs_qvel_idx, tau, inertia)
-            
+            # Limit tau between tau_limits
+            for leg in ["FL", "FR", "RL", "RR"]:
+                tau_min, tau_max = tau_limits[leg][:, 0], tau_limits[leg][:, 1]
+                tau[leg] = np.clip(tau[leg], tau_min, tau_max)
+
             quadrupedpympc_observables = quadrupedpympc_wrapper.get_obs()
 
             
