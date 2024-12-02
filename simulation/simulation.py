@@ -29,7 +29,7 @@ if(cfg.simulation_params['visual_foothold_adaptation'] != 'blind'):
 
 
 
-def run_simulation(process=0, num_episodes=500, return_dict=None, seed_number=0, render=True):
+def run_simulation(process=0, num_episodes=500, return_dict=None, seed_number=0, base_vel_command_type="human" ,render=True):
     
     np.set_printoptions(precision=3, suppress=True)
     np.random.seed(seed_number) 
@@ -53,9 +53,10 @@ def run_simulation(process=0, num_episodes=500, return_dict=None, seed_number=0,
                        feet_geom_name=robot_feet_geom_names,  # Geom/Frame id of feet
                        scene=scene_name,
                        sim_dt=simulation_dt,
-                       ref_base_lin_vel=0.0,  # pass a float for a fixed value
+                       ref_base_lin_vel=(0, 0.6),  # pass a float for a fixed value
+                       ref_base_ang_vel=(-0.2, 0.2),  # pass a float for a fixed value
                        ground_friction_coeff=1.5,  # pass a float for a fixed value
-                       base_vel_command_type="human",  # "forward", "random", "forward+rotate", "human"
+                       base_vel_command_type=base_vel_command_type,  # "forward", "random", "forward+rotate", "human"
                        state_obs_names=state_observables_names,  # Desired quantities in the 'state' vec
                        )
 
@@ -265,14 +266,18 @@ def run_simulation(process=0, num_episodes=500, return_dict=None, seed_number=0,
                 else:
                     state_obs_history.append(ep_state_obs_history)
                     ctrl_state_history.append(ep_ctrl_state_history)
-                env.reset(random=False)
                 
-                quadrupedpympc_wrapper.reset(initial_feet_pos = env.feet_pos(frame='world'))
-                
+                env.reset(random=True)     
+                quadrupedpympc_wrapper.reset(initial_feet_pos = env.feet_pos(frame='world')) 
 
                 if(return_dict is not None):
                     return_dict['process'+str(process)+'_ctrl_state_history_ep'+str(episode_num)] = np.array(ctrl_state_history).reshape(-1, len(ctrl_state))
-                    return_dict['process'+str(process)+'_success_rate_ep'+str(episode_num)] = int(not is_terminated or not is_truncated)
+                    if(is_terminated or is_truncated):
+                        return_dict['process'+str(process)+'_success_rate_ep'+str(episode_num)] = 0
+                    else:
+                        return_dict['process'+str(process)+'_success_rate_ep'+str(episode_num)] = 1
+                
+                break
 
 
     env.close()
