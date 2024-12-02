@@ -246,6 +246,7 @@ class QuadrupedPyMPC_Wrapper:
         """ Reset the controller."""
 
         self.wb_interface.reset(initial_feet_pos)
+        self.srbd_controller_interface.controller.reset()
         
 
     

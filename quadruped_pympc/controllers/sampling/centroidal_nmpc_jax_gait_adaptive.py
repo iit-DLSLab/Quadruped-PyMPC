@@ -1137,3 +1137,7 @@ class Sampling_MPC:
 
         
         return nmpc_GRFs, nmpc_footholds, best_control_parameters, best_cost, costs, new_sigma_cem_mppi
+
+
+    def reset(self):
+        print("Resetting the controller")

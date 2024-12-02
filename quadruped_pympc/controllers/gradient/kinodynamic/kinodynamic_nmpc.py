@@ -656,9 +656,9 @@ class Acados_NMPC_KinoDynamic:
 
     def reset(self):
         self.acados_ocp_solver.reset()
-        
-    
-
+        self.acados_ocp_solver = AcadosOcpSolver(self.ocp,
+                                                 json_file=self.ocp.code_export_directory + "/centroidal_nmpc" + ".json",
+                                                 build=False, generate=False)
 
 
 
