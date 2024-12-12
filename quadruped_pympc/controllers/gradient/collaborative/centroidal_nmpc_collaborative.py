@@ -3,7 +3,7 @@
 # Authors: Giulio Turrisi - 
 
 from acados_template import AcadosOcp, AcadosOcpSolver, ACADOS_INFTY
-from centroidal_model_collaborative import Centroidal_Model_Collaborative
+from .centroidal_model_collaborative import Centroidal_Model_Collaborative
 import numpy as np
 import scipy.linalg
 import casadi as cs
