@@ -124,8 +124,6 @@ class WBInterface:
             contact_sequence (np.ndarray): this is an array, containing the contact sequence of the robot in the future
             ref_feet_pos (LegsAttr): where to step in world frame
             ref_feet_constraints (LegsAttr): constraints for the footholds in the world frame
-            contact_sequence_dts (list): 
-            contact_sequence_lenghts (list): 
             step_height (float): step height
             optimize_swing (bool), boolean to inform that the robot is in the apex, hence we can optimize step freq. 
         """
@@ -326,7 +324,7 @@ class WBInterface:
         else:
             optimize_swing = 0
 
-        return state_current, ref_state, contact_sequence, self.contact_sequence_dts, self.contact_sequence_lenghts, self.step_height, optimize_swing
+        return state_current, ref_state, contact_sequence, self.step_height, optimize_swing
     
 
 

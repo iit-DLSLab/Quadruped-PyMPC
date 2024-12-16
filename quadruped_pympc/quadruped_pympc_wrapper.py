@@ -117,8 +117,6 @@ class QuadrupedPyMPC_Wrapper:
         state_current, \
         ref_state, \
         contact_sequence, \
-        contact_sequence_dts, \
-        contact_sequence_lenghts, \
         step_height, \
         optimize_swing = self.wb_interface.update_state_and_reference(base_pos,
                                                 base_lin_vel,
@@ -164,8 +162,6 @@ class QuadrupedPyMPC_Wrapper:
                                                                         self.wb_interface.pgg.step_freq,
                                                                         self.wb_interface.pgg.duty_factor,
                                                                         self.wb_interface.pgg.gait_type,
-                                                                        contact_sequence_dts,
-                                                                        contact_sequence_lenghts,
                                                                         optimize_swing)
 
 
