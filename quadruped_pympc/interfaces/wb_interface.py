@@ -186,18 +186,6 @@ class WBInterface:
             
             ref_feet_pos, ref_feet_constraints = self.vfa.get_footholds_adapted(ref_feet_pos)
 
-
-            """step_height_modification = False
-            for _, leg_name in enumerate(legs_order):
-                #TODO this should be in the terrain frame
-                ref_feet_pos_height_diffence = ref_feet_pos[leg_name][2] - self.frg.lift_off_positions[leg_name][2]
-                if(ref_feet_pos_height_diffence > (cfg.simulation_params['step_height']) and ref_feet_pos_height_diffence > 0.0):
-                    step_height = ref_feet_pos_height_diffence + 0.05
-                    step_height_modification = True
-                    self.stc.regenerate_swing_trajectory_generator(step_height=step_height, swing_period=self.stc.swing_period)
-            if(step_height_modification == False):
-                step_height = cfg.simulation_params['step_height']
-                self.stc.regenerate_swing_trajectory_generator(step_height=step_height, swing_period=self.stc.swing_period)"""
         
         else:
             ref_feet_constraints = LegsAttr(FL=None, FR=None, RL=None, RR=None)
@@ -222,15 +210,19 @@ class WBInterface:
         if(cfg.mpc_params['type'] != 'kinodynamic'):
             ref_state = {}
             ref_state |= dict(ref_foot_FL=ref_feet_pos.FL.reshape((1, 3)),
-                                ref_foot_FR=ref_feet_pos.FR.reshape((1, 3)),
-                                ref_foot_RL=ref_feet_pos.RL.reshape((1, 3)),
-                                ref_foot_RR=ref_feet_pos.RR.reshape((1, 3)),
-                                # Also update the reference base linear velocity and
-                                ref_linear_velocity=ref_base_lin_vel,
-                                ref_angular_velocity=ref_base_ang_vel,
-                                ref_orientation=np.array([terrain_roll, terrain_pitch, 0.0]),
-                                ref_position=ref_pos
-                                )
+                              ref_foot_FR=ref_feet_pos.FR.reshape((1, 3)),
+                              ref_foot_RL=ref_feet_pos.RL.reshape((1, 3)),
+                              ref_foot_RR=ref_feet_pos.RR.reshape((1, 3)),
+                              ref_foot_constraints_FL=ref_feet_constraints.FL,
+                              ref_foot_constraints_FR=ref_feet_constraints.FR,
+                              ref_foot_constraints_RL=ref_feet_constraints.RL,
+                              ref_foot_constraints_RR=ref_feet_constraints.RR,
+                              # Also update the reference base linear velocity and
+                              ref_linear_velocity=ref_base_lin_vel,
+                              ref_angular_velocity=ref_base_ang_vel,
+                              ref_orientation=np.array([terrain_roll, terrain_pitch, 0.0]),
+                              ref_position=ref_pos
+                              )
         else:
             # In the case of the kinodynamic model,
             # we should pass as a reference the X-Y-Z spline of the feet for the horizon, 
@@ -308,16 +300,20 @@ class WBInterface:
             ref_state = {}
             init_qpos = np.array([0, 0.9, -1.8, 0, 0.9, -1.8, 0, 0.9, -1.8, 0, 0.9, -1.8])
             ref_state |= dict(ref_foot_FL=desired_foot_position_FL,
-                                ref_foot_FR=desired_foot_position_FR,
-                                ref_foot_RL=desired_foot_position_RL,
-                                ref_foot_RR=desired_foot_position_RR,
-                                # Also update the reference base linear velocity and
-                                ref_linear_velocity=ref_base_lin_vel,
-                                ref_angular_velocity=ref_base_ang_vel,
-                                ref_orientation=np.array([terrain_roll, terrain_pitch, 0.0]),
-                                ref_position=ref_pos,
-                                ref_joints=init_qpos
-                                )
+                              ref_foot_FR=desired_foot_position_FR,
+                              ref_foot_RL=desired_foot_position_RL,
+                              ref_foot_RR=desired_foot_position_RR,
+                              ref_foot_constraints_FL=ref_feet_constraints.FL,
+                              ref_foot_constraints_FR=ref_feet_constraints.FR,
+                              ref_foot_constraints_RL=ref_feet_constraints.RL,
+                              ref_foot_constraints_RR=ref_feet_constraints.RR,
+                              # Also update the reference base linear velocity and
+                              ref_linear_velocity=ref_base_lin_vel,
+                              ref_angular_velocity=ref_base_ang_vel,
+                              ref_orientation=np.array([terrain_roll, terrain_pitch, 0.0]),
+                              ref_position=ref_pos,
+                              ref_joints=init_qpos
+                              )
 
     
         # -------------------------------------------------------------------------------------------------
@@ -330,7 +326,7 @@ class WBInterface:
         else:
             optimize_swing = 0
 
-        return state_current, ref_state, contact_sequence, ref_feet_pos, ref_feet_constraints, self.contact_sequence_dts, self.contact_sequence_lenghts, self.step_height, optimize_swing
+        return state_current, ref_state, contact_sequence, self.contact_sequence_dts, self.contact_sequence_lenghts, self.step_height, optimize_swing
     
 
 
