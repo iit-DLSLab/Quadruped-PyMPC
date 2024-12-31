@@ -121,10 +121,12 @@ If you find the work useful, please consider citing [our work](https://arxiv.org
 
 ```
 @INPROCEEDINGS{turrisi2024sampling,
-  title={On the Benefits of GPU Sample-Based Stochastic Predictive Controllers for Legged Locomotion},
   author={Turrisi, Giulio and Modugno, Valerio and Amatucci, Lorenzo and Kanoulas, Dimitrios and Semini, Claudio},
-  booktitle={2024 IEEE/RSJ International Conference on Intelligent Robots and Systems (IROS)},
-  year={2024}
+  booktitle={2024 IEEE/RSJ International Conference on Intelligent Robots and Systems (IROS)}, 
+  title={On the Benefits of GPU Sample-Based Stochastic Predictive Controllers for Legged Locomotion}, 
+  year={2024},
+  pages={13757-13764},
+  doi={10.1109/IROS58592.2024.10801698}
 }
 ```
 
