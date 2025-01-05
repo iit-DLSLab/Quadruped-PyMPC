@@ -1,3 +1,10 @@
+<div style="display: flex; justify-content: space-around;">
+  <img src="./gifs/aliengo_trot.gif" alt="Trot" width="30%">
+  <img src="./gifs/hyqreal_pace.gif" alt="Pace" width="30%">
+  <img src="./gifs/go2_bound.gif" alt="Bound" width="30%">
+</div>
+
+
 ## Overview
 This repo contains a model predictive controller based on the **single rigid body model** and written in **Python**. It comes in two flavours: gradient-based via [acados](https://github.com/acados/acados) or sampling-based via [jax](https://github.com/google/jax). The controller is tested on real robots and is compatible with [Mujoco](https://mujoco.org/). See [the end of this README](https://github.com/iit-DLSLab/Quadruped-PyMPC?tab=readme-ov-file#citing-this-work) if you want to cite this work.
 
@@ -17,20 +24,6 @@ Features sampling-based mpc:
 - optional step frequency adaptation for enhancing robustness
 - implements different strategies: [random sampling](https://arxiv.org/pdf/2212.00541.pdf), [mppi](https://sites.gatech.edu/acds/mppi/), or [cemppi](https://arxiv.org/pdf/2203.16633.pdf) 
 - different control parametrizations: zero-order, linear splines or cubic splines (see [mujoco-mpc](https://arxiv.org/pdf/2212.00541.pdf))
-
-<br>
-<div style="display: flex; justify-content: space-around;">
-  <img src="./gifs/trot.gif" alt="Trot" width="30%">
-  <img src="./gifs/pace.gif" alt="Pace" width="30%">
-  <img src="./gifs/crawl.gif" alt="Crawl" width="30%">
-</div>
-
-<div style="display: flex; justify-content: space-around;">
-  <img src="./gifs/trot_mujoco.gif" alt="Trot Mujoco" width="30%">
-  <img src="./gifs/pace_mujoco.gif" alt="Pace Mujoco" width="30%">
-  <img src="./gifs/crawl_mujoco.gif" alt="Crawl Mujoco" width="30%">
-</div>
-<br>
 
 
 
