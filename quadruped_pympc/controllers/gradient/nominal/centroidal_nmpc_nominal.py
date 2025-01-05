@@ -31,6 +31,8 @@ class Acados_NMPC_Nominal:
 
         self.use_DDP = config.mpc_params['use_DDP']
 
+        self.verbose = config.mpc_params['verbose']
+
         self.previous_status = -1
         self.previous_contact_sequence = np.zeros((4, self.horizon))
         self.optimal_next_state = np.zeros((24,))
@@ -996,7 +998,8 @@ class Acados_NMPC_Nominal:
                             idx_constraint[3] += 1
 
         except:
-            print("###WARNING: error in setting the constraints")
+            if(self.verbose):
+                print("###WARNING: error in setting the constraints")
 
         return
 
@@ -1305,7 +1308,8 @@ class Acados_NMPC_Nominal:
                                                cap_integrator_pitch * np.sign(self.integral_errors[5]),
                                                self.integral_errors[5])
 
-            print("self.integral_errors: ", self.integral_errors)
+            if(self.verbose):
+                print("self.integral_errors: ", self.integral_errors)
 
         # Set initial state constraint acados, converting first the dictionary to np array
         state_acados = np.concatenate((state["position"], state["linear_velocity"],
@@ -1334,11 +1338,13 @@ class Acados_NMPC_Nominal:
             # feedback phase
             self.acados_ocp_solver.options_set('rti_phase', 2)
             status = self.acados_ocp_solver.solve()
-            print("feedback phase time: ", self.acados_ocp_solver.get_stats('time_tot'))
+            if(self.verbose):
+                print("feedback phase time: ", self.acados_ocp_solver.get_stats('time_tot'))
 
         else:
             status = self.acados_ocp_solver.solve()
-            print("ocp time: ", self.acados_ocp_solver.get_stats('time_tot'))
+            if(self.verbose):
+                print("ocp time: ", self.acados_ocp_solver.get_stats('time_tot'))
 
         # Take the solution
         control = self.acados_ocp_solver.get(0, "u")
@@ -1486,12 +1492,14 @@ class Acados_NMPC_Nominal:
 
         optimal_next_state = self.acados_ocp_solver.get(optimal_next_state_index, "x")[0:24]
         self.optimal_next_state = optimal_next_state
-        self.acados_ocp_solver.print_statistics()
+        if(self.verbose):
+            self.acados_ocp_solver.print_statistics()
 
         # Check if QPs converged, if not just use the reference footholds
         # and a GRF over Z distribuited between the leg in stance
         if (status == 1 or status == 4):
-            print("status", status)
+            if(self.verbose):
+                print("status", status)
             if FL_contact_sequence[0] == 0:
                 optimal_foothold[0] = reference["ref_foot_FL"][0]
             if FR_contact_sequence[0] == 0:

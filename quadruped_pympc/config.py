@@ -69,6 +69,9 @@ mpc_params = {
     # 'lyapunov' optimized directly the GRF and has a Lyapunov-based stability constraint
     'type':                                    'nominal',
 
+    # print the mpc info
+    'verbose':                                 False,
+
     # horizon is the number of timesteps in the future that the mpc will optimize
     # dt is the discretization time used in the mpc
     'horizon':                                 12,
