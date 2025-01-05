@@ -126,6 +126,7 @@ class SRBDControllerInterface:
 
                     nmpc_GRFs, \
                     nmpc_footholds, \
+                    nmpc_predicted_state,\
                     self.controller.best_control_parameters, \
                     best_cost, \
                     best_sample_freq, \
@@ -138,6 +139,7 @@ class SRBDControllerInterface:
                     nominal_sample_freq = pgg_step_freq
                     nmpc_GRFs, \
                     nmpc_footholds, \
+                    nmpc_predicted_state,\
                     self.controller.best_control_parameters, \
                     best_cost, \
                     best_sample_freq, \
@@ -155,7 +157,6 @@ class SRBDControllerInterface:
             nmpc_joints_pos = None
             nmpc_joints_vel = None
             nmpc_joints_acc = None
-            nmpc_predicted_state = None
 
         # If we use Gradient-Based MPC
         else:
