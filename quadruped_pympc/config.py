@@ -6,7 +6,7 @@ from quadruped_pympc.helpers.quadruped_utils import GaitType
 
 # These are used both for a real experiment and a simulation -----------
 # These are the only attributes needed per quadruped, the rest can be computed automatically ----------------------
-robot = 'aliengo'  # 'go1', 'go2', 'aliengo', 'hyqreal', 'mini_cheetah'  # TODO: Load from robot_descriptions.py
+robot = 'aliengo'  # 'go1', 'go2', 'b1', 'aliengo', 'hyqreal', 'mini_cheetah'  # TODO: Load from robot_descriptions.py
 robot_leg_joints = dict(FL=['FL_hip_joint', 'FL_thigh_joint', 'FL_calf_joint',],  # TODO: Make configs per robot.
                         FR=['FR_hip_joint', 'FR_thigh_joint', 'FR_calf_joint',],
                         RL=['RL_hip_joint', 'RL_thigh_joint', 'RL_calf_joint',],
@@ -40,6 +40,15 @@ elif (robot == 'aliengo'):
 
     urdf_filename = "aliengo.urdf"
     hip_height = 0.35
+
+elif (robot == 'b2'):
+    mass = 60.0
+    inertia = np.array([[0.2310941359705289, -0.0014987128245817424, -0.021400468992761768],
+                        [-0.0014987128245817424, 1.4485084687476608, 0.0004641447134275615],
+                        [-0.021400468992761768, 0.0004641447134275615, 1.503217877350808]])
+
+    urdf_filename = "b2.urdf"
+    hip_height = 0.485
 
 elif (robot == 'hyqreal'):
     mass = 108.40
