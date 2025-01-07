@@ -444,10 +444,10 @@ class WBInterface:
                                                 des_foot_pos.FL, des_foot_pos.FR,
                                                 des_foot_pos.RL, des_foot_pos.RR)
             
-            des_joints_pos.FL = temp[0:3]
-            des_joints_pos.FR = temp[3:6]
-            des_joints_pos.RL = temp[6:9]
-            des_joints_pos.RR = temp[9:12]
+            des_joints_pos.FL = np.array(temp[0:3]).reshape((3, ))
+            des_joints_pos.FR = np.array(temp[3:6]).reshape((3, ))
+            des_joints_pos.RL = np.array(temp[6:9]).reshape((3, ))
+            des_joints_pos.RR = np.array(temp[9:12]).reshape((3, ))
             
             
             des_joints_vel.FL = (des_joints_pos.FL - qpos[legs_qpos_idx.FL])/simulation_dt
