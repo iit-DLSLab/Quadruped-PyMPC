@@ -196,9 +196,9 @@ class QuadrupedPyMPC_Wrapper:
         # to a low-level motor controller, here we can try to simulate it)
         kp_joint_motor = cfg.simulation_params['impedence_joint_position_gain']
         kd_joint_motor = cfg.simulation_params['impedence_joint_velocity_gain']
-        for leg in legs_order:
-            tau[leg] += kp_joint_motor * (des_joints_pos[leg] - qpos[legs_qpos_idx[leg]]) + \
-                        kd_joint_motor * (des_joints_vel[leg] - qvel[legs_qvel_idx[leg]])
+        #for leg in legs_order:
+        #    tau[leg] += kp_joint_motor * (des_joints_pos[leg] - qpos[legs_qpos_idx[leg]]) + \
+        #                kd_joint_motor * (des_joints_vel[leg] - qvel[legs_qvel_idx[leg]])
 
 
         # Save some observables -------------------------------------------------------------------------------------
