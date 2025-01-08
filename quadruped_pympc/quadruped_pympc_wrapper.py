@@ -169,8 +169,8 @@ class QuadrupedPyMPC_Wrapper:
         
         # Compute Swing and Stance Torque ---------------------------------------------------------------------------
         tau, \
-        _, \
-        _ = self.wb_interface.compute_stance_and_swing_torque(simulation_dt,
+        des_joints_pos, \
+        des_joints_vel = self.wb_interface.compute_stance_and_swing_torque(simulation_dt,
                                                             qpos,
                                                             qvel,
                                                             feet_jac,
@@ -192,6 +192,13 @@ class QuadrupedPyMPC_Wrapper:
                                                             self.nmpc_predicted_state)
         
 
+        # Do some PD control over the joints (these values are normally passed
+        # to a low-level motor controller, here we can try to simulate it)
+        kp_joint_motor = cfg.simulation_params['impedence_joint_position_gain']
+        kd_joint_motor = cfg.simulation_params['impedence_joint_velocity_gain']
+        for leg in legs_order:
+            tau[leg] += kp_joint_motor * (des_joints_pos[leg] - qpos[legs_qpos_idx[leg]]) + \
+                        kd_joint_motor * (des_joints_vel[leg] - qvel[legs_qvel_idx[leg]])
 
 
         # Save some observables -------------------------------------------------------------------------------------
