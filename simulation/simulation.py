@@ -29,9 +29,10 @@ if(cfg.simulation_params['visual_foothold_adaptation'] != 'blind'):
 
 
 
-
-if __name__ == '__main__':
+def run_simulation(process=0, num_episodes=500, return_dict=None, seed_number=0, base_vel_command_type="human" ,render=True):
+    
     np.set_printoptions(precision=3, suppress=True)
+    np.random.seed(seed_number) 
 
     robot_name = cfg.robot
     hip_height = cfg.hip_height
@@ -52,9 +53,10 @@ if __name__ == '__main__':
                        feet_geom_name=robot_feet_geom_names,  # Geom/Frame id of feet
                        scene=scene_name,
                        sim_dt=simulation_dt,
-                       ref_base_lin_vel=0.0,  # pass a float for a fixed value
+                       ref_base_lin_vel=(0, 0.6),  # pass a float for a fixed value
+                       ref_base_ang_vel=(-0.2, 0.2),  # pass a float for a fixed value
                        ground_friction_coeff=1.5,  # pass a float for a fixed value
-                       base_vel_command_type="human",  # "forward", "random", "forward+rotate", "human"
+                       base_vel_command_type=base_vel_command_type,  # "forward", "random", "forward+rotate", "human"
                        state_obs_names=state_observables_names,  # Desired quantities in the 'state' vec
                        )
 
@@ -65,7 +67,8 @@ if __name__ == '__main__':
         env.mjModel.qpos0 = np.concatenate((env.mjModel.qpos0[:7], cfg.qpos0_js))
 
     env.reset(random=False)
-    env.render()  # Pass in the first render call any mujoco.viewer.KeyCallbackType
+    if render:
+        env.render()  # Pass in the first render call any mujoco.viewer.KeyCallbackType
 
 
     # Initialization of variables used in the main control loop --------------------------------
@@ -75,6 +78,15 @@ if __name__ == '__main__':
     jac_feet_dot = LegsAttr(*[np.zeros((3, env.mjModel.nv)) for _ in range(4)])
     # Torque vector
     tau = LegsAttr(*[np.zeros((env.mjModel.nv, 1)) for _ in range(4)])
+    # Torque limits
+    tau_soft_limits_scalar = 0.9
+    tau_limits = LegsAttr(
+        FL=env.mjModel.actuator_ctrlrange[env.legs_tau_idx.FL]*tau_soft_limits_scalar,
+        FR=env.mjModel.actuator_ctrlrange[env.legs_tau_idx.FR]*tau_soft_limits_scalar,
+        RL=env.mjModel.actuator_ctrlrange[env.legs_tau_idx.RL]*tau_soft_limits_scalar,
+        RR=env.mjModel.actuator_ctrlrange[env.legs_tau_idx.RR]*tau_soft_limits_scalar)
+
+    
     
     # Feet positions and Legs order
     feet_pos = None
@@ -108,7 +120,7 @@ if __name__ == '__main__':
 
     # --------------------------------------------------------------
     RENDER_FREQ = 30  # Hz
-    N_EPISODES = 500
+    N_EPISODES = num_episodes
     N_STEPS_PER_EPISODE = 2000 if env.base_vel_command_type != "human" else 20000
     last_render_time = time.time()
 
@@ -169,7 +181,11 @@ if __name__ == '__main__':
                                                     legs_order, simulation_dt, ref_base_lin_vel, ref_base_ang_vel,
                                                     env.step_num, qpos, qvel, feet_jac, jac_feet_dot, feet_vel, legs_qfrc_bias,
                                                     legs_mass_matrix, legs_qpos_idx, legs_qvel_idx, tau, inertia)
-            
+            # Limit tau between tau_limits
+            for leg in ["FL", "FR", "RL", "RR"]:
+                tau_min, tau_max = tau_limits[leg][:, 0], tau_limits[leg][:, 1]
+                tau[leg] = np.clip(tau[leg], tau_min, tau_max)
+
             quadrupedpympc_observables = quadrupedpympc_wrapper.get_obs()
 
             
@@ -198,7 +214,7 @@ if __name__ == '__main__':
 
 
             # Render only at a certain frequency -----------------------------------------------------------------
-            if time.time() - last_render_time > 1.0 / RENDER_FREQ or env.step_num == 1:
+            if render and (time.time() - last_render_time > 1.0 / RENDER_FREQ or env.step_num == 1):
                 _, _, feet_GRF = env.feet_contact_state(ground_reaction_forces=True)
 
                 # Plot the swing trajectory
@@ -244,19 +260,32 @@ if __name__ == '__main__':
 
 
             # Reset the environment if the episode is terminated ------------------------------------------------
-            if env.step_num > N_STEPS_PER_EPISODE or is_terminated or is_truncated:
+            if env.step_num >= N_STEPS_PER_EPISODE or is_terminated or is_truncated:
                 if is_terminated:
                     print("Environment terminated")
                 else:
                     state_obs_history.append(ep_state_obs_history)
                     ctrl_state_history.append(ep_ctrl_state_history)
-                env.reset(random=False)
                 
-                quadrupedpympc_wrapper.reset(initial_feet_pos = env.feet_pos(frame='world'))
+                env.reset(random=True)     
+                quadrupedpympc_wrapper.reset(initial_feet_pos = env.feet_pos(frame='world')) 
 
+                if(return_dict is not None):
+                    return_dict['process'+str(process)+'_ctrl_state_history_ep'+str(episode_num)] = np.array(ctrl_state_history).reshape(-1, len(ctrl_state))
+                    if(is_terminated or is_truncated):
+                        return_dict['process'+str(process)+'_success_rate_ep'+str(episode_num)] = 0
+                    else:
+                        return_dict['process'+str(process)+'_success_rate_ep'+str(episode_num)] = 1
                 
-                
+                break
+
 
     env.close()
+    return return_dict
 
 
+
+
+if __name__ == '__main__':
+    run_simulation()
+    #run_simulation(num_episodes=1, render=False)

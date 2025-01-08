@@ -124,8 +124,6 @@ class WBInterface:
             contact_sequence (np.ndarray): this is an array, containing the contact sequence of the robot in the future
             ref_feet_pos (LegsAttr): where to step in world frame
             ref_feet_constraints (LegsAttr): constraints for the footholds in the world frame
-            contact_sequence_dts (list): 
-            contact_sequence_lenghts (list): 
             step_height (float): step height
             optimize_swing (bool), boolean to inform that the robot is in the apex, hence we can optimize step freq. 
         """
@@ -161,6 +159,7 @@ class WBInterface:
 
         # Compute the reference for the footholds ---------------------------------------------------
         self.frg.update_lift_off_positions(previous_contact, self.current_contact, feet_pos, legs_order, self.pgg.gait_type)
+        self.frg.update_touch_down_positions(previous_contact, self.current_contact, feet_pos, legs_order, self.pgg.gait_type)
         ref_feet_pos = self.frg.compute_footholds_reference(
             com_position=base_pos,
             base_ori_euler_xyz=base_ori_euler_xyz,
@@ -185,18 +184,6 @@ class WBInterface:
             
             ref_feet_pos, ref_feet_constraints = self.vfa.get_footholds_adapted(ref_feet_pos)
 
-
-            """step_height_modification = False
-            for _, leg_name in enumerate(legs_order):
-                #TODO this should be in the terrain frame
-                ref_feet_pos_height_diffence = ref_feet_pos[leg_name][2] - self.frg.lift_off_positions[leg_name][2]
-                if(ref_feet_pos_height_diffence > (cfg.simulation_params['step_height']) and ref_feet_pos_height_diffence > 0.0):
-                    step_height = ref_feet_pos_height_diffence + 0.05
-                    step_height_modification = True
-                    self.stc.regenerate_swing_trajectory_generator(step_height=step_height, swing_period=self.stc.swing_period)
-            if(step_height_modification == False):
-                step_height = cfg.simulation_params['step_height']
-                self.stc.regenerate_swing_trajectory_generator(step_height=step_height, swing_period=self.stc.swing_period)"""
         
         else:
             ref_feet_constraints = LegsAttr(FL=None, FR=None, RL=None, RR=None)
@@ -221,15 +208,19 @@ class WBInterface:
         if(cfg.mpc_params['type'] != 'kinodynamic'):
             ref_state = {}
             ref_state |= dict(ref_foot_FL=ref_feet_pos.FL.reshape((1, 3)),
-                                ref_foot_FR=ref_feet_pos.FR.reshape((1, 3)),
-                                ref_foot_RL=ref_feet_pos.RL.reshape((1, 3)),
-                                ref_foot_RR=ref_feet_pos.RR.reshape((1, 3)),
-                                # Also update the reference base linear velocity and
-                                ref_linear_velocity=ref_base_lin_vel,
-                                ref_angular_velocity=ref_base_ang_vel,
-                                ref_orientation=np.array([terrain_roll, terrain_pitch, 0.0]),
-                                ref_position=ref_pos
-                                )
+                              ref_foot_FR=ref_feet_pos.FR.reshape((1, 3)),
+                              ref_foot_RL=ref_feet_pos.RL.reshape((1, 3)),
+                              ref_foot_RR=ref_feet_pos.RR.reshape((1, 3)),
+                              ref_foot_constraints_FL=ref_feet_constraints.FL,
+                              ref_foot_constraints_FR=ref_feet_constraints.FR,
+                              ref_foot_constraints_RL=ref_feet_constraints.RL,
+                              ref_foot_constraints_RR=ref_feet_constraints.RR,
+                              # Also update the reference base linear velocity and
+                              ref_linear_velocity=ref_base_lin_vel,
+                              ref_angular_velocity=ref_base_ang_vel,
+                              ref_orientation=np.array([terrain_roll, terrain_pitch, 0.0]),
+                              ref_position=ref_pos
+                              )
         else:
             # In the case of the kinodynamic model,
             # we should pass as a reference the X-Y-Z spline of the feet for the horizon, 
@@ -307,16 +298,20 @@ class WBInterface:
             ref_state = {}
             init_qpos = np.array([0, 0.9, -1.8, 0, 0.9, -1.8, 0, 0.9, -1.8, 0, 0.9, -1.8])
             ref_state |= dict(ref_foot_FL=desired_foot_position_FL,
-                                ref_foot_FR=desired_foot_position_FR,
-                                ref_foot_RL=desired_foot_position_RL,
-                                ref_foot_RR=desired_foot_position_RR,
-                                # Also update the reference base linear velocity and
-                                ref_linear_velocity=ref_base_lin_vel,
-                                ref_angular_velocity=ref_base_ang_vel,
-                                ref_orientation=np.array([terrain_roll, terrain_pitch, 0.0]),
-                                ref_position=ref_pos,
-                                ref_joints=init_qpos
-                                )
+                              ref_foot_FR=desired_foot_position_FR,
+                              ref_foot_RL=desired_foot_position_RL,
+                              ref_foot_RR=desired_foot_position_RR,
+                              ref_foot_constraints_FL=ref_feet_constraints.FL,
+                              ref_foot_constraints_FR=ref_feet_constraints.FR,
+                              ref_foot_constraints_RL=ref_feet_constraints.RL,
+                              ref_foot_constraints_RR=ref_feet_constraints.RR,
+                              # Also update the reference base linear velocity and
+                              ref_linear_velocity=ref_base_lin_vel,
+                              ref_angular_velocity=ref_base_ang_vel,
+                              ref_orientation=np.array([terrain_roll, terrain_pitch, 0.0]),
+                              ref_position=ref_pos,
+                              ref_joints=init_qpos
+                              )
 
     
         # -------------------------------------------------------------------------------------------------
@@ -329,7 +324,7 @@ class WBInterface:
         else:
             optimize_swing = 0
 
-        return state_current, ref_state, contact_sequence, ref_feet_pos, ref_feet_constraints, self.contact_sequence_dts, self.contact_sequence_lenghts, self.step_height, optimize_swing
+        return state_current, ref_state, contact_sequence, self.step_height, optimize_swing
     
 
 
@@ -422,7 +417,8 @@ class WBInterface:
                                                         mass_matrix=legs_mass_matrix[leg_name]
                                                         )
                 else:
-                    des_foot_pos[leg_name] = nmpc_footholds[leg_name]
+                    #des_foot_pos[leg_name] = nmpc_footholds[leg_name]
+                    des_foot_pos[leg_name] = self.frg.touch_down_positions[leg_name]
                     des_foot_vel[leg_name] = des_foot_vel[leg_name]*0.0
         else:
             # The swing controller is in the joint space
@@ -440,8 +436,8 @@ class WBInterface:
                     
         
         # Compute PD targets for the joints ----------------------------------------------------------------
-        pd_target_joints_pos = LegsAttr(*[np.zeros((3, 1)) for _ in range(4)])
-        pd_target_joints_vel = LegsAttr(*[np.zeros((3, 1)) for _ in range(4)])
+        des_joints_pos = LegsAttr(*[np.zeros((3, 1)) for _ in range(4)])
+        des_joints_vel = LegsAttr(*[np.zeros((3, 1)) for _ in range(4)])
         if(cfg.mpc_params['type'] != 'kinodynamic'):
             qpos_predicted = copy.deepcopy(qpos)
             #TODO use predicted rotation too
@@ -449,26 +445,48 @@ class WBInterface:
             temp = self.ik.fun_compute_solution(qpos_predicted,
                                                 des_foot_pos.FL, des_foot_pos.FR,
                                                 des_foot_pos.RL, des_foot_pos.RR)
-            #print("IK time: ", time.time() - time_ik)
-            pd_target_joints_pos.FL = temp[0:3]
-            pd_target_joints_pos.FR = temp[3:6]
-            pd_target_joints_pos.RL = temp[6:9]
-            pd_target_joints_pos.RR = temp[9:12]
             
-            #TODO fix dt
-            pd_target_joints_vel.FL = (pd_target_joints_pos.FL - qpos[legs_qpos_idx.FL])/0.02
-            pd_target_joints_vel.FR = (pd_target_joints_pos.FR - qpos[legs_qpos_idx.FR])/0.02
-            pd_target_joints_vel.RL = (pd_target_joints_pos.RL - qpos[legs_qpos_idx.RL])/0.02
-            pd_target_joints_vel.RR = (pd_target_joints_pos.RR - qpos[legs_qpos_idx.RR])/0.02
+            des_joints_pos.FL = np.array(temp[0:3]).reshape((3, ))
+            des_joints_pos.FR = np.array(temp[3:6]).reshape((3, ))
+            des_joints_pos.RL = np.array(temp[6:9]).reshape((3, ))
+            des_joints_pos.RR = np.array(temp[9:12]).reshape((3, ))
+            
+            
+            des_joints_vel.FL = (des_joints_pos.FL - qpos[legs_qpos_idx.FL])/simulation_dt
+            des_joints_vel.FR = (des_joints_pos.FR - qpos[legs_qpos_idx.FR])/simulation_dt
+            des_joints_vel.RL = (des_joints_pos.RL - qpos[legs_qpos_idx.RL])/simulation_dt
+            des_joints_vel.RR = (des_joints_pos.RR - qpos[legs_qpos_idx.RR])/simulation_dt
 
 
         else:
-            #TODO
-            pd_target_joints_pos = nmpc_joints_pos
-            pd_target_joints_vel = nmpc_joints_vel
+            # In the case of the kinodynamic model, we just use the NMPC predicted joints
+            des_joints_pos = nmpc_joints_pos
+            des_joints_pos = nmpc_joints_vel
+
+        # Saturate of desired joint positions and velocities
+        max_joints_pos_difference = 0.1
+        max_joints_vel_difference = 1.0
+        
+        # Calculate the difference
+        actual_joints_pos = LegsAttr(*[qpos[legs_qpos_idx[leg_name]] for leg_name in self.legs_order])
+        actual_joints_vel = LegsAttr(*[qvel[legs_qvel_idx[leg_name]] for leg_name in self.legs_order])
+        joints_pos_difference = des_joints_pos - actual_joints_pos
+        joints_vel_difference = des_joints_vel - actual_joints_vel
+
+        # Saturate the difference for each leg
+        for leg in ["FL", "FR", "RL", "RR"]:
+            joints_pos_difference = des_joints_pos[leg] - actual_joints_pos[leg]
+            saturated_joints_pos_difference = np.clip(joints_pos_difference, -max_joints_pos_difference, max_joints_pos_difference)
+            des_joints_pos[leg] = actual_joints_pos[leg] + saturated_joints_pos_difference
+
+            joints_vel_difference = des_joints_vel[leg] - actual_joints_vel[leg]
+            saturated_joints_vel_difference = np.clip(joints_vel_difference, -max_joints_vel_difference, max_joints_vel_difference)
+            des_joints_vel[leg] = actual_joints_vel[leg] + saturated_joints_vel_difference
+        
 
 
-        return tau, pd_target_joints_pos, pd_target_joints_vel
+
+        return tau, des_joints_pos, des_joints_vel
     
 
 

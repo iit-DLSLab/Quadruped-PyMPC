@@ -6,7 +6,7 @@ from quadruped_pympc.helpers.quadruped_utils import GaitType
 
 # These are used both for a real experiment and a simulation -----------
 # These are the only attributes needed per quadruped, the rest can be computed automatically ----------------------
-robot = 'aliengo'  # 'go1', 'go2', 'aliengo', 'hyqreal', 'mini_cheetah'  # TODO: Load from robot_descriptions.py
+robot = 'aliengo'  # 'go1', 'go2', 'b2', 'aliengo', 'hyqreal', 'mini_cheetah'  # TODO: Load from robot_descriptions.py
 robot_leg_joints = dict(FL=['FL_hip_joint', 'FL_thigh_joint', 'FL_calf_joint',],  # TODO: Make configs per robot.
                         FR=['FR_hip_joint', 'FR_thigh_joint', 'FR_calf_joint',],
                         RL=['RL_hip_joint', 'RL_thigh_joint', 'RL_calf_joint',],
@@ -41,6 +41,15 @@ elif (robot == 'aliengo'):
     urdf_filename = "aliengo.urdf"
     hip_height = 0.35
 
+elif (robot == 'b2'):
+    mass = 83.49
+    inertia = np.array([[0.2310941359705289, -0.0014987128245817424, -0.021400468992761768],
+                        [-0.0014987128245817424, 1.4485084687476608, 0.0004641447134275615],
+                        [-0.021400468992761768, 0.0004641447134275615, 1.503217877350808]])
+
+    urdf_filename = "b2.urdf"
+    hip_height = 0.485
+
 elif (robot == 'hyqreal'):
     mass = 108.40
     inertia = np.array([[4.55031444e+00, 2.75249434e-03, -5.11957307e-01],
@@ -68,6 +77,9 @@ mpc_params = {
     # 'collaborative' optimized directly the GRF and has a passive arm model inside
     # 'lyapunov' optimized directly the GRF and has a Lyapunov-based stability constraint
     'type':                                    'nominal',
+
+    # print the mpc info
+    'verbose':                                 False,
 
     # horizon is the number of timesteps in the future that the mpc will optimize
     # dt is the discretization time used in the mpc
@@ -187,7 +199,9 @@ simulation_params = {
     'swing_position_gain_fb':      5000,
     'swing_velocity_gain_fb':      100,
     'swing_integral_gain_fb':      0,
-    'step_height':                 0.3 * hip_height,  # 0.05 go2
+    'impedence_joint_position_gain':  5,
+    'impedence_joint_velocity_gain':  0.1,
+    'step_height':                 0.3 * hip_height,  
 
     # Visual Foothold adapatation
     "visual_foothold_adaptation":  'blind', #'blind', 'height', 'vfa'

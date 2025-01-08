@@ -3,7 +3,7 @@
 # Authors: Giulio Turrisi - 
 
 from acados_template import AcadosOcp, AcadosOcpSolver, ACADOS_INFTY
-from centroidal_model_collaborative import Centroidal_Model_Collaborative
+from .centroidal_model_collaborative import Centroidal_Model_Collaborative
 import numpy as np
 import scipy.linalg
 import casadi as cs
@@ -597,10 +597,10 @@ class Acados_NMPC_Collaborative:
 
     def reset(self):
         self.acados_ocp_solver.reset()
-        self.acados_ocp_solver =  AcadosOcpSolver(self.ocp, json_file=self.ocp.code_export_directory + "/centroidal_nmpc" + ".json", build = False, generate = False)
+        self.acados_ocp_solver = AcadosOcpSolver(self.ocp, 
+                                                json_file=self.ocp.code_export_directory + "/centroidal_nmpc" + ".json", 
+                                                build = False, generate = False)
         
-    
-
 
 
     def set_stage_constraint(self, constraint, state, reference, contact_sequence, h_R_w, stance_proximity):

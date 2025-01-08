@@ -36,6 +36,8 @@ class Acados_NMPC_Lyapunov:
 
         self.use_DDP = config.mpc_params['use_DDP']
 
+        self.verbose = config.mpc_params['verbose']
+
 
         self.previous_status = -1
         self.previous_contact_sequence = np.zeros((4, self.horizon))
@@ -351,7 +353,7 @@ class Acados_NMPC_Lyapunov:
         angles = self.centroidal_model.states[6:9]
         eta = cs.vertcat(angles, w)
 
-        
+
         residual = eta.T@eta
         ub = np.array([config.mpc_params['residual_dynamics_upper_bound']])
         lb = np.zeros(1)
@@ -608,7 +610,7 @@ class Acados_NMPC_Lyapunov:
         phi = self.centroidal_model.states[42:45]
         squared_K_z1 = np.array([K_z1[0]*K_z1[0], K_z1[1]*K_z1[1], K_z1[2]*K_z1[2]])
         F_star = mass*(-(K_z1 + K_z2)*z2 + squared_K_z1*z1 - gravity + p_ddot)
-        F_star += phi
+        F_star -= phi
 
 
         stanceFL = self.centroidal_model.param[0]
@@ -708,6 +710,10 @@ class Acados_NMPC_Lyapunov:
 
     def reset(self):
         self.acados_ocp_solver.reset()
+        self.acados_ocp_solver = AcadosOcpSolver(self.ocp,
+                                                json_file=self.ocp.code_export_directory + "/centroidal_nmpc" + ".json",
+                                                build=False, generate=False)
+        self.phi_predicted = self.phi_predicted*0.0
 
 
 
@@ -735,7 +741,8 @@ class Acados_NMPC_Lyapunov:
 
 
         except:
-            print("Error in setting the residual constraint")
+            if(self.verbose):
+                print("Error in setting the residual constraint")
             pass
 
 
@@ -1217,7 +1224,8 @@ class Acados_NMPC_Lyapunov:
                             idx_constraint[3] += 1
 
         except:
-            print("###WARNING: error in setting the constraints")
+            if(self.verbose):
+                print("###WARNING: error in setting the constraints")
 
         return
 
@@ -1292,7 +1300,7 @@ class Acados_NMPC_Lyapunov:
         self.initial_base_position = copy.deepcopy(state["position"])
         reference = copy.deepcopy(reference)
         state = copy.deepcopy(state)
-        
+
         reference["ref_position"] = reference["ref_position"] - state["position"]
         reference["ref_foot_FL"] = reference["ref_foot_FL"] - state["position"]
         reference["ref_foot_FR"] = reference["ref_foot_FR"] - state["position"]
@@ -1523,7 +1531,8 @@ class Acados_NMPC_Lyapunov:
             self.integral_errors[4] = np.where(np.abs(self.integral_errors[4]) > cap_integrator_roll, cap_integrator_roll*np.sign(self.integral_errors[4]), self.integral_errors[4])
             self.integral_errors[5] = np.where(np.abs(self.integral_errors[5]) > cap_integrator_pitch, cap_integrator_pitch*np.sign(self.integral_errors[5]), self.integral_errors[5])
 
-            print("self.integral_errors: ", self.integral_errors)
+            if(self.verbose):
+                print("self.integral_errors: ", self.integral_errors)
 
 
         # Calculate state of the lyapunov function
@@ -1570,11 +1579,13 @@ class Acados_NMPC_Lyapunov:
             # feedback phase
             self.acados_ocp_solver.options_set('rti_phase', 2)
             status = self.acados_ocp_solver.solve()
-            print("feedback phase time: ", self.acados_ocp_solver.get_stats('time_tot'))
+            if(self.verbose):
+                print("feedback phase time: ", self.acados_ocp_solver.get_stats('time_tot'))
 
         else:
             status = self.acados_ocp_solver.solve()
-            print("ocp time: ", self.acados_ocp_solver.get_stats('time_tot'))
+            if(self.verbose):
+                print("ocp time: ", self.acados_ocp_solver.get_stats('time_tot'))
 
 
         # Take the solution
@@ -1589,6 +1600,7 @@ class Acados_NMPC_Lyapunov:
         gravity = np.array([0, 0, -9.81])
         squared_K_z1 = np.array([K_z1[0]*K_z1[0], K_z1[1]*K_z1[1], K_z1[2]*K_z1[2]])
         F_star = mass*(-(K_z1 + K_z2)*z2 + squared_K_z1*z1 - gravity + p_ddot)
+        F_star -= phi
 
 
         num_leg_contact = FL_contact_sequence[0] + FR_contact_sequence[0]
@@ -1738,13 +1750,15 @@ class Acados_NMPC_Lyapunov:
 
         optimal_next_state = self.acados_ocp_solver.get(optimal_next_state_index, "x")[0:24]
         self.optimal_next_state = optimal_next_state
-        self.acados_ocp_solver.print_statistics()
+        if(self.verbose):
+            self.acados_ocp_solver.print_statistics()
 
 
         # Check if QPs converged, if not just use the reference footholds
         # and a GRF over Z distribuited between the leg in stance
         if(status == 1 or status == 4):
-            print("status", status)
+            if(self.verbose):
+                print("status", status)
             if FL_contact_sequence[0] == 0:
                 optimal_foothold[0] = reference["ref_foot_FL"][0]
             if FR_contact_sequence[0] == 0:
