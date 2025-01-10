@@ -466,10 +466,8 @@ class WBInterface:
         max_joints_vel_difference = 10.0
         
         # Calculate the difference
-        actual_joints_pos = LegsAttr(*[qpos[legs_qpos_idx[leg_name]] for leg_name in self.legs_order])
-        actual_joints_vel = LegsAttr(*[qvel[legs_qvel_idx[leg_name]] for leg_name in self.legs_order])
-        joints_pos_difference = des_joints_pos - actual_joints_pos
-        joints_vel_difference = des_joints_vel - actual_joints_vel
+        actual_joints_pos = LegsAttr(**{leg_name:qpos[legs_qpos_idx[leg_name]] for leg_name in self.legs_order})
+        actual_joints_vel = LegsAttr(**{leg_name:qvel[legs_qvel_idx[leg_name]] for leg_name in self.legs_order})
 
         # Saturate the difference for each leg
         for leg in ["FL", "FR", "RL", "RR"]:
