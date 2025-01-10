@@ -450,10 +450,10 @@ class WBInterface:
             des_joints_pos.RR = np.array(temp[9:12]).reshape((3, ))
             
             
-            des_joints_vel.FL = (des_joints_pos.FL - qpos[legs_qpos_idx.FL])/simulation_dt
-            des_joints_vel.FR = (des_joints_pos.FR - qpos[legs_qpos_idx.FR])/simulation_dt
-            des_joints_vel.RL = (des_joints_pos.RL - qpos[legs_qpos_idx.RL])/simulation_dt
-            des_joints_vel.RR = (des_joints_pos.RR - qpos[legs_qpos_idx.RR])/simulation_dt
+            des_joints_vel.FL = (des_joints_pos.FL - qpos[legs_qpos_idx.FL])/self.contact_sequence_dts[0]
+            des_joints_vel.FR = (des_joints_pos.FR - qpos[legs_qpos_idx.FR])/self.contact_sequence_dts[0]
+            des_joints_vel.RL = (des_joints_pos.RL - qpos[legs_qpos_idx.RL])/self.contact_sequence_dts[0]
+            des_joints_vel.RR = (des_joints_pos.RR - qpos[legs_qpos_idx.RR])/self.contact_sequence_dts[0]
 
 
         else:
@@ -462,8 +462,8 @@ class WBInterface:
             des_joints_pos = nmpc_joints_vel
 
         # Saturate of desired joint positions and velocities
-        max_joints_pos_difference = 0.1
-        max_joints_vel_difference = 1.0
+        max_joints_pos_difference = 0.3
+        max_joints_vel_difference = 10.0
         
         # Calculate the difference
         actual_joints_pos = LegsAttr(*[qpos[legs_qpos_idx[leg_name]] for leg_name in self.legs_order])
@@ -480,7 +480,6 @@ class WBInterface:
             joints_vel_difference = des_joints_vel[leg] - actual_joints_vel[leg]
             saturated_joints_vel_difference = np.clip(joints_vel_difference, -max_joints_vel_difference, max_joints_vel_difference)
             des_joints_vel[leg] = actual_joints_vel[leg] + saturated_joints_vel_difference
-        
 
 
 
