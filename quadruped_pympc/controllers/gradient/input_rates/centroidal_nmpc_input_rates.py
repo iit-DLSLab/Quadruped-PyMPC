@@ -9,7 +9,8 @@ import casadi as cs
 import copy
 from typing import Tuple
 # TODO: Check acados installation and trow error + instructions if needed ->  pip install quadruped_pympc[acados]
-from acados_template import AcadosOcp, AcadosOcpSolver, ACADOS_INFTY
+from acados_template import AcadosOcp, AcadosOcpSolver
+ACADOS_INFTY = ACADOS_INFTY = 1000
 from quadruped_pympc import config
 from .centroidal_model_input_rates import Centroidal_Model_InputRates
 
