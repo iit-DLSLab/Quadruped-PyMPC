@@ -3,7 +3,8 @@ import pathlib
 
 # Authors: Giulio Turrisi - 
 
-from acados_template import AcadosOcp, AcadosOcpSolver, ACADOS_INFTY
+from acados_template import AcadosOcp, AcadosOcpSolver
+ACADOS_INFTY = 1000
 from .centroidal_model_nominal import Centroidal_Model_Nominal
 import numpy as np
 import scipy.linalg

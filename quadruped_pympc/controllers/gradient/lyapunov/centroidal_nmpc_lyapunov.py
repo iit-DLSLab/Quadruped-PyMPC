@@ -3,7 +3,8 @@ import pathlib
 
 # Authors: Giulio Turrisi -
 
-from acados_template import AcadosOcp, AcadosOcpSolver, ACADOS_INFTY
+from acados_template import AcadosOcp, AcadosOcpSolver
+ACADOS_INFTY = 1000
 import numpy as np
 import scipy.linalg
 import casadi as cs
