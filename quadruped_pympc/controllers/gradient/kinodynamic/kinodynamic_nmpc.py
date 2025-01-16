@@ -2,6 +2,7 @@
 
 # Authors: Giulio Turrisi - 
 
+import pathlib
 from acados_template import AcadosOcp, AcadosOcpSolver
 from .kinodynamic_model import KinoDynamic_Model
 import numpy as np
@@ -65,8 +66,11 @@ class Acados_NMPC_KinoDynamic:
 
         # Create the acados ocp solver
         self.ocp = self.create_ocp_solver_description(acados_model)
+
+        code_export_dir = pathlib.Path(__file__).parent / 'c_generated_code'
+        self.ocp.code_export_directory = str(code_export_dir)
         self.acados_ocp_solver = AcadosOcpSolver(
-            self.ocp, json_file="nmpc_kynodinamic" + ".json"
+            self.ocp, json_file=self.ocp.code_export_directory + "/kynodinamic_nmpc" + ".json"
         )
 
 
@@ -630,7 +634,7 @@ class Acados_NMPC_KinoDynamic:
         Q_roll_integral_integral = np.array([10]) #integral of roll
         Q_pitch_integral_integral = np.array([10]) #integral of pitch
 
-        Q_joint_angle = np.array([0.1, 0.1, 0.1])
+        Q_joint_angle = np.array([0.01, 0.01, 0.01])
 
 
         R_joint_vel = np.array([0.0001, 0.0001, 0.0001]) 

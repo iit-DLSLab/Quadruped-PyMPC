@@ -215,6 +215,10 @@ class WBInterface:
                               ref_foot_constraints_FR=ref_feet_constraints.FR,
                               ref_foot_constraints_RL=ref_feet_constraints.RL,
                               ref_foot_constraints_RR=ref_feet_constraints.RR,
+                              ref_foot_touch_down_FL=ref_feet_pos.FL.reshape((1, 3)),
+                              ref_foot_touch_down_FR=ref_feet_pos.FR.reshape((1, 3)),
+                              ref_foot_touch_down_RL=ref_feet_pos.RL.reshape((1, 3)),
+                              ref_foot_touch_down_RR=ref_feet_pos.RR.reshape((1, 3)),
                               # Also update the reference base linear velocity and
                               ref_linear_velocity=ref_base_lin_vel,
                               ref_angular_velocity=ref_base_ang_vel,
@@ -305,6 +309,10 @@ class WBInterface:
                               ref_foot_constraints_FR=ref_feet_constraints.FR,
                               ref_foot_constraints_RL=ref_feet_constraints.RL,
                               ref_foot_constraints_RR=ref_feet_constraints.RR,
+                              ref_foot_touch_down_FL=ref_feet_pos.FL.reshape((1, 3)),
+                              ref_foot_touch_down_FR=ref_feet_pos.FR.reshape((1, 3)),
+                              ref_foot_touch_down_RL=ref_feet_pos.RL.reshape((1, 3)),
+                              ref_foot_touch_down_RR=ref_feet_pos.RR.reshape((1, 3)),
                               # Also update the reference base linear velocity and
                               ref_linear_velocity=ref_base_lin_vel,
                               ref_angular_velocity=ref_base_ang_vel,

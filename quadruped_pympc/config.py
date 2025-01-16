@@ -76,7 +76,7 @@ mpc_params = {
     # 'sampling' is a gpu-based mpc that samples the GRF
     # 'collaborative' optimized directly the GRF and has a passive arm model inside
     # 'lyapunov' optimized directly the GRF and has a Lyapunov-based stability constraint
-    'type':                                    'nominal',
+    'type':                                    'kinodynamic',
 
     # print the mpc info
     'verbose':                                 False,
@@ -99,7 +99,7 @@ mpc_params = {
     # if this is true, we optimize the step frequency as well
     # for the sampling controller, this is done in the rollout
     # for the gradient-based controller, this is done with a batched version of the ocp
-    'optimize_step_freq':                      True,
+    'optimize_step_freq':                      False,
     'step_freq_available':                     [1.4, 2.0, 2.4],
     'optimize_duty_factor':                    False,
     'duty_factor_available':                   [0.3, 0.4, 0.5, 0.6, 0.7],
@@ -195,7 +195,7 @@ mpc_params = {
 # -----------------------------------------------------------------------
 
 simulation_params = {
-    'swing_generator':             'scipy',  # 'scipy', 'explicit', 'ndcurves'
+    'swing_generator':             'explicit',  # 'scipy', 'explicit', 'ndcurves'
     'swing_position_gain_fb':      5000,
     'swing_velocity_gain_fb':      100,
     'swing_integral_gain_fb':      0,
@@ -209,7 +209,7 @@ simulation_params = {
     # this is the integration time used in the simulator
     'dt':                          0.002,
 
-    'gait':                        'bound',  # 'trot', 'pace', 'crawl', 'bound', 'full_stance'
+    'gait':                        'trot',  # 'trot', 'pace', 'crawl', 'bound', 'full_stance'
     'gait_params':                 {'trot': {'step_freq': 1.4, 'duty_factor': 0.65, 'type': GaitType.TROT.value},
                                     'crawl': {'step_freq': 0.5, 'duty_factor': 0.8, 'type': GaitType.BACKDIAGONALCRAWL.value},
                                     'pace': {'step_freq': 1.4, 'duty_factor': 0.7, 'type': GaitType.PACE.value},

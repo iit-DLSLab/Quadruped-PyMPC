@@ -168,8 +168,8 @@ class QuadrupedPyMPC_Wrapper:
                                                                         optimize_swing)
 
 
-        print("Best sample freq: ", self.best_sample_freq)
-        print("Best duty factor: ", self.best_duty_factor)
+        #print("Best sample freq: ", self.best_sample_freq)
+        #print("Best duty factor: ", self.best_duty_factor)
         
         # Compute Swing and Stance Torque ---------------------------------------------------------------------------
         tau, \
@@ -189,6 +189,7 @@ class QuadrupedPyMPC_Wrapper:
                                                             legs_qvel_idx,
                                                             tau,
                                                             optimize_swing,
+                                                            self.best_sample_freq,
                                                             self.best_sample_freq,
                                                             self.nmpc_joints_pos,
                                                             self.nmpc_joints_vel,
@@ -213,10 +214,10 @@ class QuadrupedPyMPC_Wrapper:
             elif obs_name == 'ref_base_angles':
                 data = {'ref_base_angles': ref_state['ref_orientation']}
             elif obs_name == 'ref_feet_pos':
-                ref_feet_pos = LegsAttr(FL=ref_state['ref_foot_FL'].reshape(3,1),
-                                        FR=ref_state['ref_foot_FR'].reshape(3,1),
-                                        RL=ref_state['ref_foot_RL'].reshape(3,1),
-                                        RR=ref_state['ref_foot_RR'].reshape(3,1))
+                ref_feet_pos = LegsAttr(FL=ref_state['ref_foot_touch_down_FL'].reshape(3,1),
+                                        FR=ref_state['ref_foot_touch_down_FR'].reshape(3,1),
+                                        RL=ref_state['ref_foot_touch_down_RL'].reshape(3,1),
+                                        RR=ref_state['ref_foot_touch_down_RR'].reshape(3,1))
                 data = {'ref_feet_pos': ref_feet_pos}
             elif obs_name == 'ref_feet_constraints':
                 ref_feet_constraints = LegsAttr(FL=ref_state['ref_foot_FL_constraints'],
