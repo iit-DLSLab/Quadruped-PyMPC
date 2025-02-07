@@ -35,7 +35,8 @@ class PeriodicGaitGenerator:
             self.phase_offset = [0.0, 0.5, 0.5, 0.0]
 
         # Set random gait_signal respecting the gait phase offset between legs
-        self._phase_signal = (np.asarray(self.phase_offset) + np.random.rand()) % 1.0
+        #self._phase_signal = (np.asarray(self.phase_offset) + np.random.rand()) % 1.0
+        self._phase_signal = (np.asarray(self.phase_offset))
         self._init = [False] * len(self.phase_offset)
         self.n_contact = len(self.phase_offset)
         self.time_before_switch_freq = 0
@@ -55,7 +56,7 @@ class PeriodicGaitGenerator:
             # is not surpassed. If not, the contact needs to be still 1
             # otherwise we lift off
             if self._init[leg]:
-                if self._phase_signal[leg] < self.phase_offset[leg]:
+                if self._phase_signal[leg] <= self.phase_offset[leg]:
                     contact[leg] = 1
                 else:
                     self._init[leg] = False
