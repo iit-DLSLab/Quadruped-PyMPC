@@ -2,6 +2,3 @@
 	path = quadruped_pympc/acados
 	url = https://github.com/acados/acados.git
 
-[submodule "quadruped_pympc/gym-quadruped"]
-	path = quadruped_pympc/gym-quadruped
-	url = https://github.com/iit-DLSLab/gym-quadruped.git/
