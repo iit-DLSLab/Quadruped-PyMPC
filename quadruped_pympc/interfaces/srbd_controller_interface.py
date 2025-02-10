@@ -20,10 +20,12 @@ class SRBDControllerInterface:
 
         self.previous_contact_mpc = np.array([1, 1, 1, 1])
         
-
-        # input_rates optimize the delta_GRF (smoooth!)
-        # nominal optimize directly the GRF (not smooth)
-        # sampling use GPU
+        # 'nominal' optimized directly the GRF
+        # 'input_rates' optimizes the delta GRF
+        # 'sampling' is a gpu-based mpc that samples the GRF
+        # 'collaborative' optimized directly the GRF and has a passive arm model inside
+        # 'lyapunov' optimized directly the GRF and has a Lyapunov-based stability constraint
+        # 'kynodynamic' sbrd with joints - experimental
         if self.type == 'nominal':
             from quadruped_pympc.controllers.gradient.nominal.centroidal_nmpc_nominal import Acados_NMPC_Nominal
 
@@ -226,4 +228,9 @@ class SRBDControllerInterface:
 
         
         return nmpc_GRFs, nmpc_footholds, nmpc_joints_pos, nmpc_joints_vel, nmpc_joints_acc, best_sample_freq, nmpc_predicted_state
-        
+    
+
+    def compute_RTI(self):
+        self.controller.acados_ocp_solver.options_set('rti_phase', 1)
+        self.controller.acados_ocp_solver.solve()
+        # print("preparation phase time: ", controller.acados_ocp_solver.get_stats('time_tot'))
