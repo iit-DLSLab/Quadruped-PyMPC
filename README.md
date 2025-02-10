@@ -52,7 +52,7 @@ Gradient-based MPC: It uses [CasADI](https://web.casadi.org/) to define the mode
     ```
     mkdir build
     cd build
-    cmake ..
+    cmake -DACADOS_WITH_SYSTEM_BLASFEO:BOOL=ON ..
     make install -j4
     pip install -e ./../interfaces/acados_template
     ```
