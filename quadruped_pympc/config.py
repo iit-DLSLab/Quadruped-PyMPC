@@ -126,7 +126,7 @@ mpc_params = {
     'use_RTI':                                 False,
     # If RTI is used, we can set the advance RTI-step! (Standard is the simpler RTI)
     # See https://arxiv.org/pdf/2403.07101.pdf
-    'as_rti_type':                             "AS-RTI-A",  # "AS-RTI-A", "AS-RTI-B", "AS-RTI-C", "AS-RTI-D", "Standard"
+    'as_rti_type':                             "Standard",  # "AS-RTI-A", "AS-RTI-B", "AS-RTI-C", "AS-RTI-D", "Standard"
     'as_rti_iter':                             1,  # > 0, the higher the better, but slower computation!
 
     # This will force to use DDP instead of SQP, based on https://arxiv.org/abs/2403.10115.

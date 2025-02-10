@@ -4,7 +4,7 @@ channels:
 - robostack-staging
 dependencies:
 - pip
-- python
+- python==3.11
 - casadi
 - numpy
 - matplotlib

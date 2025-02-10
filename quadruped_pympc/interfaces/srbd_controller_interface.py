@@ -211,22 +211,9 @@ class SRBDControllerInterface:
                                         FR=nmpc_footholds[1],
                                         RL=nmpc_footholds[2],
                                         RR=nmpc_footholds[3])
-            
-            
-            # If the controller is using RTI, we need to linearize the mpc after its computation
-            # this helps to minize the delay between new state->control, but only in a real case.
-            # Here we are in simulation and does not make any difference for now
-            if (self.controller.use_RTI):
-                # preparation phase
-                self.controller.acados_ocp_solver.options_set('rti_phase', 1)
-                self.controller.acados_ocp_solver.solve()
-                # print("preparation phase time: ", controller.acados_ocp_solver.get_stats('time_tot'))
-
 
 
             best_sample_freq = pgg_step_freq
-
-
 
 
 

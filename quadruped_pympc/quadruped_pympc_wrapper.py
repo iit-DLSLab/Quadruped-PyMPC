@@ -151,6 +151,14 @@ class QuadrupedPyMPC_Wrapper:
                                                                     self.wb_interface.pgg.step_freq,
                                                                     optimize_swing)
             
+            if(cfg.mpc_params['type'] != 'sampling' and cfg.mpc_params['use_RTI']):
+                # If the controller is gradient and is using RTI, we need to linearize the mpc after its computation
+                # this helps to minize the delay between new state->control, but only in a real case.
+                # Here we are in simulation and does not make any difference for now
+                # preparation phase
+                self.controller.acados_ocp_solver.options_set('rti_phase', 1)
+                self.controller.acados_ocp_solver.solve()
+                # print("preparation phase time: ", controller.acados_ocp_solver.get_stats('time_tot'))
 
 
             # Update the gait
