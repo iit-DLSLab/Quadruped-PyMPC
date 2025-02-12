@@ -415,8 +415,8 @@ class WBInterface:
                                                         mass_matrix=legs_mass_matrix[leg_name]
                                                         )
                 else:
-                    #des_foot_pos[leg_name] = nmpc_footholds[leg_name]
-                    des_foot_pos[leg_name] = self.frg.touch_down_positions[leg_name]
+                    des_foot_pos[leg_name] = nmpc_footholds[leg_name]
+                    #des_foot_pos[leg_name] = self.frg.touch_down_positions[leg_name]
                     des_foot_vel[leg_name] = des_foot_vel[leg_name]*0.0
         else:
             # The swing controller is in the joint space
@@ -440,6 +440,7 @@ class WBInterface:
             qpos_predicted = copy.deepcopy(qpos)
             #TODO use predicted rotation too
             #qpos_predicted[0:3] = nmpc_predicted_state[0:3]
+            #TODO make the ik explicit and not numerical
             temp = self.ik.fun_compute_solution(qpos_predicted,
                                                 des_foot_pos.FL, des_foot_pos.FR,
                                                 des_foot_pos.RL, des_foot_pos.RR)
@@ -454,10 +455,11 @@ class WBInterface:
             #des_joints_vel.FR = (des_joints_pos.FR - qpos[legs_qpos_idx.FR])/self.contact_sequence_dts[0]
             #des_joints_vel.RL = (des_joints_pos.RL - qpos[legs_qpos_idx.RL])/self.contact_sequence_dts[0]
             #des_joints_vel.RR = (des_joints_pos.RR - qpos[legs_qpos_idx.RR])/self.contact_sequence_dts[0]
-            des_joints_vel.FL = np.linalg.inv(feet_jac.FL[:, legs_qvel_idx.FL]) @ des_foot_vel.FL
-            des_joints_vel.FR = np.linalg.inv(feet_jac.FR[:, legs_qvel_idx.FR]) @ des_foot_vel.FR
-            des_joints_vel.RL = np.linalg.inv(feet_jac.RL[:, legs_qvel_idx.RL]) @ des_foot_vel.RL
-            des_joints_vel.RR = np.linalg.inv(feet_jac.RR[:, legs_qvel_idx.RR]) @ des_foot_vel.RR
+            #TODO This should be done over the the desired joint positions jacobian
+            des_joints_vel.FL = np.linalg.pinv(feet_jac.FL[:, legs_qvel_idx.FL]) @ des_foot_vel.FL
+            des_joints_vel.FR = np.linalg.pinv(feet_jac.FR[:, legs_qvel_idx.FR]) @ des_foot_vel.FR
+            des_joints_vel.RL = np.linalg.pinv(feet_jac.RL[:, legs_qvel_idx.RL]) @ des_foot_vel.RL
+            des_joints_vel.RR = np.linalg.pinv(feet_jac.RR[:, legs_qvel_idx.RR]) @ des_foot_vel.RR
 
         else:
             # In the case of the kinodynamic model, we just use the NMPC predicted joints
@@ -465,7 +467,7 @@ class WBInterface:
             des_joints_pos = nmpc_joints_vel
 
         # Saturate of desired joint positions and velocities
-        max_joints_pos_difference = 0.3
+        max_joints_pos_difference = 3
         max_joints_vel_difference = 10.0
         
         # Calculate the difference
