@@ -27,6 +27,7 @@ class SwingTrajectoryController:
         self.swing_time = [0, 0, 0, 0]
 
         self.use_feedback_linearization = True
+        self.use_gravity_compensation = True
 
     def regenerate_swing_trajectory_generator(self, step_height: float, swing_period: float) -> None:
         if (self.generator == "ndcurves"):
@@ -121,6 +122,8 @@ class SwingTrajectoryController:
         # Feedback linearization
         if(self.use_feedback_linearization):
             tau_swing += legs_mass_matrix@(accelleration + self.position_gain_fb*error_position + self.velocity_gain_fb*error_velocity) + legs_qfrc_bias
+        elif(self.use_gravity_compensation):
+            tau_swing += legs_qfrc_bias
         
         return tau_swing, None, None
 
