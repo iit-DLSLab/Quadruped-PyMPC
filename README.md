@@ -116,8 +116,7 @@ If you find the work useful, please consider citing one of our works:
   title={On the Benefits of GPU Sample-Based Stochastic Predictive Controllers for Legged Locomotion}, 
   year={2024},
   pages={13757-13764},
-  doi={10.1109/IROS58592.2024.10801698}
-}
+  doi={10.1109/IROS58592.2024.10801698}}
 ```
 [Lyapunov](https://arxiv.org/abs/2409.01144):
 ```
