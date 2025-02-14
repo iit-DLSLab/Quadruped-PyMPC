@@ -108,7 +108,7 @@ ctrl -> set zero all velocities
 
 If you find the work useful, please consider citing one of our works: 
 
-[Sampling](https://arxiv.org/abs/2403.11383)
+[Sampling](https://arxiv.org/abs/2403.11383):
 ```
 @INPROCEEDINGS{turrisi2024sampling,
   author={Turrisi, Giulio and Modugno, Valerio and Amatucci, Lorenzo and Kanoulas, Dimitrios and Semini, Claudio},
