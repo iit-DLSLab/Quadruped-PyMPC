@@ -106,8 +106,9 @@ ctrl -> set zero all velocities
 
 ## Citing this work
 
-If you find the work useful, please consider citing [our work](https://arxiv.org/abs/2403.11383):
+If you find the work useful, please consider citing one of our works: 
 
+[Sampling](https://arxiv.org/abs/2403.11383)
 ```
 @INPROCEEDINGS{turrisi2024sampling,
   author={Turrisi, Giulio and Modugno, Valerio and Amatucci, Lorenzo and Kanoulas, Dimitrios and Semini, Claudio},
@@ -117,6 +118,18 @@ If you find the work useful, please consider citing [our work](https://arxiv.org
   pages={13757-13764},
   doi={10.1109/IROS58592.2024.10801698}
 }
+```
+[Lyapunov](https://arxiv.org/abs/2409.01144):
+```
+@ARTICLE{elobaid2025adaptivestablempc,
+  author={Elobaid, Mohamed and Turrisi, Giulio and Rapetti, Lorenzo and Romualdi, Giulio and Dafarra, Stefano and Kawakami, Tomohiro and Chaki, Tomohiro and Yoshiike, Takahide and Semini, Claudio and Pucci, Daniele},
+  journal={IEEE Robotics and Automation Letters}, 
+  title={Adaptive Non-Linear Centroidal MPC With Stability Guarantees for Robust Locomotion of Legged Robots}, 
+  year={2025},
+  volume={10},
+  number={3},
+  pages={2806-2813},
+  doi={10.1109/LRA.2025.3536296}}
 ```
 
 ## Maintainer
