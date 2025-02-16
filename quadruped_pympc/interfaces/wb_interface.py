@@ -143,8 +143,15 @@ class WBInterface:
             joint_RR=joints_pos.RR,
             )
 
-
+        
         # Update the desired contact sequence ---------------------------
+        # stop the robot for energy efficency if there is no movement and its safe
+        # only if activated by an an internal flag for now
+        self.pgg.update_start_and_stop(feet_pos, hip_pos, self.frg.hip_offset, 
+                                       base_pos, base_ori_euler_xyz, 
+                                       base_lin_vel, base_ang_vel, 
+                                       ref_base_lin_vel, ref_base_ang_vel,
+                                       self.current_contact)
         self.pgg.run(simulation_dt, self.pgg.step_freq)
         contact_sequence = self.pgg.compute_contact_sequence(contact_sequence_dts=self.contact_sequence_dts, 
                                                 contact_sequence_lenghts=self.contact_sequence_lenghts)
