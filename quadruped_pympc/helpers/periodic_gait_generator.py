@@ -120,9 +120,11 @@ class PeriodicGaitGenerator:
         
     def set_full_stance(self):
         self.gait_type = GaitType.FULL_STANCE.value
+        self.reset()
     
     def restore_previous_gait(self):
         self.gait_type = copy.deepcopy(self.previous_gait_type)
+        self.reset()
 
     def update_start_and_stop(self, feet_pos, hip_pos, hip_offset, 
                             base_pos, base_ori_euler_xyz, 
@@ -165,14 +167,14 @@ class PeriodicGaitGenerator:
         
         # Some safety checks to safely stop motion
         if(np.linalg.norm(ref_base_lin_vel) == 0.0 and np.linalg.norm(ref_base_ang_vel) == 0.0 and
-            np.linalg.norm(base_lin_vel) < 0.05 and np.linalg.norm(base_ang_vel) < 0.05 and
-            np.abs(base_ori_euler_xyz[0]) < 0.1 and np.abs(base_ori_euler_xyz[1]) < 0.1 and
+            np.linalg.norm(base_lin_vel) < 0.1 and np.linalg.norm(base_ang_vel) < 0.1 and
+            np.abs(base_ori_euler_xyz[0]) < 0.05 and np.abs(base_ori_euler_xyz[1]) < 0.05 and
             np.sum(current_contact) == 4 and 
-            feet_to_hip_distance_h_FL < 0.02 and 
-            feet_to_hip_distance_h_FR < 0.02 and
-            feet_to_hip_distance_h_RL < 0.02 and 
-            feet_to_hip_distance_h_RR < 0.02):
+            feet_to_hip_distance_h_FL < 0.06 and 
+            feet_to_hip_distance_h_FR < 0.06 and
+            feet_to_hip_distance_h_RL < 0.06 and 
+            feet_to_hip_distance_h_RR < 0.06):
                 self.set_full_stance()
-        else:
+        elif(self.gait_type == GaitType.FULL_STANCE.value):
             self.restore_previous_gait()
 
