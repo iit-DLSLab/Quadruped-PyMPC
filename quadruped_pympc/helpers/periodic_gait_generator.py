@@ -13,7 +13,7 @@ class PeriodicGaitGenerator:
         self.gait_type = gait_type
         self.previous_gait_type = copy.deepcopy(gait_type)
         
-        self.start_and_stop = False # If True, the robot will start and stop walking to save energy
+        self.start_and_stop = True # If True, the robot will start and stop walking to save energy
 
         # Private variables
         self._phase_signal, self._init = None, None
@@ -166,7 +166,7 @@ class PeriodicGaitGenerator:
         # Some safety checks to safely stop motion
         if(np.linalg.norm(ref_base_lin_vel) == 0.0 and np.linalg.norm(ref_base_ang_vel) == 0.0 and
             np.linalg.norm(base_lin_vel) < 0.05 and np.linalg.norm(base_ang_vel) < 0.05 and
-            base_ori_euler_xyz[0] < 0.1 and base_ori_euler_xyz[1] < 0.1 and
+            np.abs(base_ori_euler_xyz[0]) < 0.1 and np.abs(base_ori_euler_xyz[1]) < 0.1 and
             np.sum(current_contact) == 4 and 
             feet_to_hip_distance_h_FL < 0.02 and 
             feet_to_hip_distance_h_FR < 0.02 and
