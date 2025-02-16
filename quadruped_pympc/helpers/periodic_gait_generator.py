@@ -13,7 +13,7 @@ class PeriodicGaitGenerator:
         self.gait_type = gait_type
         self.previous_gait_type = copy.deepcopy(gait_type)
         
-        self.start_and_stop = True # If True, the robot will start and stop walking to save energy
+        self.start_and_stop = False # If True, the robot will start and stop walking to save energy
 
         # Private variables
         self._phase_signal, self._init = None, None
