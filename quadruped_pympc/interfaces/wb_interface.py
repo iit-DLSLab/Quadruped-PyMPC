@@ -11,6 +11,7 @@ from quadruped_pympc.helpers.periodic_gait_generator import PeriodicGaitGenerato
 from quadruped_pympc.helpers.swing_trajectory_controller import SwingTrajectoryController
 from quadruped_pympc.helpers.terrain_estimator import TerrainEstimator
 from quadruped_pympc.helpers.inverse_kinematics.inverse_kinematics_numeric import InverseKinematicsNumeric
+from quadruped_pympc.helpers.velocity_modulator import VelocityModulator
 
 if(cfg.simulation_params['visual_foothold_adaptation'] != 'blind'):
     from quadruped_pympc.helpers.visual_foothold_adaptation import VisualFootholdAdaptation
@@ -84,6 +85,8 @@ class WBInterface:
             # Visual foothold adaptation -------------------------------------------------------------
             self.vfa = VisualFootholdAdaptation(legs_order=self.legs_order, adaptation_strategy=cfg.simulation_params['visual_foothold_adaptation'])
 
+        # Velocity modulator ---------------------------------------------------------------------
+        self.vm = VelocityModulator()
 
         self.current_contact = np.array([1, 1, 1, 1])
 
@@ -142,16 +145,22 @@ class WBInterface:
             joint_RL=joints_pos.RL,
             joint_RR=joints_pos.RR,
             )
+        
+        # Modulate the desired velocity if the robot is in strange positions
+        if(self.vm.activated):
+            ref_base_lin_vel, ref_base_ang_vel = self.vm.modulate_velocities(ref_base_lin_vel, ref_base_ang_vel, feet_pos, hip_pos)
 
         
         # Update the desired contact sequence ---------------------------
-        # stop the robot for energy efficency if there is no movement and its safe
-        # only if activated by an an internal flag for now
-        self.pgg.update_start_and_stop(feet_pos, hip_pos, self.frg.hip_offset, 
-                                       base_pos, base_ori_euler_xyz, 
-                                       base_lin_vel, base_ang_vel, 
-                                       ref_base_lin_vel, ref_base_ang_vel,
-                                       self.current_contact)
+        if(self.pgg.start_and_stop_activated):
+            # stop the robot for energy efficency if there is no movement and its safe
+            # only if activated by an an internal flag for now
+            self.pgg.update_start_and_stop(feet_pos, hip_pos, self.frg.hip_offset, 
+                                        base_pos, base_ori_euler_xyz, 
+                                        base_lin_vel, base_ang_vel, 
+                                        ref_base_lin_vel, ref_base_ang_vel,
+                                        self.current_contact)
+        
         self.pgg.run(simulation_dt, self.pgg.step_freq)
         contact_sequence = self.pgg.compute_contact_sequence(contact_sequence_dts=self.contact_sequence_dts, 
                                                 contact_sequence_lenghts=self.contact_sequence_lenghts)
@@ -190,8 +199,6 @@ class WBInterface:
                 self.vfa.reset()
             
             ref_feet_pos, ref_feet_constraints = self.vfa.get_footholds_adapted(ref_feet_pos)
-
-        
         else:
             ref_feet_constraints = LegsAttr(FL=None, FR=None, RL=None, RR=None)
         

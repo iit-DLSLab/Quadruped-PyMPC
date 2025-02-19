@@ -13,7 +13,7 @@ class PeriodicGaitGenerator:
         self.gait_type = gait_type
         self.previous_gait_type = copy.deepcopy(gait_type)
         
-        self.start_and_stop = False # If True, the robot will start and stop walking to save energy
+        self.start_and_stop_activated = False # If True, the robot will start and stop walking to save energy
 
         # Private variables
         self._phase_signal, self._init = None, None
@@ -118,13 +118,16 @@ class PeriodicGaitGenerator:
             self.set_phase_signal(t_init, init_init)
             return contact_sequence
         
+
     def set_full_stance(self):
         self.gait_type = GaitType.FULL_STANCE.value
         self.reset()
     
+
     def restore_previous_gait(self):
         self.gait_type = copy.deepcopy(self.previous_gait_type)
         self.reset()
+
 
     def update_start_and_stop(self, feet_pos, hip_pos, hip_offset, 
                             base_pos, base_ori_euler_xyz, 
@@ -132,8 +135,6 @@ class PeriodicGaitGenerator:
                             ref_base_lin_vel, ref_base_ang_vel,
                             current_contact):
         
-        if(self.start_and_stop == False):
-            return
         
         # Get the rotation matrix to transform from world to horizontal frame (hip-centric)
         yaw = base_ori_euler_xyz[2]
