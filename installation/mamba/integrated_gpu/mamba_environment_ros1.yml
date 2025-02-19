@@ -11,7 +11,7 @@ dependencies:
 - jaxlib
 - jax
 - meshcat-python 
-- scipy 
+- scipy==1.15.1  
 - pinocchio
 - adam-robotics[all]
 - ros-noetic-desktop
