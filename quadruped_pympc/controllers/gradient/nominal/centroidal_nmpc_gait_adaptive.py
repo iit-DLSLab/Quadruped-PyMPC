@@ -371,27 +371,6 @@ class Acados_NMPC_GaitAdaptive():
                         constraint_RR_RL, constraint_RL_FL,
                         constraint_FL_RR, constraint_FR_RL)
 
-        # create some casadi function for the derivative of the constraint if needed
-        temp = cs.vertcat(self.centroidal_model.states, self.centroidal_model.inputs,
-                          self.centroidal_model.stanceFL, self.centroidal_model.stanceFR,
-                          self.centroidal_model.stanceRL, self.centroidal_model.stanceRR)
-        constraint_FL_FR_jac = cs.jacobian(constraint_FL_FR, temp)
-        self.constraint_FL_FR_jac_fun = cs.Function('constraint_FL_FR_jac_fun', [temp], [constraint_FL_FR_jac])
-
-        constraint_FR_RR_jac = cs.jacobian(constraint_FR_RR, temp)
-        self.constraint_FR_RR_jac_fun = cs.Function('constraint_FR_RR_jac_fun', [temp], [constraint_FR_RR_jac])
-
-        constraint_RR_RL_jac = cs.jacobian(constraint_RR_RL, temp)
-        self.constraint_RR_RL_jac_fun = cs.Function('constraint_RR_RL_jac_fun', [temp], [constraint_RR_RL_jac])
-
-        constraint_RL_FL_jac = cs.jacobian(constraint_RL_FL, temp)
-        self.constraint_RL_FL_jac_fun = cs.Function('constraint_RL_FL_jac_fun', [temp], [constraint_RL_FL_jac])
-
-        constraint_FL_RR_jac = cs.jacobian(constraint_FL_RR, temp)
-        self.constraint_FL_RR_jac_fun = cs.Function('constraint_FL_RR_jac_fun', [temp], [constraint_FL_RR_jac])
-
-        constraint_FR_RL_jac = cs.jacobian(constraint_FR_RL, temp)
-        self.constraint_FR_RL_jac_fun = cs.Function('constraint_FR_RL_jac_fun', [temp], [constraint_FR_RL_jac])
 
         return Jb, ub, lb
 
