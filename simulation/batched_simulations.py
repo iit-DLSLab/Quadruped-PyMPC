@@ -13,7 +13,7 @@ import matplotlib.pyplot as plt
 import simulation
 
 # Number of processes to run
-NUM_PROCESSES = 1
+NUM_PROCESSES = 5
 NUM_EPISODES = 20
 
 

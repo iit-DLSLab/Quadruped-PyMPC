@@ -13,7 +13,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "quadruped_pympc"
-version = "0.1.0"
+version = "0.1.1"
 description = "A model predictive controller for quadruped robots based on the single rigid body model and written in python. Gradient-based (acados) or Sampling-based (jax)."
 authors = [
     { name="Giulio Turrisi", email="giulio.turrisi@iit.it" },
@@ -42,7 +42,7 @@ dependencies = [
     #"pin",
     "cmake",
     "mujoco>=3.1.0",
-    "gym_quadruped",
+    "gym_quadruped @ git+https://github.com/iit-DLSLab/gym-quadruped.git",
 ]
 
 [project.optional-dependencies]
@@ -51,6 +51,11 @@ sampling = [  # Example on how we can setup optional dependencies depending on t
     "jax",
     "jaxlib"
 ]
+
+# ____________________________________________________________________________________________________________________
+[tool.hatch.metadata]
+allow-direct-references = true  # Allow direct references to packages in the same repository
+
 
 #____________________________________________________________________________________________________________________
 [tool.ruff]  # Linter tool
@@ -63,7 +68,7 @@ select = [
     "E",
     "W",
     # isort
-    "I001",
+    "I",
     # pydocstyle
     "D"
 ]

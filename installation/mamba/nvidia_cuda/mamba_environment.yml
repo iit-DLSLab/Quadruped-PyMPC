@@ -5,15 +5,15 @@ channels:
 - robostack-staging
 dependencies:
 - pip
-- python
-- casadi==3.6.5
+- python==3.11
+- casadi
 - numpy
 - matplotlib
 - jaxlib=*=*cuda*
 - jax
 - cuda-nvcc 
 - meshcat-python 
-- scipy 
+- scipy==1.15.1 
 - pinocchio
 - adam-robotics[all]
 - compilers 

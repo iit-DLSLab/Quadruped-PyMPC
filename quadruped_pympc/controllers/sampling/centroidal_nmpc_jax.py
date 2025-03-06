@@ -873,8 +873,24 @@ class Sampling_MPC:
                                     0, 0, 0,
                                     0, 0, 0])
         
+
+        # Compute predicted state for IK
+        input = jnp.array([jnp.float32(0), jnp.float32(0), jnp.float32(0),
+                    jnp.float32(0), jnp.float32(0), jnp.float32(0),
+                    jnp.float32(0), jnp.float32(0), jnp.float32(0),
+                    jnp.float32(0), jnp.float32(0), jnp.float32(0),
+                    fx_FL, fy_FL, fz_FL,
+                    fx_FR, fy_FR, fz_FR,
+                    fx_RL, fy_RL, fz_RL,
+                    fx_RR, fy_RR, fz_RR,
+                ], dtype=dtype_general)
+        current_contact = jnp.array([contact_sequence[0][0], contact_sequence[1][0], 
+                                        contact_sequence[2][0], contact_sequence[3][0]], dtype=dtype_general)
+        nmpc_predicted_state = self.robot.integrate_jax(state, input, current_contact, 0)
+        
+
         best_freq = 1.4
-        return nmpc_GRFs, nmpc_footholds, best_control_parameters, best_cost, best_freq, costs
+        return nmpc_GRFs, nmpc_footholds, nmpc_predicted_state, best_control_parameters, best_cost, best_freq, costs
     
 
 
@@ -984,9 +1000,25 @@ class Sampling_MPC:
                                     0, 0, 0,
                                     0, 0, 0])
         
+
+        # Compute predicted state for IK
+        input = jnp.array([jnp.float32(0), jnp.float32(0), jnp.float32(0),
+                    jnp.float32(0), jnp.float32(0), jnp.float32(0),
+                    jnp.float32(0), jnp.float32(0), jnp.float32(0),
+                    jnp.float32(0), jnp.float32(0), jnp.float32(0),
+                    fx_FL, fy_FL, fz_FL,
+                    fx_FR, fy_FR, fz_FR,
+                    fx_RL, fy_RL, fz_RL,
+                    fx_RR, fy_RR, fz_RR,
+                ], dtype=dtype_general)
+        current_contact = jnp.array([contact_sequence[0][0], contact_sequence[1][0], 
+                                        contact_sequence[2][0], contact_sequence[3][0]], dtype=dtype_general)
+        nmpc_predicted_state = self.robot.integrate_jax(state, input, current_contact, 0)
+        
+        
         best_freq = 1.4
         
-        return nmpc_GRFs, nmpc_footholds, best_control_parameters, best_cost, best_freq, costs
+        return nmpc_GRFs, nmpc_footholds, nmpc_predicted_state, best_control_parameters, best_cost, best_freq, costs
     
 
 
@@ -1095,6 +1127,20 @@ class Sampling_MPC:
                                     0, 0, 0,
                                     0, 0, 0,
                                     0, 0, 0])
+        # Compute predicted state for IK
+        input = jnp.array([jnp.float32(0), jnp.float32(0), jnp.float32(0),
+                    jnp.float32(0), jnp.float32(0), jnp.float32(0),
+                    jnp.float32(0), jnp.float32(0), jnp.float32(0),
+                    jnp.float32(0), jnp.float32(0), jnp.float32(0),
+                    fx_FL, fy_FL, fz_FL,
+                    fx_FR, fy_FR, fz_FR,
+                    fx_RL, fy_RL, fz_RL,
+                    fx_RR, fy_RR, fz_RR,
+                ], dtype=dtype_general)
+        current_contact = jnp.array([contact_sequence[0][0], contact_sequence[1][0], 
+                                        contact_sequence[2][0], contact_sequence[3][0]], dtype=dtype_general)
+        nmpc_predicted_state = self.robot.integrate_jax(state, input, current_contact, 0)
+
         
         indexes = jnp.argsort(costs)[:10]
         elite = additional_random_parameters[indexes]
@@ -1107,7 +1153,7 @@ class Sampling_MPC:
         
         best_freq = 1.65
         
-        return nmpc_GRFs, nmpc_footholds, best_control_parameters, best_cost, best_freq, costs, new_sigma_cem_mppi
+        return nmpc_GRFs, nmpc_footholds, nmpc_predicted_state, best_control_parameters, best_cost, best_freq, costs, new_sigma_cem_mppi
 
     
     def reset(self):

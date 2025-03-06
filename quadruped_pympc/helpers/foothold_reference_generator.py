@@ -1,6 +1,7 @@
 import collections
 
 import mujoco
+import copy
 import numpy as np
 from gym_quadruped.utils.quadruped_utils import LegsAttr
 
@@ -11,7 +12,8 @@ from quadruped_pympc.helpers.quadruped_utils import GaitType
 # TODO: @Giulio Should we convert this to a single function instead of a class? Stance time, can be passed as argument
 class FootholdReferenceGenerator:
 
-    def __init__(self, stance_time: float, lift_off_positions: LegsAttr, vel_moving_average_length=20,
+    def __init__(self, stance_time: float, lift_off_positions: LegsAttr,
+                 vel_moving_average_length=20,
                  hip_height: float = None) -> None:
         """This method initializes the foothold generator class, which computes
         the reference foothold for the nonlinear MPC.
@@ -23,8 +25,15 @@ class FootholdReferenceGenerator:
         self.base_vel_hist = collections.deque(maxlen=vel_moving_average_length)
         self.stance_time = stance_time
         self.hip_height = hip_height
-        self.lift_off_positions = lift_off_positions
-        self.touch_down_positions = lift_off_positions
+        self.lift_off_positions = copy.deepcopy(lift_off_positions)
+        self.touch_down_positions = copy.deepcopy(lift_off_positions)
+
+        """R_W2H = np.array([np.cos(yaw), np.sin(yaw),
+                          -np.sin(yaw), np.cos(yaw)])
+        R_W2H = R_W2H.reshape((2, 2))
+        self.lift_off_positions_h =  R_W2H @ (self.lift_off_positions - base_position[0:2])"""
+        self.lift_off_positions_h = copy.deepcopy(lift_off_positions) #TODO wrong
+        self.touch_down_positions_h = copy.deepcopy(lift_off_positions) #TODO wrong
 
         # The footholds are wrt the hip position, so if we want to change
         # the default foothold, we need to use a variable to add an offset
@@ -127,23 +136,57 @@ class FootholdReferenceGenerator:
 
         return ref_feet
 
-    def update_lift_off_positions(self, previous_contact, current_contact, feet_pos, legs_order, gait_type):
+
+    def update_lift_off_positions(self, previous_contact, current_contact, feet_pos, legs_order, gait_type,
+                                  base_position, base_ori_euler_xyz):
+
+        yaw = base_ori_euler_xyz[2]
+        R_W2H = np.array([np.cos(yaw), np.sin(yaw), 0,
+                        -np.sin(yaw), np.cos(yaw), 0, 
+                            0,          0,       1])
+        R_W2H = R_W2H.reshape((3, 3))
+
         for leg_id, leg_name in enumerate(legs_order):
-            # Set lif-offs
-            if previous_contact[leg_id] == 1 and current_contact[leg_id] == 0:
-                self.lift_off_positions[leg_name] = feet_pos[leg_name]
 
             if(gait_type == GaitType.FULL_STANCE.value):
                 self.lift_off_positions[leg_name] = feet_pos[leg_name]
+                continue
 
-    def update_touch_down_positions(self, previous_contact, current_contact, feet_pos, legs_order, gait_type):
+            # Set lif-offs in world frame and base frame
+            if previous_contact[leg_id] == 1 and current_contact[leg_id] == 0:
+                self.lift_off_positions[leg_name] = feet_pos[leg_name]
+                self.lift_off_positions_h[leg_name] =  R_W2H @ (self.lift_off_positions[leg_name] - base_position)
+            
+            elif(previous_contact[leg_id] == 0 and current_contact[leg_id] == 0):       
+                # Update lift-offs in world frame
+                self.lift_off_positions[leg_name] = R_W2H.T @ self.lift_off_positions_h[leg_name] + base_position
+        
+
+
+    def update_touch_down_positions(self, previous_contact, current_contact, feet_pos, legs_order, gait_type,
+                                    base_position, base_ori_euler_xyz):
+        
+        yaw = base_ori_euler_xyz[2]
+        R_W2H = np.array([np.cos(yaw), np.sin(yaw), 0,
+                        -np.sin(yaw), np.cos(yaw), 0, 
+                            0,          0,       1])
+        R_W2H = R_W2H.reshape((3, 3))
+
         for leg_id, leg_name in enumerate(legs_order):
+            if(gait_type == GaitType.FULL_STANCE.value):
+                self.touch_down_positions[leg_name] = feet_pos[leg_name]
+                continue
+
             # Set touch-downs
             if previous_contact[leg_id] == 0 and current_contact[leg_id] == 1:
                 self.touch_down_positions[leg_name] = feet_pos[leg_name]
+                self.touch_down_positions_h[leg_name] =  R_W2H @ (self.touch_down_positions[leg_name] - base_position)
+            
+            elif(previous_contact[leg_id] == 1 and current_contact[leg_id] == 1):
+                # Update touch-downs in world frame
+                self.touch_down_positions[leg_name] = R_W2H.T @ self.touch_down_positions_h[leg_name] + base_position
 
-            if(gait_type == GaitType.FULL_STANCE.value):
-                self.touch_down_positions[leg_name] = feet_pos[leg_name]
+
 
 
 if __name__ == "__main__":

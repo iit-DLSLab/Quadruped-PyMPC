@@ -5,13 +5,13 @@ channels:
 dependencies:
 - pip
 - python
-- casadi==3.6.5
+- casadi
 - numpy
 - matplotlib
 - jaxlib
 - jax
 - meshcat-python 
-- scipy 
+- scipy==1.15.1  
 - pinocchio
 - adam-robotics[all]
 - ros-noetic-desktop

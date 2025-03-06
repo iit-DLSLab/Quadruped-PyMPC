@@ -20,10 +20,12 @@ class SRBDControllerInterface:
 
         self.previous_contact_mpc = np.array([1, 1, 1, 1])
         
-
-        # input_rates optimize the delta_GRF (smoooth!)
-        # nominal optimize directly the GRF (not smooth)
-        # sampling use GPU
+        # 'nominal' optimized directly the GRF
+        # 'input_rates' optimizes the delta GRF
+        # 'sampling' is a gpu-based mpc that samples the GRF
+        # 'collaborative' optimized directly the GRF and has a passive arm model inside
+        # 'lyapunov' optimized directly the GRF and has a Lyapunov-based stability constraint
+        # 'kynodynamic' sbrd with joints - experimental
         if self.type == 'nominal':
             from quadruped_pympc.controllers.gradient.nominal.centroidal_nmpc_nominal import Acados_NMPC_Nominal
 
@@ -126,6 +128,7 @@ class SRBDControllerInterface:
 
                     nmpc_GRFs, \
                     nmpc_footholds, \
+                    nmpc_predicted_state,\
                     self.controller.best_control_parameters, \
                     best_cost, \
                     best_sample_freq, \
@@ -138,6 +141,7 @@ class SRBDControllerInterface:
                     nominal_sample_freq = pgg_step_freq
                     nmpc_GRFs, \
                     nmpc_footholds, \
+                    nmpc_predicted_state,\
                     self.controller.best_control_parameters, \
                     best_cost, \
                     best_sample_freq, \
@@ -155,7 +159,6 @@ class SRBDControllerInterface:
             nmpc_joints_pos = None
             nmpc_joints_vel = None
             nmpc_joints_acc = None
-            nmpc_predicted_state = None
 
         # If we use Gradient-Based MPC
         else:
@@ -210,22 +213,9 @@ class SRBDControllerInterface:
                                         FR=nmpc_footholds[1],
                                         RL=nmpc_footholds[2],
                                         RR=nmpc_footholds[3])
-            
-            
-            # If the controller is using RTI, we need to linearize the mpc after its computation
-            # this helps to minize the delay between new state->control, but only in a real case.
-            # Here we are in simulation and does not make any difference for now
-            if (self.controller.use_RTI):
-                # preparation phase
-                self.controller.acados_ocp_solver.options_set('rti_phase', 1)
-                self.controller.acados_ocp_solver.solve()
-                # print("preparation phase time: ", controller.acados_ocp_solver.get_stats('time_tot'))
-
 
 
             best_sample_freq = pgg_step_freq
-
-
 
 
 
@@ -238,4 +228,9 @@ class SRBDControllerInterface:
 
         
         return nmpc_GRFs, nmpc_footholds, nmpc_joints_pos, nmpc_joints_vel, nmpc_joints_acc, best_sample_freq, nmpc_predicted_state
-        
+    
+
+    def compute_RTI(self):
+        self.controller.acados_ocp_solver.options_set('rti_phase', 1)
+        self.controller.acados_ocp_solver.solve()
+        # print("preparation phase time: ", controller.acados_ocp_solver.get_stats('time_tot'))

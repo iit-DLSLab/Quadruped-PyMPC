@@ -22,6 +22,15 @@ class SRBDBatchedControllerInterface:
                     Acados_NMPC_GaitAdaptive
         
         self.batched_controller = Acados_NMPC_GaitAdaptive()
+
+
+        # in the case of nonuniform discretization, we create a list of dts and horizons for each nonuniform discretization
+        if (cfg.mpc_params['use_nonuniform_discretization']):
+            self.contact_sequence_dts = [cfg.mpc_params['dt_fine_grained'], self.mpc_dt]
+            self.contact_sequence_lenghts = [cfg.mpc_params['horizon_fine_grained'], self.horizon]
+        else:
+            self.contact_sequence_dts = [self.mpc_dt]
+            self.contact_sequence_lenghts = [self.horizon]
         
 
 
@@ -35,8 +44,6 @@ class SRBDBatchedControllerInterface:
                         pgg_step_freq: float,
                         pgg_duty_factor: float,
                         pgg_gait_type: int,
-                        contact_sequence_dts: np.ndarray,
-                        contact_sequence_lenghts: np.ndarray,
                         optimize_swing: int) -> float:
         """Optimize the gait using the SRBD method
         TODO: remove the unused arguments, and not pass pgg but rather its values
@@ -69,8 +76,8 @@ class SRBDBatchedControllerInterface:
                                                     gait_type=pgg_gait_type,
                                                     horizon=self.horizon)
                 pgg_temp.set_phase_signal(pgg_phase_signal)
-                contact_sequence_temp[j] = pgg_temp.compute_contact_sequence(contact_sequence_dts=contact_sequence_dts, 
-                                                                                contact_sequence_lenghts=contact_sequence_lenghts)
+                contact_sequence_temp[j] = pgg_temp.compute_contact_sequence(contact_sequence_dts=self.contact_sequence_dts, 
+                                                                                contact_sequence_lenghts=self.contact_sequence_lenghts)
 
 
             costs, \

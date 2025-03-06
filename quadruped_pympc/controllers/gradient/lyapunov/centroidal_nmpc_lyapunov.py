@@ -3,7 +3,8 @@ import pathlib
 
 # Authors: Giulio Turrisi -
 
-from acados_template import AcadosOcp, AcadosOcpSolver, ACADOS_INFTY
+from acados_template import AcadosOcp, AcadosOcpSolver
+ACADOS_INFTY = 1000
 import numpy as np
 import scipy.linalg
 import casadi as cs
@@ -35,6 +36,8 @@ class Acados_NMPC_Lyapunov:
         self.use_stability_constraints = self.use_static_stability or self.use_zmp_stability
 
         self.use_DDP = config.mpc_params['use_DDP']
+
+        self.verbose = config.mpc_params['verbose']
 
 
         self.previous_status = -1
@@ -469,29 +472,6 @@ class Acados_NMPC_Lyapunov:
                         constraint_FL_RR, constraint_FR_RL)
 
 
-
-        #create some casadi function for the derivative of the constraint if needed
-        temp = cs.vertcat(self.centroidal_model.states, self.centroidal_model.inputs,
-                          self.centroidal_model.stanceFL, self.centroidal_model.stanceFR,
-                          self.centroidal_model.stanceRL, self.centroidal_model.stanceRR)
-        constraint_FL_FR_jac = cs.jacobian(constraint_FL_FR, temp)
-        self.constraint_FL_FR_jac_fun = cs.Function('constraint_FL_FR_jac_fun', [temp], [constraint_FL_FR_jac])
-
-        constraint_FR_RR_jac = cs.jacobian(constraint_FR_RR, temp)
-        self.constraint_FR_RR_jac_fun = cs.Function('constraint_FR_RR_jac_fun', [temp], [constraint_FR_RR_jac])
-
-        constraint_RR_RL_jac = cs.jacobian(constraint_RR_RL, temp)
-        self.constraint_RR_RL_jac_fun = cs.Function('constraint_RR_RL_jac_fun', [temp], [constraint_RR_RL_jac])
-
-        constraint_RL_FL_jac = cs.jacobian(constraint_RL_FL, temp)
-        self.constraint_RL_FL_jac_fun = cs.Function('constraint_RL_FL_jac_fun', [temp], [constraint_RL_FL_jac])
-
-        constraint_FL_RR_jac = cs.jacobian(constraint_FL_RR, temp)
-        self.constraint_FL_RR_jac_fun = cs.Function('constraint_FL_RR_jac_fun', [temp], [constraint_FL_RR_jac])
-
-        constraint_FR_RL_jac = cs.jacobian(constraint_FR_RL, temp)
-        self.constraint_FR_RL_jac_fun = cs.Function('constraint_FR_RL_jac_fun', [temp], [constraint_FR_RL_jac])
-
         return Jb, ub, lb
 
 
@@ -739,7 +719,8 @@ class Acados_NMPC_Lyapunov:
 
 
         except:
-            print("Error in setting the residual constraint")
+            if(self.verbose):
+                print("Error in setting the residual constraint")
             pass
 
 
@@ -1221,7 +1202,8 @@ class Acados_NMPC_Lyapunov:
                             idx_constraint[3] += 1
 
         except:
-            print("###WARNING: error in setting the constraints")
+            if(self.verbose):
+                print("###WARNING: error in setting the constraints")
 
         return
 
@@ -1527,7 +1509,8 @@ class Acados_NMPC_Lyapunov:
             self.integral_errors[4] = np.where(np.abs(self.integral_errors[4]) > cap_integrator_roll, cap_integrator_roll*np.sign(self.integral_errors[4]), self.integral_errors[4])
             self.integral_errors[5] = np.where(np.abs(self.integral_errors[5]) > cap_integrator_pitch, cap_integrator_pitch*np.sign(self.integral_errors[5]), self.integral_errors[5])
 
-            print("self.integral_errors: ", self.integral_errors)
+            if(self.verbose):
+                print("self.integral_errors: ", self.integral_errors)
 
 
         # Calculate state of the lyapunov function
@@ -1574,11 +1557,13 @@ class Acados_NMPC_Lyapunov:
             # feedback phase
             self.acados_ocp_solver.options_set('rti_phase', 2)
             status = self.acados_ocp_solver.solve()
-            print("feedback phase time: ", self.acados_ocp_solver.get_stats('time_tot'))
+            if(self.verbose):
+                print("feedback phase time: ", self.acados_ocp_solver.get_stats('time_tot'))
 
         else:
             status = self.acados_ocp_solver.solve()
-            print("ocp time: ", self.acados_ocp_solver.get_stats('time_tot'))
+            if(self.verbose):
+                print("ocp time: ", self.acados_ocp_solver.get_stats('time_tot'))
 
 
         # Take the solution
@@ -1743,13 +1728,15 @@ class Acados_NMPC_Lyapunov:
 
         optimal_next_state = self.acados_ocp_solver.get(optimal_next_state_index, "x")[0:24]
         self.optimal_next_state = optimal_next_state
-        self.acados_ocp_solver.print_statistics()
+        if(self.verbose):
+            self.acados_ocp_solver.print_statistics()
 
 
         # Check if QPs converged, if not just use the reference footholds
         # and a GRF over Z distribuited between the leg in stance
         if(status == 1 or status == 4):
-            print("status", status)
+            if(self.verbose):
+                print("status", status)
             if FL_contact_sequence[0] == 0:
                 optimal_foothold[0] = reference["ref_foot_FL"][0]
             if FR_contact_sequence[0] == 0:
