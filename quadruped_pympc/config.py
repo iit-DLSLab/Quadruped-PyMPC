@@ -52,6 +52,19 @@ elif (robot == 'hyqreal'):
                             RL=['lh_haa_joint', 'lh_hfe_joint', 'lh_kfe_joint',],
                             RR=['rh_haa_joint', 'rh_hfe_joint', 'rh_kfe_joint',])
     hip_height = 0.5
+    
+elif (robot == 'hyqreal2'):
+    mass = 115
+    inertia = np.array([[2.42667485998004, -0.0086484048420372, -0.010394423467962],
+                        [-0.0086484048420372, 9.46721548168144, -0.041558626873888],
+                        [-0.010394423467962, -0.041558626873888, 9.36736073384002]])
+    urdf_filename = "hyqreal2.urdf"
+    robot_leg_joints = dict(FL=['lf_haa_joint', 'lf_hfe_joint', 'lf_kfe_joint',],
+                            FR=['rf_haa_joint', 'rf_hfe_joint', 'rf_kfe_joint',],
+                            RL=['lh_haa_joint', 'lh_hfe_joint', 'lh_kfe_joint',],
+                            RR=['rh_haa_joint', 'rh_hfe_joint', 'rh_kfe_joint',])
+    hip_height = 0.5
+    
 elif (robot == 'mini_cheetah'):
     mass = 12.5
     inertia = np.array([[1.58460467e-01, 1.21660000e-04, -1.55444692e-02],
