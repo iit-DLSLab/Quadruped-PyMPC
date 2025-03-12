@@ -97,8 +97,8 @@ mpc_params = {
 
     # horizon is the number of timesteps in the future that the mpc will optimize
     # dt is the discretization time used in the mpc
-    'horizon':                                 12,
-    'dt':                                      0.02,
+    'horizon':                                 20,
+    'dt':                                      0.04,
 
     # GRF limits for each single leg
     "grf_max":                                 mass * 9.81,
