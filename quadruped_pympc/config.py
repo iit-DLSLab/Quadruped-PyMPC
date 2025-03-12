@@ -102,7 +102,7 @@ mpc_params = {
 
     # GRF limits for each single leg
     "grf_max":                                 mass * 9.81,
-    "grf_min":                                 0,
+    "grf_min":                                 50,
     'mu':                                      0.5,
 
     # this is used to have a smaller dt near the start of the horizon
