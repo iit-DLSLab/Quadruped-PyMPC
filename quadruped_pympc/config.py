@@ -197,8 +197,8 @@ simulation_params = {
     'swing_position_gain_fb':      5000,
     'swing_velocity_gain_fb':      100,
     'swing_integral_gain_fb':      0,
-    'impedence_joint_position_gain':  5,
-    'impedence_joint_velocity_gain':  0.1,
+    'impedence_joint_position_gain':  10.0,
+    'impedence_joint_velocity_gain':  1.0,
     'step_height':                 0.3 * hip_height,  
 
     # Visual Foothold adapatation
