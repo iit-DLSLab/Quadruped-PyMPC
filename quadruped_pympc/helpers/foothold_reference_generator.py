@@ -28,6 +28,9 @@ class FootholdReferenceGenerator:
         self.lift_off_positions = copy.deepcopy(lift_off_positions)
         self.touch_down_positions = copy.deepcopy(lift_off_positions)
 
+        # The offset of the COM position wrt the estimated one. HACK compensation
+        self.com_pos_offset = np.zeros((3, ))
+
         """R_W2H = np.array([np.cos(yaw), np.sin(yaw),
                           -np.sin(yaw), np.cos(yaw)])
         R_W2H = R_W2H.reshape((2, 2))
@@ -124,10 +127,10 @@ class FootholdReferenceGenerator:
         ref_feet += vel_offset + error_compensation  # Add offset to all feet
 
         # Reference footholds in world frame
-        ref_feet.FL[0:2] = R_W2H.T @ ref_feet.FL[:2] + com_position[0:2]
-        ref_feet.FR[0:2] = R_W2H.T @ ref_feet.FR[:2] + com_position[0:2]
-        ref_feet.RL[0:2] = R_W2H.T @ ref_feet.RL[:2] + com_position[0:2]
-        ref_feet.RR[0:2] = R_W2H.T @ ref_feet.RR[:2] + com_position[0:2]
+        ref_feet.FL[0:2] = R_W2H.T @ ref_feet.FL[:2] + com_position[0:2] + R_W2H.T @self.com_pos_offset[0:2] 
+        ref_feet.FR[0:2] = R_W2H.T @ ref_feet.FR[:2] + com_position[0:2] + R_W2H.T @self.com_pos_offset[0:2]
+        ref_feet.RL[0:2] = R_W2H.T @ ref_feet.RL[:2] + com_position[0:2] + R_W2H.T @self.com_pos_offset[0:2]
+        ref_feet.RR[0:2] = R_W2H.T @ ref_feet.RR[:2] + com_position[0:2] + R_W2H.T @self.com_pos_offset[0:2]
 
         # TODO: we should rotate them considering the terrain estimator maybe
         #   or we can just do exteroceptive height adjustement...
