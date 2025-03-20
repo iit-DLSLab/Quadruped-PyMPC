@@ -139,6 +139,7 @@ def run_simulation(process=0, num_episodes=500, return_dict=None, seed_number=0,
             base_ang_vel = env.base_ang_vel(frame='world')
             base_ori_euler_xyz = env.base_ori_euler_xyz
             base_pos = env.base_pos
+            com_pos = env.com
             
             # Get the reference base velocity in the world frame
             ref_base_lin_vel, ref_base_ang_vel = env.target_base_vel()
@@ -175,12 +176,12 @@ def run_simulation(process=0, num_episodes=500, return_dict=None, seed_number=0,
 
 
             # Quadruped PyMPC controller --------------------------------------------------------------
-            tau = quadrupedpympc_wrapper.compute_actions(base_pos, base_lin_vel, base_ori_euler_xyz, base_ang_vel,
-                                                    feet_pos, hip_pos, joints_pos,
-                                                    heightmaps,
-                                                    legs_order, simulation_dt, ref_base_lin_vel, ref_base_ang_vel,
-                                                    env.step_num, qpos, qvel, feet_jac, jac_feet_dot, feet_vel, legs_qfrc_bias,
-                                                    legs_mass_matrix, legs_qpos_idx, legs_qvel_idx, tau, inertia)
+            tau = quadrupedpympc_wrapper.compute_actions(com_pos, base_pos, base_lin_vel, base_ori_euler_xyz, base_ang_vel,
+                                                         feet_pos, hip_pos, joints_pos,
+                                                         heightmaps,
+                                                         legs_order, simulation_dt, ref_base_lin_vel, ref_base_ang_vel,
+                                                         env.step_num, qpos, qvel, feet_jac, jac_feet_dot, feet_vel, legs_qfrc_bias,
+                                                         legs_mass_matrix, legs_qpos_idx, legs_qvel_idx, tau, inertia)
             # Limit tau between tau_limits
             for leg in ["FL", "FR", "RL", "RR"]:
                 tau_min, tau_max = tau_limits[leg][:, 0], tau_limits[leg][:, 1]

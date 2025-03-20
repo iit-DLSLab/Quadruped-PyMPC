@@ -29,7 +29,8 @@ class FootholdReferenceGenerator:
         self.touch_down_positions = copy.deepcopy(lift_off_positions)
 
         # The offset of the COM position wrt the estimated one. HACK compensation
-        self.com_pos_offset = np.zeros((3, ))
+        self.com_pos_offset_h = np.zeros((3, ))
+        self.com_pos_offset_w = np.zeros((3, ))
 
         """R_W2H = np.array([np.cos(yaw), np.sin(yaw),
                           -np.sin(yaw), np.cos(yaw)])
@@ -43,7 +44,7 @@ class FootholdReferenceGenerator:
         self.hip_offset = 0.1
 
     def compute_footholds_reference(self,
-                                    com_position: np.ndarray,
+                                    base_position: np.ndarray,
                                     base_ori_euler_xyz: np.ndarray,
                                     base_xy_lin_vel: np.ndarray,
                                     ref_base_xy_lin_vel: np.ndarray,
@@ -60,7 +61,7 @@ class FootholdReferenceGenerator:
 
         Args:
         ----
-            com_position: (3,) The position of the center of mass of the robot.
+            base_position: (3,) The position of the center of mass of the robot.
             base_ori_euler_xyz: (3,) The orientation of the base in euler angles.
             base_xy_lin_vel: (2,) The [x,y] linear velocity of the base in world frame.
             ref_base_xy_lin_vel: (2,) The desired [x,y] linear velocity of the base in world frame.
@@ -107,10 +108,10 @@ class FootholdReferenceGenerator:
         ref_feet = LegsAttr(*[np.zeros(3) for _ in range(4)])
 
         # Reference feet positions are computed from the hips x,y position in the hip-centric/Horizontal frame
-        ref_feet.FL[0:2] = R_W2H @ (hips_position.FL[0:2] - com_position[0:2])
-        ref_feet.FR[0:2] = R_W2H @ (hips_position.FR[0:2] - com_position[0:2])
-        ref_feet.RL[0:2] = R_W2H @ (hips_position.RL[0:2] - com_position[0:2])
-        ref_feet.RR[0:2] = R_W2H @ (hips_position.RR[0:2] - com_position[0:2])
+        ref_feet.FL[0:2] = R_W2H @ (hips_position.FL[0:2] - base_position[0:2])
+        ref_feet.FR[0:2] = R_W2H @ (hips_position.FR[0:2] - base_position[0:2])
+        ref_feet.RL[0:2] = R_W2H @ (hips_position.RL[0:2] - base_position[0:2])
+        ref_feet.RR[0:2] = R_W2H @ (hips_position.RR[0:2] - base_position[0:2])
         # Offsets are introduced to account for x,y offsets from nominal hip and feet positions.
         # Offsets to the Y axis result in wider/narrower stance (+y values lead to wider stance in left/right)
         # Offsets to the X axis result in spread/crossed legs (+x values lead to spread legs in front/back)
@@ -127,10 +128,17 @@ class FootholdReferenceGenerator:
         ref_feet += vel_offset + error_compensation  # Add offset to all feet
 
         # Reference footholds in world frame
-        ref_feet.FL[0:2] = R_W2H.T @ ref_feet.FL[:2] + com_position[0:2] + R_W2H.T @self.com_pos_offset[0:2] 
-        ref_feet.FR[0:2] = R_W2H.T @ ref_feet.FR[:2] + com_position[0:2] + R_W2H.T @self.com_pos_offset[0:2]
-        ref_feet.RL[0:2] = R_W2H.T @ ref_feet.RL[:2] + com_position[0:2] + R_W2H.T @self.com_pos_offset[0:2]
-        ref_feet.RR[0:2] = R_W2H.T @ ref_feet.RR[:2] + com_position[0:2] + R_W2H.T @self.com_pos_offset[0:2]
+        ref_feet.FL[0:2] = R_W2H.T @ ref_feet.FL[:2] + base_position[0:2] 
+        ref_feet.FR[0:2] = R_W2H.T @ ref_feet.FR[:2] + base_position[0:2]
+        ref_feet.RL[0:2] = R_W2H.T @ ref_feet.RL[:2] + base_position[0:2]
+        ref_feet.RR[0:2] = R_W2H.T @ ref_feet.RR[:2] + base_position[0:2]
+
+        # Add offset to the feet positions for manual com offset
+        self.com_pos_offset_w[0:2] = R_W2H.T @self.com_pos_offset_h[0:2]
+        ref_feet.FL[0:2] += self.com_pos_offset_w[0:2]
+        ref_feet.FR[0:2] += self.com_pos_offset_w[0:2]
+        ref_feet.RL[0:2] += self.com_pos_offset_w[0:2]
+        ref_feet.RR[0:2] += self.com_pos_offset_w[0:2]
 
         # TODO: we should rotate them considering the terrain estimator maybe
         #   or we can just do exteroceptive height adjustement...

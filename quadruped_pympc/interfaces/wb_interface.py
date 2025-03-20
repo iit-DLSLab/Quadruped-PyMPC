@@ -93,6 +93,7 @@ class WBInterface:
 
     
     def update_state_and_reference(self,
+                                   com_pos: np.ndarray,
                                    base_pos: np.ndarray,
                                    base_lin_vel: np.ndarray,
                                    base_ori_euler_xyz: np.ndarray,
@@ -108,6 +109,7 @@ class WBInterface:
         """Update the state and reference for the whole body controller, including the contact sequence, footholds, and terrain estimation.
 
         Args:
+            com_pos (np.ndarray): center of mass position in world frame
             base_pos (np.ndarray): base position in world frame
             base_lin_vel (np.ndarray): base linear velocity in world frame
             base_ori_euler_xyz (np.ndarray): base orientation in euler angles in world frame
@@ -130,9 +132,11 @@ class WBInterface:
             step_height (float): step height
             optimize_swing (bool), boolean to inform that the robot is in the apex, hence we can optimize step freq. 
         """
-        
+
+
         state_current = dict(
-            position=base_pos,
+            position=com_pos + self.frg.com_pos_offset_w, #manual com offset
+            #position=base_pos,
             linear_velocity=base_lin_vel,
             orientation=base_ori_euler_xyz,
             angular_velocity=base_ang_vel,
@@ -177,7 +181,7 @@ class WBInterface:
         self.frg.update_lift_off_positions(previous_contact, self.current_contact, feet_pos, legs_order, self.pgg.gait_type, base_pos, base_ori_euler_xyz)
         self.frg.update_touch_down_positions(previous_contact, self.current_contact, feet_pos, legs_order, self.pgg.gait_type, base_pos, base_ori_euler_xyz)
         ref_feet_pos = self.frg.compute_footholds_reference(
-            com_position=base_pos,
+            base_position=base_pos,
             base_ori_euler_xyz=base_ori_euler_xyz,
             base_xy_lin_vel=base_lin_vel[0:2],
             ref_base_xy_lin_vel=ref_base_lin_vel[0:2],
@@ -219,6 +223,11 @@ class WBInterface:
 
 
         # Update state reference ------------------------------------------------------------------------
+        
+        # Since the MPC close in CoM position, but usually we have desired height for the base, 
+        # we modify the reference to bring the base at the desired height and not the CoM
+        ref_pos[2] -= base_pos[2] - (com_pos[2] + self.frg.com_pos_offset_w[2])
+        
         if(cfg.mpc_params['type'] != 'kinodynamic'):
             ref_state = {}
             ref_state |= dict(ref_foot_FL=ref_feet_pos.FL.reshape((1, 3)),

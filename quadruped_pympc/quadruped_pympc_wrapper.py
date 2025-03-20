@@ -57,6 +57,7 @@ class QuadrupedPyMPC_Wrapper:
 
 
     def compute_actions(self, 
+                        com_pos: np.ndarray,
                         base_pos: np.ndarray, 
                         base_lin_vel: np.ndarray, 
                         base_ori_euler_xyz: np.ndarray, 
@@ -85,6 +86,7 @@ class QuadrupedPyMPC_Wrapper:
             compute the torques to be applied to the motors.
 
         Args:
+            com_pos (np.ndarray): center of mass position in
             base_pos (np.ndarray): base position in world frame
             base_lin_vel (np.ndarray): base velocity in world frame
             base_ori_euler_xyz (np.ndarray): base orientation in world frame
@@ -118,7 +120,8 @@ class QuadrupedPyMPC_Wrapper:
         ref_state, \
         contact_sequence, \
         step_height, \
-        optimize_swing = self.wb_interface.update_state_and_reference(base_pos,
+        optimize_swing = self.wb_interface.update_state_and_reference(com_pos,
+                                                base_pos,
                                                 base_lin_vel,
                                                 base_ori_euler_xyz,
                                                 base_ang_vel,
