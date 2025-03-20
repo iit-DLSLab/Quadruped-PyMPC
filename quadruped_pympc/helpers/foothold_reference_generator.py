@@ -3,8 +3,9 @@ import collections
 import mujoco
 import copy
 import numpy as np
-from gym_quadruped.utils.quadruped_utils import LegsAttr
+from scipy.spatial.transform import Rotation
 
+from gym_quadruped.utils.quadruped_utils import LegsAttr
 from quadruped_pympc.helpers.quadruped_utils import GaitType
 
 
@@ -29,7 +30,7 @@ class FootholdReferenceGenerator:
         self.touch_down_positions = copy.deepcopy(lift_off_positions)
 
         # The offset of the COM position wrt the estimated one. HACK compensation
-        self.com_pos_offset_h = np.zeros((3, ))
+        self.com_pos_offset_b = np.zeros((3, ))
         self.com_pos_offset_w = np.zeros((3, ))
 
         """R_W2H = np.array([np.cos(yaw), np.sin(yaw),
@@ -134,7 +135,8 @@ class FootholdReferenceGenerator:
         ref_feet.RR[0:2] = R_W2H.T @ ref_feet.RR[:2] + base_position[0:2]
 
         # Add offset to the feet positions for manual com offset
-        self.com_pos_offset_w[0:2] = R_W2H.T @self.com_pos_offset_h[0:2]
+        R_B2W = Rotation.from_euler('xyz', base_ori_euler_xyz).as_matrix()
+        self.com_pos_offset_w = R_B2W @ self.com_pos_offset_b
         ref_feet.FL[0:2] += self.com_pos_offset_w[0:2]
         ref_feet.FR[0:2] += self.com_pos_offset_w[0:2]
         ref_feet.RL[0:2] += self.com_pos_offset_w[0:2]
