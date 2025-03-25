@@ -56,10 +56,6 @@ elif (robot == 'hyqreal'):
                         [2.75249434e-03, 2.02411774e+01, -7.38560592e-04],
                         [-5.11957307e-01, -7.38560592e-04, 2.14269772e+01]])
     urdf_filename = "hyqreal.urdf"
-    robot_leg_joints = dict(FL=['lf_haa_joint', 'lf_hfe_joint', 'lf_kfe_joint',],
-                            FR=['rf_haa_joint', 'rf_hfe_joint', 'rf_kfe_joint',],
-                            RL=['lh_haa_joint', 'lh_hfe_joint', 'lh_kfe_joint',],
-                            RR=['rh_haa_joint', 'rh_hfe_joint', 'rh_kfe_joint',])
     hip_height = 0.5
 elif (robot == 'mini_cheetah'):
     mass = 12.5
@@ -194,8 +190,8 @@ mpc_params = {
 
 simulation_params = {
     'swing_generator':             'scipy',  # 'scipy', 'explicit', 'ndcurves'
-    'swing_position_gain_fb':      5000,
-    'swing_velocity_gain_fb':      100,
+    'swing_position_gain_fb':      500,
+    'swing_velocity_gain_fb':      10,
     'swing_integral_gain_fb':      0,
     'impedence_joint_position_gain':  10.0,
     'impedence_joint_velocity_gain':  1.0,
