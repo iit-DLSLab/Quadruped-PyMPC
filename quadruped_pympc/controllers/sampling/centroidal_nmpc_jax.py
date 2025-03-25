@@ -258,7 +258,9 @@ class Sampling_MPC:
                                     self.control_parameters_vec.reshape(self.num_parallel_computations, self.num_control_parameters), 
                                     contact_sequence)
 
-            
+
+        self.rollout_sens_to_state = jax.vmap(jax.value_and_grad(self.compute_rollout, argnums=0, has_aux=False), in_axes=(None, None, 0, None), out_axes=(0, 0))
+        self.jit_rollout_sens_to_state = jax.jit(self.rollout_sens_to_state, device=self.device) 
     
     
     def compute_linear_spline_1(self, parameters, step, horizon_leg):
@@ -890,7 +892,7 @@ class Sampling_MPC:
         
 
         best_freq = 1.4
-        return nmpc_GRFs, nmpc_footholds, nmpc_predicted_state, best_control_parameters, best_cost, best_freq, costs
+        return nmpc_GRFs, nmpc_footholds, nmpc_predicted_state, best_control_parameters, best_cost, best_freq, costs, None
     
 
 
@@ -916,8 +918,8 @@ class Sampling_MPC:
         
 
         # Do rollout
-        costs = self.jit_vectorized_rollout(state, reference, control_parameters_vec, contact_sequence)
-
+        #costs = self.jit_vectorized_rollout(state, reference, control_parameters_vec, contact_sequence)
+        costs, gradients = self.jit_rollout_sens_to_state(state, reference, control_parameters_vec, contact_sequence)
 
         # Saturate the cost in case of NaN or inf
         costs = jnp.where(jnp.isnan(costs), 1000000, costs)
@@ -929,16 +931,22 @@ class Sampling_MPC:
         best_cost = costs.take(best_index)
 
 
-        # Compute MPPI update
+        # Compute MPPI update for the feedforward control
         beta = best_cost
-        temperature = 1.
+        temperature = 100.
         exp_costs = jnp.exp((-1./temperature) * (costs - beta))
         denom = np.sum(exp_costs)
         weights = exp_costs/denom
         weighted_inputs = weights[:, jnp.newaxis, jnp.newaxis] * additional_random_parameters.reshape((self.num_parallel_computations,self.num_control_parameters,1))
         best_control_parameters += jnp.sum(weighted_inputs, axis=0).reshape((self.num_control_parameters, ))
 
-
+        # Compute MPPI update for the gains
+        weights_grad_shift = jnp.sum(weights[:, jnp.newaxis] * gradients, axis=0)
+        lam = 1./temperature
+        weights_grad = -lam * weights[:, jnp.newaxis] * (gradients - weights_grad_shift)
+        sensitivity_gains = jnp.sum(jnp.einsum('bi,bo->bio', weights_grad, additional_random_parameters[:, :]), axis=0).T
+        
+        
         # And redistribute it to each leg
         best_control_parameters_FL = best_control_parameters[0:self.num_control_parameters_single_leg]
         best_control_parameters_FR = best_control_parameters[self.num_control_parameters_single_leg:self.num_control_parameters_single_leg*2]
@@ -1018,7 +1026,7 @@ class Sampling_MPC:
         
         best_freq = 1.4
         
-        return nmpc_GRFs, nmpc_footholds, nmpc_predicted_state, best_control_parameters, best_cost, best_freq, costs
+        return nmpc_GRFs, nmpc_footholds, nmpc_predicted_state, best_control_parameters, best_cost, best_freq, costs, sensitivity_gains
     
 
 

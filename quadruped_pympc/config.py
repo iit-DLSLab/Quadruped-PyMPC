@@ -33,7 +33,7 @@ elif (robot == 'go2'):
 
 
 elif (robot == 'aliengo'):
-    mass = 24.637
+    mass = 24
     inertia = np.array([[0.2310941359705289, -0.0014987128245817424, -0.021400468992761768],
                         [-0.0014987128245817424, 1.4485084687476608, 0.0004641447134275615],
                         [-0.021400468992761768, 0.0004641447134275615, 1.503217877350808]])
@@ -56,10 +56,6 @@ elif (robot == 'hyqreal'):
                         [2.75249434e-03, 2.02411774e+01, -7.38560592e-04],
                         [-5.11957307e-01, -7.38560592e-04, 2.14269772e+01]])
     urdf_filename = "hyqreal.urdf"
-    robot_leg_joints = dict(FL=['lf_haa_joint', 'lf_hfe_joint', 'lf_kfe_joint',],
-                            FR=['rf_haa_joint', 'rf_hfe_joint', 'rf_kfe_joint',],
-                            RL=['lh_haa_joint', 'lh_hfe_joint', 'lh_kfe_joint',],
-                            RR=['rh_haa_joint', 'rh_hfe_joint', 'rh_kfe_joint',])
     hip_height = 0.5
 elif (robot == 'mini_cheetah'):
     mass = 12.5
@@ -176,8 +172,8 @@ mpc_params = {
     # ----- START properties only for the sampling-based mpc -----
 
     # this is used only in the case 'sampling'.
-    'sampling_method':                         'random_sampling',  # 'random_sampling', 'mppi', 'cem_mppi'
-    'control_parametrization':                 'cubic_spline_1',
+    'sampling_method':                         'mppi',  # 'random_sampling', 'mppi', 'cem_mppi'
+    'control_parametrization':                 'linear_spline_1',
     # 'cubic_spline_1', 'cubic_spline_2', 'linear_spline_1', 'linear_spline_2', 'zero_order'
     'num_parallel_computations':               10000,  # More is better, but slower computation!
     'num_sampling_iterations':                 1,  # More is better, but slower computation!
@@ -186,6 +182,7 @@ mpc_params = {
     'sigma_mppi':                              3,
     'sigma_random_sampling':                   [0.2, 3, 10],
     'shift_solution':                          False,
+    'use_sensitivity_gains':                   True,
 
     # ----- END properties for the sampling-based mpc -----
 
@@ -194,8 +191,8 @@ mpc_params = {
 
 simulation_params = {
     'swing_generator':             'scipy',  # 'scipy', 'explicit', 'ndcurves'
-    'swing_position_gain_fb':      5000,
-    'swing_velocity_gain_fb':      100,
+    'swing_position_gain_fb':      500,
+    'swing_velocity_gain_fb':      10,
     'swing_integral_gain_fb':      0,
     'impedence_joint_position_gain':  5,
     'impedence_joint_velocity_gain':  0.1,

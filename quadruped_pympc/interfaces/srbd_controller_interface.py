@@ -72,6 +72,8 @@ class SRBDControllerInterface:
                 from quadruped_pympc.controllers.sampling.centroidal_nmpc_jax import Sampling_MPC
 
             self.controller = Sampling_MPC()
+            self.sensitivity_gains = None
+            self.x0_sensitivity = None
             
 
 
@@ -145,10 +147,14 @@ class SRBDControllerInterface:
                     self.controller.best_control_parameters, \
                     best_cost, \
                     best_sample_freq, \
-                    costs = self.controller.jitted_compute_control(state_current_jax, reference_state_jax,
+                    costs,\
+                    sensitivity_gains = self.controller.jitted_compute_control(state_current_jax, reference_state_jax,
                                                         contact_sequence, self.controller.best_control_parameters,
                                                         self.controller.master_key, pgg_phase_signal,
                                                         nominal_sample_freq, optimize_swing)
+                    
+                    self.sensitivity_gains = sensitivity_gains
+                    self.x0_sensitivity = state_current
 
             nmpc_footholds = LegsAttr(FL=ref_state["ref_foot_FL"][0],
                                         FR=ref_state["ref_foot_FR"][0],

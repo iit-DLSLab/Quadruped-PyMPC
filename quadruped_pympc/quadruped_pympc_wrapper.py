@@ -135,6 +135,8 @@ class QuadrupedPyMPC_Wrapper:
 
 
         # Solve OCP ---------------------------------------------------------------------------------------
+        import time
+        time_start = time.time()
         if step_num % round(1 / (self.mpc_frequency * simulation_dt)) == 0:
 
             self.nmpc_GRFs,  \
@@ -167,10 +169,27 @@ class QuadrupedPyMPC_Wrapper:
                                                                         self.wb_interface.pgg.duty_factor,
                                                                         self.wb_interface.pgg.gait_type,
                                                                         optimize_swing)
+            print(time.time() - time_start)
 
+        if(cfg.mpc_params['type'] == 'sampling' and cfg.mpc_params['use_sensitivity_gains']):
+            if(self.srbd_controller_interface.sensitivity_gains is not None):
+                x0 = np.concatenate((self.srbd_controller_interface.x0_sensitivity["position"],
+                                self.srbd_controller_interface.x0_sensitivity["linear_velocity"],
+                                self.srbd_controller_interface.x0_sensitivity["orientation"], 
+                                self.srbd_controller_interface.x0_sensitivity["angular_velocity"]))
+                xcurrent = np.concatenate((state_current["position"],
+                                                state_current["linear_velocity"],
+                                                state_current["orientation"], 
+                                                state_current["angular_velocity"]))
+                u_sensitivity = self.srbd_controller_interface.sensitivity_gains[:,0:12]@(xcurrent - x0)
+                #print("self.sensitivity_gains: ", self.srbd_controller_interface.sensitivity_gains)
+                #print("u_sensitivity: ", u_sensitivity)
+                self.nmpc_GRFs.FL += u_sensitivity[0:3]
+                self.nmpc_GRFs.FR += u_sensitivity[6:9]
+                self.nmpc_GRFs.RL += u_sensitivity[12:15]
+                self.nmpc_GRFs.RR += u_sensitivity[18:21]
+        
 
-        
-        
         # Compute Swing and Stance Torque ---------------------------------------------------------------------------
         tau, \
         des_joints_pos, \
@@ -200,9 +219,9 @@ class QuadrupedPyMPC_Wrapper:
         # to a low-level motor controller, here we can try to simulate it)
         kp_joint_motor = cfg.simulation_params['impedence_joint_position_gain']
         kd_joint_motor = cfg.simulation_params['impedence_joint_velocity_gain']
-        #for leg in legs_order:
-        #    tau[leg] += kp_joint_motor * (des_joints_pos[leg] - qpos[legs_qpos_idx[leg]]) + \
-        #                kd_joint_motor * (des_joints_vel[leg] - qvel[legs_qvel_idx[leg]])
+        for leg in legs_order:
+            tau[leg] += kp_joint_motor * (des_joints_pos[leg] - qpos[legs_qpos_idx[leg]]) + \
+                        kd_joint_motor * (des_joints_vel[leg] - qvel[legs_qvel_idx[leg]])
 
 
         # Save some observables -------------------------------------------------------------------------------------
