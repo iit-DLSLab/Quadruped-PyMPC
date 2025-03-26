@@ -9,21 +9,17 @@ dir_path = os.path.dirname(os.path.realpath(__file__))
 os.environ['XLA_FLAGS'] = '--xla_gpu_triton_gemm_any=True'
 import jax
 import jax.numpy as jnp
-from jax import jit, random
+from jax import random
 
 import sys
 
 sys.path.append(dir_path)
-sys.path.append(dir_path + '/../')
-sys.path.append(dir_path + '/../helpers/')
+sys.path.append(dir_path + "/../")
+sys.path.append(dir_path + "/../helpers/")
 
-from quadruped_pympc import config
-from centroidal_model_jax import Centroidal_Model_JAX
-from quadruped_pympc.helpers.periodic_gait_generator_jax import PeriodicGaitGeneratorJax
-
-import time
 import copy
 
+from centroidal_model_jax import Centroidal_Model_JAX
 
 dtype_general = 'float32'
 
@@ -38,12 +34,12 @@ class Sampling_MPC:
             dt (int): desidered sampling time
         """
 
-        self.num_parallel_computations = config.mpc_params['num_parallel_computations']
-        self.sampling_method = config.mpc_params['sampling_method']
-        self.control_parametrization = config.mpc_params['control_parametrization']
-        self.num_sampling_iterations = config.mpc_params['num_sampling_iterations']
-        self.dt = config.mpc_params['dt']
-        self.horizon = config.mpc_params['horizon']
+        self.num_parallel_computations = config.mpc_params["num_parallel_computations"]
+        self.sampling_method = config.mpc_params["sampling_method"]
+        self.control_parametrization = config.mpc_params["control_parametrization"]
+        self.num_sampling_iterations = config.mpc_params["num_sampling_iterations"]
+        self.dt = config.mpc_params["dt"]
+        self.horizon = config.mpc_params["horizon"]
 
         self.state_dim = 24
         self.control_dim = 24
@@ -53,9 +49,9 @@ class Sampling_MPC:
 
         if device == "gpu":
             try:
-                self.device = jax.devices('gpu')[0]
+                self.device = jax.devices("gpu")[0]
             except:
-                self.device = jax.devices('cpu')[0]
+                self.device = jax.devices("cpu")[0]
                 print("GPU not available, using CPU")
         else:
             self.device = jax.devices('cpu')[0]
@@ -223,7 +219,7 @@ class Sampling_MPC:
         self.R = self.R.at[23, 23].set(0.001)  # foot_force_z_RR
 
         # mu is the friction coefficient
-        self.mu = config.mpc_params['mu']
+        self.mu = config.mpc_params["mu"]
 
         # maximum allowed z contact forces
         self.f_z_max = config.mpc_params['grf_max']

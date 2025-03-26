@@ -1,5 +1,5 @@
-import copy
-import numpy as np
+import os
+
 import jax
 import jax.numpy as jnp
 
@@ -10,6 +10,8 @@ dir_path = os.path.dirname(os.path.realpath(__file__))
 import sys
 
 sys.path.append(dir_path + '/../')
+
+sys.path.append(dir_path + "/../")
 
 # Parameters for both MPC and simulation
 from quadruped_pympc import config

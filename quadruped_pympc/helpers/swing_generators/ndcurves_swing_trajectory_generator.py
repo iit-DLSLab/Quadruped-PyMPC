@@ -7,6 +7,10 @@ import ndcurves
 # from ndcurves.plot import plotBezier
 import copy
 
+import matplotlib.pyplot as plt
+import ndcurves
+import numpy as np
+
 
 class SwingTrajectoryGenerator:
     def __init__(self, step_height: float, swing_period: float) -> None:
@@ -48,11 +52,11 @@ class SwingTrajectoryGenerator:
         curve_points = np.array(curve_points)
 
         fig = plt.figure()
-        ax = fig.add_subplot(111, projection='3d')
+        ax = fig.add_subplot(111, projection="3d")
         ax.plot(curve_points[:, 0], curve_points[:, 1], curve_points[:, 2])
         ax.legend()
 
-        plt.title('3D Bézier Curve')
+        plt.title("3D Bézier Curve")
         plt.show()
 
     def plot_trajectory_references(self, tp, fp, vp):

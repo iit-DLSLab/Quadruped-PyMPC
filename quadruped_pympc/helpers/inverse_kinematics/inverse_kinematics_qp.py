@@ -3,7 +3,7 @@ import numpy as np
 np.set_printoptions(precision=3, suppress=True)
 from numpy.linalg import norm
 import time
-import unittest
+
 import casadi as cs
 # import example_robot_data as robex
 
@@ -14,11 +14,12 @@ dir_path = os.path.dirname(os.path.realpath(__file__))
 import sys
 
 sys.path.append(dir_path)
-sys.path.append(dir_path + '/../../')
+sys.path.append(dir_path + "/../../")
 
 # from jnrh2023.utils.meshcat_viewer_wrapper import MeshcatVisualizer
 
 # Mujoco magic
+
 import mujoco
 import mujoco.viewer
 
@@ -26,7 +27,6 @@ import mujoco.viewer
 import pinocchio as pin
 from pinocchio import casadi as cpin
 
-import copy
 
 
 # Class for solving a generic inverse kinematics problem
@@ -191,7 +191,7 @@ if __name__ == "__main__":
     print("time: ", time.time() - initial_time)
 
     # Check consistency in mujoco
-    m = mujoco.MjModel.from_xml_path('./../simulation/robot_model/unitree_go1/scene.xml')
+    m = mujoco.MjModel.from_xml_path("./../simulation/robot_model/unitree_go1/scene.xml")
     d = mujoco.MjData(m)
     d.qpos[2] = robot.q0[2]
     d.qpos[7:] = robot.q0[7:]

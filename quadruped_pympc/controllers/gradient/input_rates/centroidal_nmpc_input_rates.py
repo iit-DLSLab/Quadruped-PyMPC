@@ -2,7 +2,10 @@
 
 # Authors: Giulio Turrisi -
 
+import copy
 import os
+
+import casadi as cs
 import numpy as np
 import scipy.linalg
 import casadi as cs
@@ -14,6 +17,7 @@ from acados_template import AcadosOcp, AcadosOcpSolver
 
 ACADOS_INFTY = ACADOS_INFTY = 1000
 from quadruped_pympc import config
+
 from .centroidal_model_input_rates import Centroidal_Model_InputRates
 
 
@@ -47,7 +51,7 @@ class Acados_NMPC_InputRates:
 
         self.use_DDP = config.mpc_params['use_DDP']
 
-        self.verbose = config.mpc_params['verbose']
+        self.verbose = config.mpc_params["verbose"]
 
         self.previous_status = -1
         self.previous_contact_sequence = np.zeros((4, self.horizon))
@@ -249,8 +253,8 @@ class Acados_NMPC_InputRates:
             # ocp.solver_options.globalization = 'MERIT_BACKTRACKING'
             ocp.solver_options.with_adaptive_levenberg_marquardt = True
 
-            ocp.cost.cost_type = 'NONLINEAR_LS'
-            ocp.cost.cost_type_e = 'NONLINEAR_LS'
+            ocp.cost.cost_type = "NONLINEAR_LS"
+            ocp.cost.cost_type_e = "NONLINEAR_LS"
             ocp.model.cost_y_expr = cs.vertcat(ocp.model.x, ocp.model.u)
             ocp.model.cost_y_expr_e = ocp.model.x
 
@@ -483,8 +487,8 @@ class Acados_NMPC_InputRates:
         t = np.array([1, 0, 0])
         b = np.array([0, 1, 0])
         mu = self.centroidal_model.mu_friction
-        f_max = config.mpc_params['grf_max']
-        f_min = config.mpc_params['grf_min']
+        f_max = config.mpc_params["grf_max"]
+        f_min = config.mpc_params["grf_min"]
 
         # Derivation can be found in the paper
         # "High-slope terrain locomotion for torque-controlled quadruped robots",
@@ -1233,14 +1237,14 @@ class Acados_NMPC_InputRates:
         idx_ref_foot_to_assign = np.array([0, 0, 0, 0])
         for j in range(self.horizon):
             yref = np.zeros(shape=(self.states_dim + self.inputs_dim,))
-            yref[0:3] = reference['ref_position']
-            yref[3:6] = reference['ref_linear_velocity']
-            yref[6:9] = reference['ref_orientation']
-            yref[9:12] = reference['ref_angular_velocity']
-            yref[12:15] = reference['ref_foot_FL'][idx_ref_foot_to_assign[0]]
-            yref[15:18] = reference['ref_foot_FR'][idx_ref_foot_to_assign[1]]
-            yref[18:21] = reference['ref_foot_RL'][idx_ref_foot_to_assign[2]]
-            yref[21:24] = reference['ref_foot_RR'][idx_ref_foot_to_assign[3]]
+            yref[0:3] = reference["ref_position"]
+            yref[3:6] = reference["ref_linear_velocity"]
+            yref[6:9] = reference["ref_orientation"]
+            yref[9:12] = reference["ref_angular_velocity"]
+            yref[12:15] = reference["ref_foot_FL"][idx_ref_foot_to_assign[0]]
+            yref[15:18] = reference["ref_foot_FR"][idx_ref_foot_to_assign[1]]
+            yref[18:21] = reference["ref_foot_RL"][idx_ref_foot_to_assign[2]]
+            yref[21:24] = reference["ref_foot_RR"][idx_ref_foot_to_assign[3]]
 
             # Update the idx_ref_foot_to_assign. Every time there is a change in the contact phase
             # between 1 and 0, it means that the leg go into swing and a new reference is needed!!!
@@ -1309,7 +1313,7 @@ class Acados_NMPC_InputRates:
 
         # Fill stance param, friction and stance proximity
         # (stance proximity will disable foothold optimization near a stance!!)
-        mu = config.mpc_params['mu']
+        mu = config.mpc_params["mu"]
         yaw = state["orientation"][2]
 
         # Stance Proximity ugly routine. Basically we disable foothold optimization
@@ -1519,7 +1523,7 @@ class Acados_NMPC_InputRates:
         # Solve ocp via RTI or normal ocp
         if self.use_RTI:
             # feedback phase
-            self.acados_ocp_solver.options_set('rti_phase', 2)
+            self.acados_ocp_solver.options_set("rti_phase", 2)
             status = self.acados_ocp_solver.solve()
             if self.verbose:
                 print("feedback phase time: ", self.acados_ocp_solver.get_stats('time_tot'))

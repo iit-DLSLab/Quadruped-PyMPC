@@ -5,13 +5,14 @@
 from acados_template import AcadosOcp, AcadosOcpSolver
 
 ACADOS_INFTY = 1000
-from .centroidal_model_collaborative import Centroidal_Model_Collaborative
+import copy
+import os
+
+import casadi as cs
 import numpy as np
 import scipy.linalg
-import casadi as cs
-import copy
 
-import time
+from .centroidal_model_collaborative import Centroidal_Model_Collaborative
 
 import os
 
@@ -20,7 +21,7 @@ dir_path = os.path.dirname(os.path.realpath(__file__))
 import sys
 
 sys.path.append(dir_path)
-sys.path.append(dir_path + '/../../')
+sys.path.append(dir_path + "/../../")
 
 from quadruped_pympc import config
 
@@ -485,8 +486,8 @@ class Acados_NMPC_Collaborative:
         t = np.array([1, 0, 0])
         b = np.array([0, 1, 0])
         mu = self.centroidal_model.mu_friction
-        f_max = config.mpc_params['grf_max']
-        f_min = config.mpc_params['grf_min']
+        f_max = config.mpc_params["grf_max"]
+        f_min = config.mpc_params["grf_min"]
 
         # Derivation can be found in the paper
         # "High-slope terrain locomotion for torque-controlled quadruped robots",
@@ -1220,22 +1221,22 @@ class Acados_NMPC_Collaborative:
             if reference['ref_linear_velocity'].shape[0] == 3:
                 yref[3:6] = reference['ref_linear_velocity']
             else:
-                yref[3:6] = reference['ref_linear_velocity'][j]
+                yref[3:6] = reference["ref_linear_velocity"][j]
 
             if reference['ref_orientation'].shape[0] == 3:
                 yref[6:9] = reference['ref_orientation']
             else:
-                yref[6:9] = reference['ref_orientation'][j]
+                yref[6:9] = reference["ref_orientation"][j]
 
             if reference['ref_angular_velocity'].shape[0] == 3:
                 yref[9:12] = reference['ref_angular_velocity']
             else:
-                yref[9:12] = reference['ref_angular_velocity'][j]
+                yref[9:12] = reference["ref_angular_velocity"][j]
 
-            yref[12:15] = reference['ref_foot_FL'][idx_ref_foot_to_assign[0]]
-            yref[15:18] = reference['ref_foot_FR'][idx_ref_foot_to_assign[1]]
-            yref[18:21] = reference['ref_foot_RL'][idx_ref_foot_to_assign[2]]
-            yref[21:24] = reference['ref_foot_RR'][idx_ref_foot_to_assign[3]]
+            yref[12:15] = reference["ref_foot_FL"][idx_ref_foot_to_assign[0]]
+            yref[15:18] = reference["ref_foot_FR"][idx_ref_foot_to_assign[1]]
+            yref[18:21] = reference["ref_foot_RL"][idx_ref_foot_to_assign[2]]
+            yref[21:24] = reference["ref_foot_RR"][idx_ref_foot_to_assign[3]]
 
             yref[30:32] = np.array([desired_force[0], desired_force[1]])
 
@@ -1311,7 +1312,7 @@ class Acados_NMPC_Collaborative:
 
         # Fill stance param, friction and stance proximity
         # (stance proximity will disable foothold optimization near a stance!!)
-        mu = config.mpc_params['mu']
+        mu = config.mpc_params["mu"]
         yaw = state["orientation"][2]
 
         # Stance Proximity ugly routine. Basically we disable foothold optimization
@@ -1541,13 +1542,13 @@ class Acados_NMPC_Collaborative:
         # Solve ocp via RTI or normal ocp
         if self.use_RTI:
             # feedback phase
-            self.acados_ocp_solver.options_set('rti_phase', 2)
+            self.acados_ocp_solver.options_set("rti_phase", 2)
             status = self.acados_ocp_solver.solve()
-            print("feedback phase time: ", self.acados_ocp_solver.get_stats('time_tot'))
+            print("feedback phase time: ", self.acados_ocp_solver.get_stats("time_tot"))
 
         else:
             status = self.acados_ocp_solver.solve()
-            print("ocp time: ", self.acados_ocp_solver.get_stats('time_tot'))
+            print("ocp time: ", self.acados_ocp_solver.get_stats("time_tot"))
 
         # Take the solution
         control = self.acados_ocp_solver.get(0, "u")

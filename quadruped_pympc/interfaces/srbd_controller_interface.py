@@ -1,5 +1,4 @@
 import numpy as np
-
 from gym_quadruped.utils.quadruped_utils import LegsAttr
 
 from quadruped_pympc import config as cfg
@@ -25,7 +24,7 @@ class SRBDControllerInterface:
         # 'collaborative' optimized directly the GRF and has a passive arm model inside
         # 'lyapunov' optimized directly the GRF and has a Lyapunov-based stability constraint
         # 'kynodynamic' sbrd with joints - experimental
-        if self.type == 'nominal':
+        if self.type == "nominal":
             from quadruped_pympc.controllers.gradient.nominal.centroidal_nmpc_nominal import Acados_NMPC_Nominal
 
             self.controller = Acados_NMPC_Nominal()
@@ -75,7 +74,7 @@ class SRBDControllerInterface:
 
                 self.batched_controller = Acados_NMPC_GaitAdaptive()
 
-        elif self.type == 'sampling':
+        elif self.type == "sampling":
             if self.optimize_step_freq:
                 from quadruped_pympc.controllers.sampling.centroidal_nmpc_jax_gait_adaptive import Sampling_MPC
             else:
@@ -241,6 +240,6 @@ class SRBDControllerInterface:
         )
 
     def compute_RTI(self):
-        self.controller.acados_ocp_solver.options_set('rti_phase', 1)
+        self.controller.acados_ocp_solver.options_set("rti_phase", 1)
         self.controller.acados_ocp_solver.solve()
         # print("preparation phase time: ", controller.acados_ocp_solver.get_stats('time_tot'))

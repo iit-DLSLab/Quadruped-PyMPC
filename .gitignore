@@ -304,17 +304,14 @@ pyrightconfig.json
 
 
 
-quadruped_pympc/controllers/gradient/nominal/c_generated_code_gait_adaptive/
-
-
-
 
 .idea/
 
-MUJOCO_LOG.TXT
+# Custom ignore parts.
+*MUJOCO_LOG.TXT
+quadruped_pympc/controllers/gradient/nominal/c_generated_code_gait_adaptive/
 
-MUJOCO_LOG.TXT
-
-cfg/
-
+# Datasets are heavy and shouls be saved to huggingface instead of handled here.
+/datasets/
 *.pkl
+*.h5

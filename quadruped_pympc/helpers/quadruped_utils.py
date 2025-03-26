@@ -59,14 +59,14 @@ def plot_swing_mujoco(
     if geom_ids is None:
         geom_ids = LegsAttr(FL=[], FR=[], RL=[], RR=[])
         # Instantiate a new geometry
-        for leg_id, leg_name in enumerate(['FL', 'FR', 'RL', 'RR']):
+        for leg_id, leg_name in enumerate(["FL", "FR", "RL", "RR"]):
             viewer.user_scn.ngeom += NUM_TRAJ_POINTS
             geom_ids[leg_name] = list(range(viewer.user_scn.ngeom - NUM_TRAJ_POINTS - 1, viewer.user_scn.ngeom - 1))
 
     # viewer.user_scn.ngeom = 1
     # We first draw the trajectory of the feet
     des_foot_traj = LegsAttr(FL=[], FR=[], RL=[], RR=[])
-    for leg_id, leg_name in enumerate(['FL', 'FR', 'RL', 'RR']):
+    for leg_id, leg_name in enumerate(["FL", "FR", "RL", "RR"]):
         # TODO: This function should be vectorized rather than queried sequentially
         if swing_time[leg_name] == 0.0:
             continue
@@ -101,15 +101,15 @@ def check_zmp_constraint_satisfaction(state, contact_status, forces):
     # TODO: This import should go
     from quadruped_pympc import config
 
-    base_w = copy.deepcopy(state['position'])
-    base_vel_w = copy.deepcopy(state['linear_velocity'])
+    base_w = copy.deepcopy(state["position"])
+    base_vel_w = copy.deepcopy(state["linear_velocity"])
 
-    FL = copy.deepcopy(state['foot_FL'])
-    FR = copy.deepcopy(state['foot_FR'])
-    RL = copy.deepcopy(state['foot_RL'])
-    RR = copy.deepcopy(state['foot_RR'])
+    FL = copy.deepcopy(state["foot_FL"])
+    FR = copy.deepcopy(state["foot_FR"])
+    RL = copy.deepcopy(state["foot_RL"])
+    RR = copy.deepcopy(state["foot_RR"])
 
-    yaw = copy.deepcopy(state['orientation'][2])
+    yaw = copy.deepcopy(state["orientation"][2])
     h_R_w = np.zeros((2, 2))
     h_R_w[0, 0] = np.cos(yaw)
     h_R_w[0, 1] = np.sin(yaw)

@@ -3,10 +3,9 @@
 
 # Authors: Giulio Turrisi -
 
-import time
-import unittest
-import casadi as cs
+import os
 
+import casadi as cs
 import numpy as np
 from acados_template import AcadosModel
 
@@ -17,7 +16,7 @@ dir_path = os.path.dirname(os.path.realpath(__file__))
 import sys
 
 sys.path.append(dir_path)
-sys.path.append(dir_path + '/../../')
+sys.path.append(dir_path + "/../../")
 
 from liecasadi import SO3
 
@@ -29,8 +28,8 @@ use_centroidal_model = True
 
 if use_adam:
     # ADAM import
-    from adam.casadi import KinDynComputations
     from adam import Representations
+    from adam.casadi import KinDynComputations
 else:
     # PINOCCHIO import
     import pinocchio as pin

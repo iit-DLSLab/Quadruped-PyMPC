@@ -36,10 +36,10 @@ class TerrainEstimator:
         R_W2H = np.array([[np.cos(yaw), np.sin(yaw), 0], [-np.sin(yaw), np.cos(yaw), 0], [0, 0, 1]])
 
         # Extracting 3-element segments from liftoff_position_z_ and x_op_
-        seg0 = feet_pos['FL']
-        seg3 = feet_pos['FR']
-        seg6 = feet_pos['RL']
-        seg9 = feet_pos['RR']
+        seg0 = feet_pos["FL"]
+        seg3 = feet_pos["FR"]
+        seg6 = feet_pos["RL"]
+        seg9 = feet_pos["RR"]
 
         # Calculating differences
         # TODO: Feet position in base frame?
@@ -70,10 +70,10 @@ class TerrainEstimator:
         self.terrain_pitch = self.terrain_pitch * 0.8 + pitch * 0.2
 
         # Update the reference height given the foot in contact
-        z_foot_FL = feet_pos['FL'][2]
-        z_foot_FR = feet_pos['FR'][2]
-        z_foot_RL = feet_pos['RL'][2]
-        z_foot_RR = feet_pos['RR'][2]
+        z_foot_FL = feet_pos["FL"][2]
+        z_foot_FR = feet_pos["FR"][2]
+        z_foot_RL = feet_pos["RL"][2]
+        z_foot_RR = feet_pos["RR"][2]
         """number_foot_in_contact = current_contact[0] + \
                                  current_contact[1] + \
                                  current_contact[2] + \
