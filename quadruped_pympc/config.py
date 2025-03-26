@@ -31,7 +31,6 @@ elif (robot == 'go2'):
     urdf_filename = "go2.urdf"
     hip_height = 0.28
 
-
 elif (robot == 'aliengo'):
     mass = 24.637
     inertia = np.array([[0.2310941359705289, -0.0014987128245817424, -0.021400468992761768],
@@ -57,6 +56,7 @@ elif (robot == 'hyqreal'):
                         [-5.11957307e-01, -7.38560592e-04, 2.14269772e+01]])
     urdf_filename = "hyqreal.urdf"
     hip_height = 0.5
+    
 elif (robot == 'mini_cheetah'):
     mass = 12.5
     inertia = np.array([[1.58460467e-01, 1.21660000e-04, -1.55444692e-02],
@@ -192,9 +192,9 @@ simulation_params = {
     'swing_generator':             'scipy',  # 'scipy', 'explicit', 'ndcurves'
     'swing_position_gain_fb':      500,
     'swing_velocity_gain_fb':      10,
-    'swing_integral_gain_fb':      0,
     'impedence_joint_position_gain':  10.0,
     'impedence_joint_velocity_gain':  1.0,
+
     'step_height':                 0.3 * hip_height,  
 
     # Visual Foothold adapatation
