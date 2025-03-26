@@ -17,26 +17,36 @@ from quadruped_pympc import config
 
 
 class SrbInertiaComputation:
-    def __init__(self, ) -> None:
-        if (config.robot == 'go2'):
+    def __init__(self) -> None:
+        if config.robot == 'go2':
             urdf_filename = dir_path + '/../simulation/robot_model/go2/go2.urdf'
-        elif (config.robot == 'aliengo'):
+        elif config.robot == 'aliengo':
             urdf_filename = dir_path + '/../simulation/robot_model/aliengo/aliengo.urdf'
-        elif (config.robot == 'hyqreal'):
+        elif config.robot == 'hyqreal':
             urdf_filename = dir_path + '/../simulation/robot_model/hyqreal/hyqreal.urdf'
-        elif (config.robot == 'mini_cheetah'):
+        elif config.robot == 'mini_cheetah':
             urdf_filename = dir_path + '/../simulation/robot_model/mini_cheetah/mini_cheetah.urdf'
 
         self.use_pinocchio = True
 
-        if (self.use_pinocchio):
+        if self.use_pinocchio:
             self.robot_full = pin.buildModelFromUrdf(urdf_filename)
 
             # Create a list of joints to lock
-            jointsToLock = ['FL_hip_joint', 'FL_thigh_joint', 'FL_calf_joint',
-                            'FR_hip_joint', 'FR_thigh_joint', 'FR_calf_joint',
-                            'RL_hip_joint', 'RL_thigh_joint', 'RL_calf_joint',
-                            'RR_hip_joint', 'RR_thigh_joint', 'RR_calf_joint']
+            jointsToLock = [
+                'FL_hip_joint',
+                'FL_thigh_joint',
+                'FL_calf_joint',
+                'FR_hip_joint',
+                'FR_thigh_joint',
+                'FR_calf_joint',
+                'RL_hip_joint',
+                'RL_thigh_joint',
+                'RL_calf_joint',
+                'RR_hip_joint',
+                'RR_thigh_joint',
+                'RR_calf_joint',
+            ]
 
             # Get the ID of all existing joints
             self.jointsToLockIDs = []
@@ -52,9 +62,8 @@ class SrbInertiaComputation:
             self.mass_mass_fun = self.kindyn.mass_matrix_fun()
 
     def compute_inertia(self, q):
-
-        if (self.use_pinocchio):
-            if (config.robot == 'aliengo'):
+        if self.use_pinocchio:
+            if config.robot == 'aliengo':
                 robot_reduced = pin.buildReducedModel(self.robot_full, self.jointsToLockIDs, q[3:])
             else:
                 robot_reduced = pin.buildReducedModel(self.robot_full, self.jointsToLockIDs, q[7:])

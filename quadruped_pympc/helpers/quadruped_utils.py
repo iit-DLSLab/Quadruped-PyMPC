@@ -23,15 +23,16 @@ class GaitType(Enum):
     FULL_STANCE = 7
 
 
-def plot_swing_mujoco(viewer: Handle,
-                      swing_traj_controller: SwingTrajectoryController,
-                      swing_period,
-                      swing_time: namedtuple,
-                      lift_off_positions: namedtuple,
-                      nmpc_footholds: namedtuple,
-                      ref_feet_pos: namedtuple,
-                      geom_ids: namedtuple = None,
-                      ):
+def plot_swing_mujoco(
+    viewer: Handle,
+    swing_traj_controller: SwingTrajectoryController,
+    swing_period,
+    swing_time: namedtuple,
+    lift_off_positions: namedtuple,
+    nmpc_footholds: namedtuple,
+    ref_feet_pos: namedtuple,
+    geom_ids: namedtuple = None,
+):
     """Function to plot the desired foot swing trajectory in Mujoco.
 
     Args:
@@ -71,27 +72,28 @@ def plot_swing_mujoco(viewer: Handle,
             continue
         for point_idx, foot_swing_time in enumerate(np.linspace(swing_time[leg_name], swing_period, NUM_TRAJ_POINTS)):
             ref_foot_pos, _, _ = swing_traj_controller.swing_generator.compute_trajectory_references(
-                foot_swing_time,
-                lift_off_positions[leg_name],
-                nmpc_footholds[leg_name])
+                foot_swing_time, lift_off_positions[leg_name], nmpc_footholds[leg_name]
+            )
             des_foot_traj[leg_name].append(ref_foot_pos.squeeze())
 
         for point_idx in range(NUM_TRAJ_POINTS - 1):
-            render_line(viewer=viewer,
-                        initial_point=des_foot_traj[leg_name][point_idx],
-                        target_point=des_foot_traj[leg_name][point_idx + 1],
-                        width=.005,
-                        color=np.array([1, 0, 0, 1]),
-                        geom_id=geom_ids[leg_name][point_idx]
-                        )
+            render_line(
+                viewer=viewer,
+                initial_point=des_foot_traj[leg_name][point_idx],
+                target_point=des_foot_traj[leg_name][point_idx + 1],
+                width=0.005,
+                color=np.array([1, 0, 0, 1]),
+                geom_id=geom_ids[leg_name][point_idx],
+            )
 
         # Add a sphere at the the ref_feet_pos
-        render_sphere(viewer=viewer,
-                      position=ref_feet_pos[leg_name],
-                      diameter=0.04,
-                      color=np.array([0, 1, 0, .5]),
-                      geom_id=geom_ids[leg_name][-1]
-                      )
+        render_sphere(
+            viewer=viewer,
+            position=ref_feet_pos[leg_name],
+            diameter=0.04,
+            color=np.array([0, 1, 0, 0.5]),
+            geom_id=geom_ids[leg_name][-1],
+        )
     return geom_ids
 
 
@@ -127,7 +129,7 @@ def check_zmp_constraint_satisfaction(state, contact_status, forces):
     gravity = np.array([0, 0, -9.81])
     linear_com_acc = (1 / config.mass) * temp + gravity
 
-    if (config.mpc_params['use_zmp_stability']):
+    if config.mpc_params['use_zmp_stability']:
         gravity_z = 9.81
         robotHeight = base_w[2]
         zmp = base_w[0:2] - linear_com_acc[0:2] * (robotHeight / gravity_z)
@@ -176,24 +178,24 @@ def check_zmp_constraint_satisfaction(state, contact_status, forces):
 
     violation = 0
 
-    if (FL_contact == 1):
-        if (FR_contact == 1):
+    if FL_contact == 1:
+        if FR_contact == 1:
             # ub_support_FL_FR = -0.0
             # lb_support_FL_FR = -1000
-            if (constraint_FL_FR > 0):
+            if constraint_FL_FR > 0:
                 violation = violation + 1
 
         else:
             # ub_support_FL_RR = 1000
             # lb_support_FL_RR = 0.0
-            if (constraint_FL_RR < 0):
+            if constraint_FL_RR < 0:
                 violation = violation + 1
 
-    if (FR_contact == 1):
-        if (RR_contact == 1):
+    if FR_contact == 1:
+        if RR_contact == 1:
             # ub_support_FR_RR = 1000
             # lb_support_FR_RR = 0.0
-            if (constraint_FR_RR < 0):
+            if constraint_FR_RR < 0:
                 violation = violation + 1
 
         else:
@@ -203,35 +205,35 @@ def check_zmp_constraint_satisfaction(state, contact_status, forces):
             # violation = violation + 1
             # TOCHECK
 
-    if (RR_contact == 1):
-        if (RL_contact == 1):
+    if RR_contact == 1:
+        if RL_contact == 1:
             # ub_support_RR_RL = 1000
             # lb_support_RR_RL = 0.0
-            if (constraint_RR_RL < 0):
+            if constraint_RR_RL < 0:
                 violation = violation + 1
 
         else:
             # ub_support_FL_RR = -0.0
             # lb_support_FL_RR = -1000
-            if (constraint_FL_RR > 0):
+            if constraint_FL_RR > 0:
                 violation = violation + 1 * 0
 
-    if (RL_contact == 1):
-        if (FL_contact == 1):
+    if RL_contact == 1:
+        if FL_contact == 1:
             # ub_support_RL_FL = -0.0
             # lb_support_RL_FL = -1000
-            if (constraint_RL_FL > 0):
+            if constraint_RL_FL > 0:
                 violation = violation + 1
         else:
             # ub_support_FR_RL = -0.0
             # lb_support_FR_RL = -1000
-            if (constraint_FR_RL > 0):
+            if constraint_FR_RL > 0:
                 violation = violation + 1
 
-    if (FL_contact == 1 and FR_contact == 1 and RL_contact == 1 and RR_contact == 1):
+    if FL_contact == 1 and FR_contact == 1 and RL_contact == 1 and RR_contact == 1:
         violation = 0
 
-    if (violation >= 1):
+    if violation >= 1:
         return True
     else:
         return False

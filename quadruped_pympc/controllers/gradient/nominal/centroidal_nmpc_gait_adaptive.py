@@ -1,6 +1,6 @@
 # Description: This file contains the class for the NMPC controller
 
-# Authors: Giulio Turrisi - 
+# Authors: Giulio Turrisi -
 
 import numpy as np
 import scipy.linalg
@@ -10,6 +10,7 @@ import copy
 
 import casadi as cs
 from acados_template import AcadosOcp, AcadosOcpBatchSolver
+
 ACADOS_INFTY = 1000
 
 from quadruped_pympc import config
@@ -17,9 +18,8 @@ from .centroidal_model_nominal import Centroidal_Model_Nominal
 
 
 # Class for the Acados NMPC, the model is in another file!
-class Acados_NMPC_GaitAdaptive():
+class Acados_NMPC_GaitAdaptive:
     def __init__(self):
-
         self.horizon = config.mpc_params['horizon']  # Define the number of discretization steps
         self.dt = config.mpc_params['dt']
         self.T_horizon = self.horizon * self.dt
@@ -51,8 +51,9 @@ class Acados_NMPC_GaitAdaptive():
         self.inputs_dim = acados_model.u.size()[0]
 
         # Create the acados ocp solver
-        self.ocp = self.create_ocp_solver_description(acados_model, num_threads_in_batch_solve=len(
-            config.mpc_params['step_freq_available']))
+        self.ocp = self.create_ocp_solver_description(
+            acados_model, num_threads_in_batch_solve=len(config.mpc_params['step_freq_available'])
+        )
 
         # Batch solver
         use_batch_solver = config.mpc_params['optimize_step_freq']
@@ -62,9 +63,12 @@ class Acados_NMPC_GaitAdaptive():
         batch_ocp = self.ocp
         dir_path = os.path.dirname(os.path.realpath(__file__))
         batch_ocp.code_export_directory = dir_path + '/c_generated_code_gait_adaptive'
-        self.batch_solver = AcadosOcpBatchSolver(batch_ocp, self.batch, verbose=False,
-                                                 json_file=self.ocp.code_export_directory + "/centroidal_nmpc_batch"
-                                                           + ".json")
+        self.batch_solver = AcadosOcpBatchSolver(
+            batch_ocp,
+            self.batch,
+            verbose=False,
+            json_file=self.ocp.code_export_directory + "/centroidal_nmpc_batch" + ".json",
+        )
 
         # Initialize solvers
         for stage in range(self.horizon + 1):
@@ -102,7 +106,7 @@ class Acados_NMPC_GaitAdaptive():
         ocp.cost.Vx[:nx, :nx] = np.eye(nx)
 
         Vu = np.zeros((ny, nu))
-        Vu[nx: nx + nu, 0:nu] = np.eye(nu)
+        Vu[nx : nx + nu, 0:nu] = np.eye(nu)
         ocp.cost.Vu = Vu
 
         ocp.cost.Vx_e = np.eye(nx)
@@ -111,9 +115,7 @@ class Acados_NMPC_GaitAdaptive():
         ocp.cost.yref_e = np.zeros((ny_e,))
 
         # Set friction and foothold constraints
-        expr_h_friction, \
-            self.constr_uh_friction, \
-            self.constr_lh_friction = self.create_friction_cone_constraints()
+        expr_h_friction, self.constr_uh_friction, self.constr_lh_friction = self.create_friction_cone_constraints()
 
         ocp.model.con_h_expr = expr_h_friction
         ocp.constraints.uh = self.constr_uh_friction
@@ -124,10 +126,8 @@ class Acados_NMPC_GaitAdaptive():
         nsh = expr_h_friction.shape[0]
         nsh_state_constraint_start = copy.copy(nsh)
 
-        if (self.use_foothold_constraints):
-            expr_h_foot, \
-                self.constr_uh_foot, \
-                self.constr_lh_foot = self.create_foothold_constraints()
+        if self.use_foothold_constraints:
+            expr_h_foot, self.constr_uh_foot, self.constr_lh_foot = self.create_foothold_constraints()
 
             ocp.model.con_h_expr = cs.vertcat(ocp.model.con_h_expr, expr_h_foot)
             ocp.constraints.uh = np.concatenate((ocp.constraints.uh, self.constr_uh_foot))
@@ -135,11 +135,11 @@ class Acados_NMPC_GaitAdaptive():
             nsh += expr_h_foot.shape[0]
 
         # Set stability constraints
-        if (self.use_stability_constraints):
+        if self.use_stability_constraints:
             self.nsh_stability_start = copy.copy(nsh)
-            expr_h_support_polygon, \
-                self.constr_uh_support_polygon, \
-                self.constr_lh_support_polygon = self.create_stability_constraints()
+            expr_h_support_polygon, self.constr_uh_support_polygon, self.constr_lh_support_polygon = (
+                self.create_stability_constraints()
+            )
 
             ocp.model.con_h_expr = cs.vertcat(ocp.model.con_h_expr, expr_h_support_polygon)
             ocp.constraints.uh = np.concatenate((ocp.constraints.uh, self.constr_uh_support_polygon))
@@ -151,16 +151,19 @@ class Acados_NMPC_GaitAdaptive():
 
         # Set slack variable configuration:
         num_state_cstr = nsh_state_constraint_end - nsh_state_constraint_start
-        if (num_state_cstr > 0):
+        if num_state_cstr > 0:
             ocp.constraints.lsh = np.zeros(
-                num_state_cstr)  # Lower bounds on slacks corresponding to soft lower bounds for nonlinear constraints
+                num_state_cstr
+            )  # Lower bounds on slacks corresponding to soft lower bounds for nonlinear constraints
             ocp.constraints.ush = np.zeros(
-                num_state_cstr)  # Lower bounds on slacks corresponding to soft upper bounds for nonlinear constraints
+                num_state_cstr
+            )  # Lower bounds on slacks corresponding to soft upper bounds for nonlinear constraints
             ocp.constraints.idxsh = np.array(range(nsh_state_constraint_start, nsh_state_constraint_end))  # Jsh
             ns = num_state_cstr
             ocp.cost.zl = 1000 * np.ones((ns,))  # gradient wrt lower slack at intermediate shooting nodes (1 to N-1)
             ocp.cost.Zl = 1 * np.ones(
-                (ns,))  # diagonal of Hessian wrt lower slack at intermediate shooting nodes (1 to N-1)
+                (ns,)
+            )  # diagonal of Hessian wrt lower slack at intermediate shooting nodes (1 to N-1)
             ocp.cost.zu = 1000 * np.ones((ns,))
             ocp.cost.Zu = 1 * np.ones((ns,))
 
@@ -178,7 +181,7 @@ class Acados_NMPC_GaitAdaptive():
         ocp.constraints.x0 = X0
 
         # Set initialize parameters
-        init_contact_status = np.array([1., 1., 1., 1.])
+        init_contact_status = np.array([1.0, 1.0, 1.0, 1.0])
         init_mu = np.array([0.5])
         init_stance_proximity = np.array([0, 0, 0, 0])
         init_base_position = np.array([0, 0, 0])
@@ -187,16 +190,25 @@ class Acados_NMPC_GaitAdaptive():
         init_inertia = config.inertia.reshape((9,))
         init_mass = np.array([config.mass])
 
-        ocp.parameter_values = np.concatenate((init_contact_status, init_mu, init_stance_proximity,
-                                               init_base_position, init_base_yaw, init_external_wrench,
-                                               init_inertia, init_mass))
+        ocp.parameter_values = np.concatenate(
+            (
+                init_contact_status,
+                init_mu,
+                init_stance_proximity,
+                init_base_position,
+                init_base_yaw,
+                init_external_wrench,
+                init_inertia,
+                init_mass,
+            )
+        )
 
         # Set options
         ocp.solver_options.qp_solver = "PARTIAL_CONDENSING_HPIPM"  # FULL_CONDENSING_QPOASES PARTIAL_CONDENSING_OSQP
         # PARTIAL_CONDENSING_HPIPM
         ocp.solver_options.hessian_approx = "GAUSS_NEWTON"  # 'GAUSS_NEWTON', 'EXACT'
         ocp.solver_options.integrator_type = "ERK"  # ERK IRK GNSF DISCRETE
-        if (self.use_DDP):
+        if self.use_DDP:
             ocp.solver_options.nlp_solver_type = 'DDP'
             ocp.solver_options.nlp_solver_max_iter = config.mpc_params['num_qp_iterations']
             # ocp.solver_options.globalization = 'MERIT_BACKTRACKING'
@@ -209,21 +221,21 @@ class Acados_NMPC_GaitAdaptive():
 
             ocp.translate_to_feasibility_problem(keep_x0=True, keep_cost=True)
 
-        elif (self.use_RTI):
+        elif self.use_RTI:
             ocp.solver_options.nlp_solver_type = "SQP_RTI"
             ocp.solver_options.nlp_solver_max_iter = 1
-            # Set the RTI type for the advanced RTI method 
+            # Set the RTI type for the advanced RTI method
             # (see https://arxiv.org/pdf/2403.07101.pdf)
-            if (config.mpc_params['as_rti_type'] == "AS-RTI-A"):
+            if config.mpc_params['as_rti_type'] == "AS-RTI-A":
                 ocp.solver_options.as_rti_iter = 1
                 ocp.solver_options.as_rti_level = 0
-            elif (config.mpc_params['as_rti_type'] == "AS-RTI-B"):
+            elif config.mpc_params['as_rti_type'] == "AS-RTI-B":
                 ocp.solver_options.as_rti_iter = 1
                 ocp.solver_options.as_rti_level = 1
-            elif (config.mpc_params['as_rti_type'] == "AS-RTI-C"):
+            elif config.mpc_params['as_rti_type'] == "AS-RTI-C":
                 ocp.solver_options.as_rti_iter = 1
                 ocp.solver_options.as_rti_level = 2
-            elif (config.mpc_params['as_rti_type'] == "AS-RTI-D"):
+            elif config.mpc_params['as_rti_type'] == "AS-RTI-D":
                 ocp.solver_options.as_rti_iter = 1
                 ocp.solver_options.as_rti_level = 3
 
@@ -232,14 +244,14 @@ class Acados_NMPC_GaitAdaptive():
             ocp.solver_options.nlp_solver_max_iter = config.mpc_params['num_qp_iterations']
         # ocp.solver_options.globalization = "MERIT_BACKTRACKING"  # FIXED_STEP, MERIT_BACKTRACKING
 
-        if (config.mpc_params['solver_mode'] == "balance"):
+        if config.mpc_params['solver_mode'] == "balance":
             ocp.solver_options.hpipm_mode = "BALANCE"
-        elif (config.mpc_params['solver_mode'] == "robust"):
+        elif config.mpc_params['solver_mode'] == "robust":
             ocp.solver_options.hpipm_mode = "ROBUST"
-        elif (config.mpc_params['solver_mode'] == "fast"):
+        elif config.mpc_params['solver_mode'] == "fast":
             ocp.solver_options.qp_solver_iter_max = 10
             ocp.solver_options.hpipm_mode = "SPEED"
-        elif (config.mpc_params['solver_mode'] == "crazy_speed"):
+        elif config.mpc_params['solver_mode'] == "crazy_speed":
             ocp.solver_options.qp_solver_iter_max = 5
             ocp.solver_options.hpipm_mode = "SPEED_ABS"
 
@@ -253,11 +265,13 @@ class Acados_NMPC_GaitAdaptive():
         ocp.solver_options.tf = self.T_horizon
 
         # Nonuniform discretization
-        if (config.mpc_params['use_nonuniform_discretization']):
-            time_steps_fine_grained = np.tile(config.mpc_params['dt_fine_grained'],
-                                              config.mpc_params['horizon_fine_grained'])
+        if config.mpc_params['use_nonuniform_discretization']:
+            time_steps_fine_grained = np.tile(
+                config.mpc_params['dt_fine_grained'], config.mpc_params['horizon_fine_grained']
+            )
             time_steps = np.concatenate(
-                (time_steps_fine_grained, np.tile(self.dt, self.horizon - config.mpc_params['horizon_fine_grained'])))
+                (time_steps_fine_grained, np.tile(self.dt, self.horizon - config.mpc_params['horizon_fine_grained']))
+            )
             shooting_nodes = np.zeros((self.horizon + 1,))
             for i in range(len(time_steps)):
                 shooting_nodes[i + 1] = shooting_nodes[i] + time_steps[i]
@@ -266,8 +280,7 @@ class Acados_NMPC_GaitAdaptive():
         return ocp
 
     # Create a constraint for  stability (COM, ZMP or CP inside support polygon)
-    def create_stability_constraints(self, ) -> None:
-
+    def create_stability_constraints(self) -> None:
         base_w = self.centroidal_model.states[0:3]
         base_vel_w = self.centroidal_model.states[3:6]
 
@@ -289,7 +302,7 @@ class Acados_NMPC_GaitAdaptive():
         RL[0:2] = h_R_w @ (RL[0:2] - base_w[0:2])
         RR[0:2] = h_R_w @ (RR[0:2] - base_w[0:2])
 
-        if (self.use_static_stability):
+        if self.use_static_stability:
             x = 0.0
             y = 0.0
         else:
@@ -367,15 +380,14 @@ class Acados_NMPC_GaitAdaptive():
         ub[5] = 0
         lb[5] = -ACADOS_INFTY
 
-        Jb = cs.vertcat(constraint_FL_FR, constraint_FR_RR,
-                        constraint_RR_RL, constraint_RL_FL,
-                        constraint_FL_RR, constraint_FR_RL)
-
+        Jb = cs.vertcat(
+            constraint_FL_FR, constraint_FR_RR, constraint_RR_RL, constraint_RL_FL, constraint_FL_RR, constraint_FR_RL
+        )
 
         return Jb, ub, lb
 
     # Create a standard foothold box constraint
-    def create_foothold_constraints(self, ):
+    def create_foothold_constraints(self):
         """
         This function calculates the symbolic foothold constraints for the centroidal NMPC problem.
 
@@ -417,12 +429,11 @@ class Acados_NMPC_GaitAdaptive():
         foot_position_rr[0:2] = h_R_w @ cs.vertcat(self.centroidal_model.states[21:23] - base[0:2])
         foot_position_rr[2] = self.centroidal_model.states[23]
 
-        Jbu = cs.vertcat(foot_position_fl, foot_position_fr,
-                         foot_position_rl, foot_position_rr)
+        Jbu = cs.vertcat(foot_position_fl, foot_position_fr, foot_position_rl, foot_position_rr)
         return Jbu, ubu, lbu
 
     # Create the friction cone constraint
-    def create_friction_cone_constraints(self, ) -> None:
+    def create_friction_cone_constraints(self) -> None:
         """
         This function calculates the symbolic friction cone constraints for the centroidal NMPC problem.
 
@@ -509,21 +520,39 @@ class Acados_NMPC_GaitAdaptive():
         Q_pitch_integral_integral = np.array([10])  # integral of pitch
 
         R_foot_vel = np.array([0.0001, 0.0001, 0.00001])  # v_x, v_y, v_z (should be 4 times this, once per foot)
-        if (config.robot == "hyqreal"):
+        if config.robot == "hyqreal":
             R_foot_force = np.array(
-                [0.00001, 0.00001, 0.00001])  # f_x, f_y, f_z (should be 4 times this, once per foot)
+                [0.00001, 0.00001, 0.00001]
+            )  # f_x, f_y, f_z (should be 4 times this, once per foot)
         else:
             R_foot_force = np.array([0.001, 0.001, 0.001])
 
-        Q_mat = np.diag(np.concatenate((Q_position, Q_velocity,
-                                        Q_base_angle, Q_base_angle_rates,
-                                        Q_foot_pos, Q_foot_pos, Q_foot_pos, Q_foot_pos,
-                                        Q_com_position_z_integral, Q_com_velocity_x_integral,
-                                        Q_com_velocity_y_integral, Q_com_velocity_z_integral,
-                                        Q_roll_integral_integral, Q_pitch_integral_integral)))
+        Q_mat = np.diag(
+            np.concatenate(
+                (
+                    Q_position,
+                    Q_velocity,
+                    Q_base_angle,
+                    Q_base_angle_rates,
+                    Q_foot_pos,
+                    Q_foot_pos,
+                    Q_foot_pos,
+                    Q_foot_pos,
+                    Q_com_position_z_integral,
+                    Q_com_velocity_x_integral,
+                    Q_com_velocity_y_integral,
+                    Q_com_velocity_z_integral,
+                    Q_roll_integral_integral,
+                    Q_pitch_integral_integral,
+                )
+            )
+        )
 
-        R_mat = np.diag(np.concatenate((R_foot_vel, R_foot_vel, R_foot_vel, R_foot_vel,
-                                        R_foot_force, R_foot_force, R_foot_force, R_foot_force)))
+        R_mat = np.diag(
+            np.concatenate(
+                (R_foot_vel, R_foot_vel, R_foot_vel, R_foot_vel, R_foot_force, R_foot_force, R_foot_force, R_foot_force)
+            )
+        )
 
         return Q_mat, R_mat
 
@@ -533,7 +562,7 @@ class Acados_NMPC_GaitAdaptive():
     def set_stage_constraint(self, constraint, state, reference, contact_sequence, h_R_w, stance_proximity):
         """
         Set the stage constraint for the centroidal NMPC problem. We only consider the stance constraint, and the swing
-        constraint up to 2 maximum references. 
+        constraint up to 2 maximum references.
 
         Args:
             constraint (numpy.ndarray or None): Constraint passed from outside (e.g. vision). If None,
@@ -548,7 +577,6 @@ class Acados_NMPC_GaitAdaptive():
             None
         """
         try:
-
             # Take the array of the contact sequence and split
             # it in 4 arrays for clarity
             FL_contact_sequence = contact_sequence[0]
@@ -574,7 +602,7 @@ class Acados_NMPC_GaitAdaptive():
             h_R_w = h_R_w.reshape((2, 2))
 
             # Divide the constraint in upper and lower bound. The constraint are
-            # represented by 4 vertex, but we only use box constraint hence 
+            # represented by 4 vertex, but we only use box constraint hence
             # we need only 2 vertex for each constraint (first an last)
 
             # For the leg in stance now, we simply enlarge the actual position as a box constraint
@@ -626,8 +654,8 @@ class Acados_NMPC_GaitAdaptive():
 
             # Constraint for the first footholds at the next touchdown. If constraint == True
             # we have some constraint passed from outside (e.g. vision), otherwise we use the
-            # nominal foothold enlarged as we do previously  
-            if (constraint is not None):
+            # nominal foothold enlarged as we do previously
+            if constraint is not None:
                 # From the VFA
                 first_up_constraint_FL = np.array([constraint[0][0], constraint[1][0], constraint[2][0] + 0.002])
                 first_up_constraint_FR = np.array([constraint[0][1], constraint[1][1], constraint[2][1] + 0.002])
@@ -676,38 +704,46 @@ class Acados_NMPC_GaitAdaptive():
 
                 # FL first touchdown constraint
                 first_up_constraint_FL = np.array(
-                    [FL_reference_foot[0][0], FL_reference_foot[0][1], FL_reference_foot[0][2] + 0.002])
+                    [FL_reference_foot[0][0], FL_reference_foot[0][1], FL_reference_foot[0][2] + 0.002]
+                )
                 first_up_constraint_FL[0:2] = h_R_w @ (first_up_constraint_FL[0:2] - base[0:2]) + 0.15
 
                 first_low_constraint_FL = np.array(
-                    [FL_reference_foot[0][0], FL_reference_foot[0][1], FL_reference_foot[0][2] - 0.002])
+                    [FL_reference_foot[0][0], FL_reference_foot[0][1], FL_reference_foot[0][2] - 0.002]
+                )
                 first_low_constraint_FL[0:2] = h_R_w @ (first_low_constraint_FL[0:2] - base[0:2]) - 0.15
 
                 # FR first touchdown constraint
                 first_up_constraint_FR = np.array(
-                    [FR_reference_foot[0][0], FR_reference_foot[0][1], FR_reference_foot[0][2] + 0.002])
+                    [FR_reference_foot[0][0], FR_reference_foot[0][1], FR_reference_foot[0][2] + 0.002]
+                )
                 first_up_constraint_FR[0:2] = h_R_w @ (first_up_constraint_FR[0:2] - base[0:2]) + 0.15
 
                 first_low_constraint_FR = np.array(
-                    [FR_reference_foot[0][0], FR_reference_foot[0][1], FR_reference_foot[0][2] - 0.002])
+                    [FR_reference_foot[0][0], FR_reference_foot[0][1], FR_reference_foot[0][2] - 0.002]
+                )
                 first_low_constraint_FR[0:2] = h_R_w @ (first_low_constraint_FR[0:2] - base[0:2]) - 0.15
 
                 # RL first touchdown constraint
                 first_up_constraint_RL = np.array(
-                    [RL_reference_foot[0][0], RL_reference_foot[0][1], RL_reference_foot[0][2] + 0.002])
+                    [RL_reference_foot[0][0], RL_reference_foot[0][1], RL_reference_foot[0][2] + 0.002]
+                )
                 first_up_constraint_RL[0:2] = h_R_w @ (first_up_constraint_RL[0:2] - base[0:2]) + 0.15
 
                 first_low_constraint_RL = np.array(
-                    [RL_reference_foot[0][0], RL_reference_foot[0][1], RL_reference_foot[0][2] - 0.002])
+                    [RL_reference_foot[0][0], RL_reference_foot[0][1], RL_reference_foot[0][2] - 0.002]
+                )
                 first_low_constraint_RL[0:2] = h_R_w @ (first_low_constraint_RL[0:2] - base[0:2]) - 0.15
 
                 # RR first touchdown constraint
                 first_up_constraint_RR = np.array(
-                    [RR_reference_foot[0][0], RR_reference_foot[0][1], RR_reference_foot[0][2] + 0.002])
+                    [RR_reference_foot[0][0], RR_reference_foot[0][1], RR_reference_foot[0][2] + 0.002]
+                )
                 first_up_constraint_RR[0:2] = h_R_w @ (first_up_constraint_RR[0:2] - base[0:2]) + 0.15
 
                 first_low_constraint_RR = np.array(
-                    [RR_reference_foot[0][0], RR_reference_foot[0][1], RR_reference_foot[0][2] - 0.002])
+                    [RR_reference_foot[0][0], RR_reference_foot[0][1], RR_reference_foot[0][2] - 0.002]
+                )
                 first_low_constraint_RR[0:2] = h_R_w @ (first_low_constraint_RR[0:2] - base[0:2]) - 0.15
 
             # we stack all the constraint we have for now
@@ -725,52 +761,60 @@ class Acados_NMPC_GaitAdaptive():
             # We do not expect more than two reference footholds...
 
             # FL second touchdown constraint
-            if (FL_reference_foot.shape[0] == 2):
+            if FL_reference_foot.shape[0] == 2:
                 second_up_constraint_FL = np.array(
-                    [FL_reference_foot[1][0], FL_reference_foot[1][1], FL_reference_foot[1][2] + 0.002])
+                    [FL_reference_foot[1][0], FL_reference_foot[1][1], FL_reference_foot[1][2] + 0.002]
+                )
                 second_up_constraint_FL[0:2] = h_R_w @ (second_up_constraint_FL[0:2] - base[0:2]) + 0.15
 
                 second_low_constraint_FL = np.array(
-                    [FL_reference_foot[1][0], FL_reference_foot[1][1], FL_reference_foot[1][2] - 0.002])
+                    [FL_reference_foot[1][0], FL_reference_foot[1][1], FL_reference_foot[1][2] - 0.002]
+                )
                 second_low_constraint_FL[0:2] = h_R_w @ (second_low_constraint_FL[0:2] - base[0:2]) - 0.15
 
                 up_constraint_FL = np.vstack((up_constraint_FL, second_up_constraint_FL))
                 low_constraint_FL = np.vstack((low_constraint_FL, second_low_constraint_FL))
 
             # FR second touchdown constraint
-            if (FR_reference_foot.shape[0] == 2):
+            if FR_reference_foot.shape[0] == 2:
                 second_up_constraint_FR = np.array(
-                    [FR_reference_foot[1][0], FR_reference_foot[1][1], FR_reference_foot[1][2] + 0.002])
+                    [FR_reference_foot[1][0], FR_reference_foot[1][1], FR_reference_foot[1][2] + 0.002]
+                )
                 second_up_constraint_FR[0:2] = h_R_w @ (second_up_constraint_FR[0:2] - base[0:2]) + 0.15
 
                 second_low_constraint_FR = np.array(
-                    [FR_reference_foot[1][0], FR_reference_foot[1][1], FR_reference_foot[1][2] - 0.002])
+                    [FR_reference_foot[1][0], FR_reference_foot[1][1], FR_reference_foot[1][2] - 0.002]
+                )
                 second_low_constraint_FR[0:2] = h_R_w @ (second_low_constraint_FR[0:2] - base[0:2]) - 0.15
 
                 up_constraint_FR = np.vstack((up_constraint_FR, second_up_constraint_FR))
                 low_constraint_FR = np.vstack((low_constraint_FR, second_low_constraint_FR))
 
             # RL second touchdown constraint
-            if (RL_reference_foot.shape[0] == 2):
+            if RL_reference_foot.shape[0] == 2:
                 second_up_constraint_RL = np.array(
-                    [RL_reference_foot[1][0], RL_reference_foot[1][1], RL_reference_foot[1][2] + 0.002])
+                    [RL_reference_foot[1][0], RL_reference_foot[1][1], RL_reference_foot[1][2] + 0.002]
+                )
                 second_up_constraint_RL[0:2] = h_R_w @ (second_up_constraint_RL[0:2] - base[0:2]) + 0.15
 
                 second_low_constraint_RL = np.array(
-                    [RL_reference_foot[1][0], RL_reference_foot[1][1], RL_reference_foot[1][2] - 0.002])
+                    [RL_reference_foot[1][0], RL_reference_foot[1][1], RL_reference_foot[1][2] - 0.002]
+                )
                 second_low_constraint_RL[0:2] = h_R_w @ (second_low_constraint_RL[0:2] - base[0:2]) - 0.15
 
                 up_constraint_RL = np.vstack((up_constraint_RL, second_up_constraint_RL))
                 low_constraint_RL = np.vstack((low_constraint_RL, second_low_constraint_RL))
 
             # RR second touchdown constraint
-            if (RR_reference_foot.shape[0] == 2):
+            if RR_reference_foot.shape[0] == 2:
                 second_up_constraint_RR = np.array(
-                    [RR_reference_foot[1][0], RR_reference_foot[1][1], RR_reference_foot[1][2] + 0.002])
+                    [RR_reference_foot[1][0], RR_reference_foot[1][1], RR_reference_foot[1][2] + 0.002]
+                )
                 second_up_constraint_RR[0:2] = h_R_w @ (second_up_constraint_RR[0:2] - base[0:2]) + 0.15
 
                 second_low_constraint_RR = np.array(
-                    [RR_reference_foot[1][0], RR_reference_foot[1][1], RR_reference_foot[1][2] - 0.002])
+                    [RR_reference_foot[1][0], RR_reference_foot[1][1], RR_reference_foot[1][2] - 0.002]
+                )
                 second_low_constraint_RR[0:2] = h_R_w @ (second_low_constraint_RR[0:2] - base[0:2]) - 0.15
 
                 up_constraint_RR = np.vstack((up_constraint_RR, second_up_constraint_RR))
@@ -783,17 +827,17 @@ class Acados_NMPC_GaitAdaptive():
 
             # If the foothold is in swing, the idx of the constraint start from 1
             idx_constraint = np.array([0, 0, 0, 0])
-            if (FL_contact_sequence[0] == 0):
+            if FL_contact_sequence[0] == 0:
                 idx_constraint[0] = 1
-            if (FR_contact_sequence[0] == 0):
+            if FR_contact_sequence[0] == 0:
                 idx_constraint[1] = 1
-            if (RL_contact_sequence[0] == 0):
+            if RL_contact_sequence[0] == 0:
                 idx_constraint[2] = 1
-            if (RR_contact_sequence[0] == 0):
+            if RR_contact_sequence[0] == 0:
                 idx_constraint[3] = 1
 
             for j in range(0, self.horizon):
-                # take the constraint for the current timestep  
+                # take the constraint for the current timestep
                 ub_foot_FL = up_constraint_FL[idx_constraint[0]]
                 lb_foot_FL = low_constraint_FL[idx_constraint[0]]
 
@@ -807,11 +851,9 @@ class Acados_NMPC_GaitAdaptive():
                 lb_foot_RR = low_constraint_RR[idx_constraint[3]]
 
                 # Concatenate the friction and foothold constraint
-                ub_foot = copy.deepcopy(np.concatenate((ub_foot_FL, ub_foot_FR,
-                                                        ub_foot_RL, ub_foot_RR)))
-                lb_foot = copy.deepcopy(np.concatenate((lb_foot_FL, lb_foot_FR,
-                                                        lb_foot_RL, lb_foot_RR)))
-                if (self.use_foothold_constraints):
+                ub_foot = copy.deepcopy(np.concatenate((ub_foot_FL, ub_foot_FR, ub_foot_RL, ub_foot_RR)))
+                lb_foot = copy.deepcopy(np.concatenate((lb_foot_FL, lb_foot_FR, lb_foot_RL, lb_foot_RR)))
+                if self.use_foothold_constraints:
                     ub_total = np.concatenate((ub_friction, ub_foot))
                     lb_total = np.concatenate((lb_friction, lb_foot))
                 else:
@@ -820,7 +862,7 @@ class Acados_NMPC_GaitAdaptive():
 
                 # Constraints for the support polygon depending on the leg in stance
                 # all disabled at the beginning!!
-                if (self.use_stability_constraints):
+                if self.use_stability_constraints:
                     ub_support_FL_FR = ACADOS_INFTY
                     lb_support_FL_FR = -ACADOS_INFTY
 
@@ -840,10 +882,12 @@ class Acados_NMPC_GaitAdaptive():
                     lb_support_FR_RL = -ACADOS_INFTY
 
                     # We have 4 cases for the stability constraint: trot, pace, crawl, full stance
-                    if (FL_contact_sequence[j] == 1 and
-                            FR_contact_sequence[j] == 1 and
-                            RL_contact_sequence[j] == 1 and
-                            RR_contact_sequence[j] == 1):
+                    if (
+                        FL_contact_sequence[j] == 1
+                        and FR_contact_sequence[j] == 1
+                        and RL_contact_sequence[j] == 1
+                        and RR_contact_sequence[j] == 1
+                    ):
                         # FULL STANCE TODO
                         ub_support_FL_FR = ACADOS_INFTY
                         lb_support_FL_FR = -ACADOS_INFTY
@@ -863,27 +907,29 @@ class Acados_NMPC_GaitAdaptive():
                         ub_support_FR_RL = ACADOS_INFTY
                         lb_support_FR_RL = -ACADOS_INFTY
 
-                    elif (np.array_equal(FL_contact_sequence, RR_contact_sequence)
-                          and np.array_equal(FR_contact_sequence, RL_contact_sequence)):
+                    elif np.array_equal(FL_contact_sequence, RR_contact_sequence) and np.array_equal(
+                        FR_contact_sequence, RL_contact_sequence
+                    ):
                         # TROT
                         stability_margin = config.mpc_params['trot_stability_margin']
-                        if (FL_contact_sequence[j] == 1 and FR_contact_sequence[j] == 0):
+                        if FL_contact_sequence[j] == 1 and FR_contact_sequence[j] == 0:
                             ub_support_FL_RR = 0 + stability_margin
                             lb_support_FL_RR = 0 - stability_margin
 
-                        if (FR_contact_sequence[j] == 1 and FL_contact_sequence[j] == 0):
+                        if FR_contact_sequence[j] == 1 and FL_contact_sequence[j] == 0:
                             ub_support_FR_RL = 0 + stability_margin
                             lb_support_FR_RL = 0 - stability_margin
 
-                    elif (np.array_equal(FL_contact_sequence, RL_contact_sequence)
-                          and np.array_equal(FR_contact_sequence, RR_contact_sequence)):
+                    elif np.array_equal(FL_contact_sequence, RL_contact_sequence) and np.array_equal(
+                        FR_contact_sequence, RR_contact_sequence
+                    ):
                         # PACE
                         stability_margin = config.mpc_params['pace_stability_margin']
-                        if (FL_contact_sequence[j] == 1 and FR_contact_sequence[j] == 0):
+                        if FL_contact_sequence[j] == 1 and FR_contact_sequence[j] == 0:
                             ub_support_RL_FL = 0 + stability_margin
                             lb_support_RL_FL = 0 - stability_margin
 
-                        if (FR_contact_sequence[j] == 1 and FL_contact_sequence[j] == 0):
+                        if FR_contact_sequence[j] == 1 and FL_contact_sequence[j] == 0:
                             ub_support_FR_RR = 0 + stability_margin
                             lb_support_FR_RR = 0 - stability_margin
 
@@ -891,67 +937,83 @@ class Acados_NMPC_GaitAdaptive():
                         # CRAWL BACKDIAGONALCRAWL ONLY
                         stability_margin = config.mpc_params['crawl_stability_margin']
 
-                        if (FL_contact_sequence[j] == 1):
-                            if (FR_contact_sequence[j] == 1):
+                        if FL_contact_sequence[j] == 1:
+                            if FR_contact_sequence[j] == 1:
                                 ub_support_FL_FR = -0.0 - stability_margin
                                 lb_support_FL_FR = -ACADOS_INFTY
                             else:
                                 ub_support_FL_RR = ACADOS_INFTY
                                 lb_support_FL_RR = 0.0 + stability_margin
 
-                        if (FR_contact_sequence[j] == 1):
-                            if (RR_contact_sequence[j] == 1):
+                        if FR_contact_sequence[j] == 1:
+                            if RR_contact_sequence[j] == 1:
                                 ub_support_FR_RR = ACADOS_INFTY
                                 lb_support_FR_RR = 0.0 + stability_margin
                             else:
                                 ub_support_FR_RL = ACADOS_INFTY
                                 lb_support_FR_RL = 0.0 + stability_margin
 
-                        if (RR_contact_sequence[j] == 1):
-                            if (RL_contact_sequence[j] == 1):
+                        if RR_contact_sequence[j] == 1:
+                            if RL_contact_sequence[j] == 1:
                                 ub_support_RR_RL = ACADOS_INFTY
                                 lb_support_RR_RL = 0.0 + stability_margin
                             else:
                                 ub_support_FL_RR = -0.0 - stability_margin
                                 lb_support_FL_RR = -ACADOS_INFTY
 
-                        if (RL_contact_sequence[j] == 1):
-                            if (FL_contact_sequence[j] == 1):
+                        if RL_contact_sequence[j] == 1:
+                            if FL_contact_sequence[j] == 1:
                                 ub_support_RL_FL = -0.0 - stability_margin
                                 lb_support_RL_FL = -ACADOS_INFTY
                             else:
                                 ub_support_FR_RL = -0.0 - stability_margin
                                 lb_support_FR_RL = -ACADOS_INFTY
 
-                    ub_support = np.array([ub_support_FL_FR, ub_support_FR_RR, ub_support_RR_RL, ub_support_RL_FL,
-                                           ub_support_FL_RR, ub_support_FR_RL])
-                    lb_support = np.array([lb_support_FL_FR, lb_support_FR_RR, lb_support_RR_RL, lb_support_RL_FL,
-                                           lb_support_FL_RR, lb_support_FR_RL])
+                    ub_support = np.array(
+                        [
+                            ub_support_FL_FR,
+                            ub_support_FR_RR,
+                            ub_support_RR_RL,
+                            ub_support_RL_FL,
+                            ub_support_FL_RR,
+                            ub_support_FR_RL,
+                        ]
+                    )
+                    lb_support = np.array(
+                        [
+                            lb_support_FL_FR,
+                            lb_support_FR_RR,
+                            lb_support_RR_RL,
+                            lb_support_RL_FL,
+                            lb_support_FL_RR,
+                            lb_support_FR_RL,
+                        ]
+                    )
 
                     ub_total = np.concatenate((ub_total, ub_support))
                     lb_total = np.concatenate((lb_total, lb_support))
 
                 # No friction constraint at the end! we don't have u_N
-                if (j == self.horizon):
-                    if (self.use_foothold_constraints):
-                        if (self.use_stability_constraints):
+                if j == self.horizon:
+                    if self.use_foothold_constraints:
+                        if self.use_stability_constraints:
                             ub_total = np.concatenate((ub_foot, ub_support))
                             lb_total = np.concatenate((lb_foot, lb_support))
                         else:
                             ub_total = ub_foot
                             lb_total = lb_foot
                     else:
-                        if (self.use_stability_constraints):
+                        if self.use_stability_constraints:
                             ub_total = ub_support
                             lb_total = lb_support
                         else:
                             continue
 
                 # Only friction costraints at the beginning
-                if (j == 0):
+                if j == 0:
                     self.acados_ocp_solver.constraints_set(j, "uh", ub_friction)
                     self.acados_ocp_solver.constraints_set(j, "lh", lb_friction)
-                if (j > 0):
+                if j > 0:
                     self.acados_ocp_solver.constraints_set(j, "uh", ub_total)
                     self.acados_ocp_solver.constraints_set(j, "lh", lb_total)
 
@@ -960,21 +1022,21 @@ class Acados_NMPC_GaitAdaptive():
                 self.lower_bound[j] = lb_total.tolist()
 
                 # ugly procedure to update the idx of the constraint
-                if (j >= 1):
-                    if (FL_contact_sequence[j] == 0 and FL_contact_sequence[j - 1] == 1):
-                        if (idx_constraint[0] < up_constraint_FL.shape[0] - 1):
+                if j >= 1:
+                    if FL_contact_sequence[j] == 0 and FL_contact_sequence[j - 1] == 1:
+                        if idx_constraint[0] < up_constraint_FL.shape[0] - 1:
                             idx_constraint[0] += 1
 
-                    if (FR_contact_sequence[j] == 0 and FR_contact_sequence[j - 1] == 1):
-                        if (idx_constraint[1] < up_constraint_FR.shape[0] - 1):
+                    if FR_contact_sequence[j] == 0 and FR_contact_sequence[j - 1] == 1:
+                        if idx_constraint[1] < up_constraint_FR.shape[0] - 1:
                             idx_constraint[1] += 1
 
-                    if (RL_contact_sequence[j] == 0 and RL_contact_sequence[j - 1] == 1):
-                        if (idx_constraint[2] < up_constraint_RL.shape[0] - 1):
+                    if RL_contact_sequence[j] == 0 and RL_contact_sequence[j - 1] == 1:
+                        if idx_constraint[2] < up_constraint_RL.shape[0] - 1:
                             idx_constraint[2] += 1
 
-                    if (RR_contact_sequence[j] == 0 and RR_contact_sequence[j - 1] == 1):
-                        if (idx_constraint[3] < up_constraint_RR.shape[0] - 1):
+                    if RR_contact_sequence[j] == 0 and RR_contact_sequence[j - 1] == 1:
+                        if idx_constraint[3] < up_constraint_RR.shape[0] - 1:
                             idx_constraint[3] += 1
 
         except:
@@ -984,7 +1046,6 @@ class Acados_NMPC_GaitAdaptive():
 
     # Method to perform the centering of the states and the reference around (0, 0, 0)
     def perform_scaling(self, state, reference, constraint=None):
-
         self.initial_base_position = copy.deepcopy(state["position"])
         reference = copy.deepcopy(reference)
         state = copy.deepcopy(state)
@@ -1004,17 +1065,22 @@ class Acados_NMPC_GaitAdaptive():
         return state, reference, constraint
 
     # Main loop for computing batched control
-    def compute_batch_control(self, state, reference, contact_sequence, constraint=None,
-                              external_wrenches=np.zeros((6,)),
-                              inertia=config.inertia.reshape((9,)), mass=config.mass):
+    def compute_batch_control(
+        self,
+        state,
+        reference,
+        contact_sequence,
+        constraint=None,
+        external_wrenches=np.zeros((6,)),
+        inertia=config.inertia.reshape((9,)),
+        mass=config.mass,
+    ):
         start = time.time()
 
         costs = []
 
         # Perform the scaling of the states and the reference
-        state, \
-            reference, \
-            constraint = self.perform_scaling(state, reference, constraint)
+        state, reference, constraint = self.perform_scaling(state, reference, constraint)
 
         # Fill reference (self.states_dim+self.inputs_dim)
         idx_ref_foot_to_assign = np.array([0, 0, 0, 0])
@@ -1037,35 +1103,43 @@ class Acados_NMPC_GaitAdaptive():
         # Set initial state constraint. We teleported the robot foothold
         # to the previous optimal foothold. This is done to avoid the optimization
         # of a foothold that is not considered at all at touchdown! In any case,
-        # the height cames always from the VFA  
+        # the height cames always from the VFA
         FL_contact_sequence = contact_sequence[0][0]
         FR_contact_sequence = contact_sequence[0][1]
         RL_contact_sequence = contact_sequence[0][2]
         RR_contact_sequence = contact_sequence[0][3]
-        if (FL_contact_sequence[0] == 0):
+        if FL_contact_sequence[0] == 0:
             state["foot_FL"] = reference["ref_foot_FL"][0]
 
-        if (FR_contact_sequence[0] == 0):
+        if FR_contact_sequence[0] == 0:
             state["foot_FR"] = reference["ref_foot_FR"][0]
 
-        if (RL_contact_sequence[0] == 0):
+        if RL_contact_sequence[0] == 0:
             state["foot_RL"] = reference["ref_foot_RL"][0]
 
-        if (RR_contact_sequence[0] == 0):
+        if RR_contact_sequence[0] == 0:
             state["foot_RR"] = reference["ref_foot_RR"][0]
 
         # Fill stance param, friction and stance proximity
         # (stance proximity will disable foothold optimization near a stance!!)
         mu = config.mpc_params['mu']
 
-        state_acados = np.concatenate((state["position"], state["linear_velocity"],
-                                       state["orientation"], state["angular_velocity"],
-                                       state["foot_FL"], state["foot_FR"],
-                                       state["foot_RL"], state["foot_RR"],
-                                       self.integral_errors))  # .reshape((self.states_dim, 1))
+        state_acados = np.concatenate(
+            (
+                state["position"],
+                state["linear_velocity"],
+                state["orientation"],
+                state["angular_velocity"],
+                state["foot_FL"],
+                state["foot_FR"],
+                state["foot_RL"],
+                state["foot_RR"],
+                self.integral_errors,
+            )
+        )  # .reshape((self.states_dim, 1))
 
         for n in range(self.batch):
-            # Take the array of the contact sequence and split it in 4 arrays, 
+            # Take the array of the contact sequence and split it in 4 arrays,
             # one for each leg
             FL_contact_sequence = contact_sequence[n][0]
             FR_contact_sequence = contact_sequence[n][1]
@@ -1073,21 +1147,20 @@ class Acados_NMPC_GaitAdaptive():
             RR_contact_sequence = contact_sequence[n][3]
 
             for j in range(self.horizon):
-
                 # Update the idx_ref_foot_to_assign. Every time there is a change in the contact phase
                 # between 1 and 0, it means that the leg go into swing and a new reference is needed!!!
-                if (j > 1 and j < self.horizon - 1):
-                    if (FL_contact_sequence[j + 1] == 0 and FL_contact_sequence[j] == 1):
-                        if (reference['ref_foot_FL'].shape[0] > idx_ref_foot_to_assign[0] + 1):
+                if j > 1 and j < self.horizon - 1:
+                    if FL_contact_sequence[j + 1] == 0 and FL_contact_sequence[j] == 1:
+                        if reference['ref_foot_FL'].shape[0] > idx_ref_foot_to_assign[0] + 1:
                             idx_ref_foot_to_assign[0] += 1
-                    if (FR_contact_sequence[j + 1] == 0 and FR_contact_sequence[j] == 1):
-                        if (reference['ref_foot_FR'].shape[0] > idx_ref_foot_to_assign[1] + 1):
+                    if FR_contact_sequence[j + 1] == 0 and FR_contact_sequence[j] == 1:
+                        if reference['ref_foot_FR'].shape[0] > idx_ref_foot_to_assign[1] + 1:
                             idx_ref_foot_to_assign[1] += 1
-                    if (RL_contact_sequence[j + 1] == 0 and RL_contact_sequence[j] == 1):
-                        if (reference['ref_foot_RL'].shape[0] > idx_ref_foot_to_assign[2] + 1):
+                    if RL_contact_sequence[j + 1] == 0 and RL_contact_sequence[j] == 1:
+                        if reference['ref_foot_RL'].shape[0] > idx_ref_foot_to_assign[2] + 1:
                             idx_ref_foot_to_assign[2] += 1
-                    if (RR_contact_sequence[j + 1] == 0 and RR_contact_sequence[j] == 1):
-                        if (reference['ref_foot_RR'].shape[0] > idx_ref_foot_to_assign[3] + 1):
+                    if RR_contact_sequence[j + 1] == 0 and RR_contact_sequence[j] == 1:
+                        if reference['ref_foot_RR'].shape[0] > idx_ref_foot_to_assign[3] + 1:
                             idx_ref_foot_to_assign[3] += 1
 
                 # Setting the reference to acados
@@ -1104,41 +1177,61 @@ class Acados_NMPC_GaitAdaptive():
 
             # Set the parameters to  acados
             for j in range(self.horizon):
-                param = np.array([FL_contact_sequence[j], FR_contact_sequence[j],
-                                  RL_contact_sequence[j], RR_contact_sequence[j], mu,
-                                  0.0,
-                                  0.0,
-                                  0.0,
-                                  0.0,
-                                  state["position"][0], state["position"][1],
-                                  state["position"][2], state["orientation"][2],
-                                  0.0, 0.0,
-                                  0.0, 0.0,
-                                  0.0, 0.0,
-                                  inertia[0], inertia[1], inertia[2], inertia[3], inertia[4], inertia[5],
-                                  inertia[6], inertia[7], inertia[8], mass])
+                param = np.array(
+                    [
+                        FL_contact_sequence[j],
+                        FR_contact_sequence[j],
+                        RL_contact_sequence[j],
+                        RR_contact_sequence[j],
+                        mu,
+                        0.0,
+                        0.0,
+                        0.0,
+                        0.0,
+                        state["position"][0],
+                        state["position"][1],
+                        state["position"][2],
+                        state["orientation"][2],
+                        0.0,
+                        0.0,
+                        0.0,
+                        0.0,
+                        0.0,
+                        0.0,
+                        inertia[0],
+                        inertia[1],
+                        inertia[2],
+                        inertia[3],
+                        inertia[4],
+                        inertia[5],
+                        inertia[6],
+                        inertia[7],
+                        inertia[8],
+                        mass,
+                    ]
+                )
                 self.batch_solver.ocp_solvers[n].set(j, "p", param)
 
             # Set initial state constraint acados, converting first the dictionary to np array
             self.batch_solver.ocp_solvers[n].set(0, "lbx", state_acados)
             self.batch_solver.ocp_solvers[n].set(0, "ubx", state_acados)
 
-        t_elapsed2 = (time.time() - start)
+        t_elapsed2 = time.time() - start
 
         # Solve the batched ocp
         t0 = time.time()
         self.batch_solver.solve()
-        t_elapsed = (time.time() - t0)
+        t_elapsed = time.time() - t0
 
         print("time_python: ", t_elapsed2)
         print("time_solver: ", t_elapsed)
 
         for n in range(self.batch):
             cost_single_qp = self.batch_solver.ocp_solvers[n].get_cost()
-            if (n != 0):
-                cost_single_qp += 3 * (
-                        config.mpc_params["step_freq_available"][n] - config.mpc_params["step_freq_available"][
-                    0]) ** 2
+            if n != 0:
+                cost_single_qp += (
+                    3 * (config.mpc_params["step_freq_available"][n] - config.mpc_params["step_freq_available"][0]) ** 2
+                )
             costs.append(cost_single_qp)
 
         best_freq_index = np.argmin(costs)
