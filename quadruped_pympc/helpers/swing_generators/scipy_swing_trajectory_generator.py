@@ -16,26 +16,29 @@ class SwingTrajectoryGenerator:
         # Stored swing-trajectory properties
         self.stepHeight = step_height
 
-    def createCurve(self, x0, xf):
-        # scaling_factor = 0.7105
-        scaling_factor = 1.5
+    def createCurve(self, x0, xf, early_stance_hitmoment = -1):
 
-        p1 = x0 + np.array([0.0, 0.0, self.stepHeight / scaling_factor])
-        p2 = 0.5 * (x0 + xf) + np.array([0.0, 0.0, self.stepHeight])
+        #scaling_factor = 0.7105
+        scaling_factor = 1.5
+        if early_stance_hitmoment != -1 and early_stance_hitmoment < self.swing_period*0.9:
+            p1 = x0.copy()
+            p1[:2] = x0[:2] -0.5 * (xf[:2]-x0[:2])
+            p1 += np.array([0., 0., self.stepHeight / scaling_factor])
+            p2 = 0.5 * (x0 + xf) + np.array([0., 0., 0.25 ])
+            updated_swing_period = self.swing_period - early_stance_hitmoment
+            t = np.array([early_stance_hitmoment, early_stance_hitmoment+updated_swing_period/4, early_stance_hitmoment+updated_swing_period/2, early_stance_hitmoment+updated_swing_period*3/4, self.swing_period])
+        else:
+            p1 = x0 + np.array([0., 0., self.stepHeight / scaling_factor])
+            p2 = 0.5 * (x0 + xf) + np.array([0., 0., self.stepHeight ])
+            t = np.array([0, self.half_swing_period/2, self.half_swing_period, self.half_swing_period*3/2, self.half_swing_period*2])
+        
         p3 = xf + np.array([0.0, 0.0, self.stepHeight / scaling_factor])
 
         x = np.array([x0[0], p1[0], p2[0], p3[0], xf[0]])
         y = np.array([x0[1], p1[1], p2[1], p3[1], xf[1]])
         z = np.array([x0[2], p1[2], p2[2], p3[2], xf[2]])
-        t = np.array(
-            [
-                0,
-                self.half_swing_period / 2,
-                self.half_swing_period,
-                self.half_swing_period * 3 / 2,
-                self.half_swing_period * 2,
-            ]
-        )
+
+
         self._curve_x = CubicSpline(t, x, bc_type=["clamped", "clamped"])
         self._curve_y = CubicSpline(t, y, bc_type=["clamped", "clamped"])
         self._curve_z = CubicSpline(t, z, bc_type=["clamped", "clamped"])
@@ -68,10 +71,12 @@ class SwingTrajectoryGenerator:
         self._curve_z_acc = self._curve_z_vel.derivative()
 
     def compute_trajectory_references(
-        self, swing_time: float, lift_off: np.array, touch_down: np.array
-    ) -> (np.array, np.array, np.array):
-        # if(swing_time == 0):
-        self.createCurve(lift_off, touch_down)
+        self, swing_time: float, lift_off: np.array, touch_down: np.array, early_stance_hitmoment = -1, early_stance_hitpoint = None) -> (np.array, np.array, np.array):
+        if early_stance_hitpoint is not None:
+            self.createCurve(early_stance_hitpoint, touch_down, early_stance_hitmoment)
+            # self.plot_current_curve(hitmoment)
+        else:
+            self.createCurve(lift_off, touch_down)
 
         position_x = self._curve_x(swing_time)
         position_y = self._curve_y(swing_time)

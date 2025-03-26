@@ -78,7 +78,7 @@ class SwingTrajectoryGenerator:
         return swing_time % self.half_swing_period, cp1, cp2, cp3, cp4
 
     def compute_trajectory_references(
-        self, swing_time: float, lift_off: np.ndarray, touch_down: np.ndarray
+        self, swing_time: float, lift_off: np.ndarray, touch_down: np.ndarray, early_stance_hitmoment = -1, early_stance_hitpoint = None
     ) -> (np.ndarray, np.ndarray, np.ndarray):
         bezier_swing_time, cp1, cp2, cp3, cp4 = self.compute_control_points(
             swing_time, lift_off.squeeze(), touch_down.squeeze()

@@ -13,17 +13,12 @@ class SwingTrajectoryController:
     ) -> None:
         self.generator = generator
 
-        if self.generator == "ndcurves":
-            from .swing_generators.ndcurves_swing_trajectory_generator import SwingTrajectoryGenerator
-
-            self.swing_generator = SwingTrajectoryGenerator(swing_period=swing_period, step_height=step_height)
-        elif self.generator == "scipy":
+        if self.generator == "scipy":
             from .swing_generators.scipy_swing_trajectory_generator import SwingTrajectoryGenerator
-
             self.swing_generator = SwingTrajectoryGenerator(swing_period=swing_period, step_height=step_height)
+        
         else:
             from .swing_generators.explicit_swing_trajectory_generator import SwingTrajectoryGenerator
-
             self.swing_generator = SwingTrajectoryGenerator(swing_period=swing_period, step_height=step_height)
 
         self.position_gain_fb = position_gain_fb
@@ -35,22 +30,18 @@ class SwingTrajectoryController:
         self.use_gravity_compensation_only = False
 
     def regenerate_swing_trajectory_generator(self, step_height: float, swing_period: float) -> None:
-        if self.generator == "ndcurves":
-            from .swing_generators.ndcurves_swing_trajectory_generator import SwingTrajectoryGenerator
-
-            self.swing_generator = SwingTrajectoryGenerator(swing_period=swing_period, step_height=step_height)
-        elif self.generator == "scipy":
+        if self.generator == "scipy":
             from .swing_generators.scipy_swing_trajectory_generator import SwingTrajectoryGenerator
-
             self.swing_generator = SwingTrajectoryGenerator(swing_period=swing_period, step_height=step_height)
+        
         else:
             from .swing_generators.explicit_swing_trajectory_generator import SwingTrajectoryGenerator
-
             self.swing_generator = SwingTrajectoryGenerator(swing_period=swing_period, step_height=step_height)
+        
         self.swing_period = swing_period
 
     def compute_swing_control_cartesian_space(
-        self, leg_id, q_dot, J, J_dot, lift_off, touch_down, foot_pos, foot_vel, h, mass_matrix
+        self, leg_id, q_dot, J, J_dot, lift_off, touch_down, foot_pos, foot_vel, h, mass_matrix, early_stance_hitmoments, early_stance_hitpoints
     ):
         """TODO: Docstring.
 
@@ -75,7 +66,7 @@ class SwingTrajectoryController:
         """
         # Compute trajectory references
         des_foot_pos, des_foot_vel, des_foot_acc = self.swing_generator.compute_trajectory_references(
-            self.swing_time[leg_id], lift_off, touch_down
+            self.swing_time[leg_id], lift_off, touch_down, early_stance_hitmoments, early_stance_hitpoints
         )
 
         err_pos = des_foot_pos - foot_pos

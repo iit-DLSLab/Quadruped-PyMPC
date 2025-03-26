@@ -12,6 +12,7 @@ from quadruped_pympc.helpers.swing_trajectory_controller import SwingTrajectoryC
 from quadruped_pympc.helpers.terrain_estimator import TerrainEstimator
 from quadruped_pympc.helpers.inverse_kinematics.inverse_kinematics_numeric import InverseKinematicsNumeric
 from quadruped_pympc.helpers.velocity_modulator import VelocityModulator
+from quadruped_pympc.helpers.early_stance_detector import EarlyStanceDetector
 
 if cfg.simulation_params['visual_foothold_adaptation'] != 'blind':
     from quadruped_pympc.helpers.visual_foothold_adaptation import VisualFootholdAdaptation
@@ -76,6 +77,8 @@ class WBInterface:
             velocity_gain_fb=velocity_gain_fb,
             generator=swing_generator,
         )
+        self.last_des_foot_pos = LegsAttr(*[np.zeros((3,)) for _ in range(4)])
+        
 
         # Terrain estimator -----------------------------------------------------------------------
         self.terrain_computation = TerrainEstimator()
@@ -91,6 +94,9 @@ class WBInterface:
 
         # Velocity modulator ---------------------------------------------------------------------
         self.vm = VelocityModulator()
+
+        # Early Stance detector -------------------------------------------------------------------
+        self.esd = EarlyStanceDetector()
 
         self.current_contact = np.array([1, 1, 1, 1])
 
@@ -429,6 +435,12 @@ class WBInterface:
             swing_period = (1 - self.pgg.duty_factor) * (1 / self.pgg.step_freq)
             self.stc.regenerate_swing_trajectory_generator(step_height=self.step_height, swing_period=swing_period)
 
+        
+        # Update the Early Stance Detector for Reflexes
+        self.esd.update_detection(feet_pos, self.last_des_foot_pos, lift_off=self.frg.lift_off_positions, touch_down=nmpc_footholds, 
+                        swing_time=self.stc.swing_time, swing_period=self.stc.swing_period, current_contact=self.current_contact)
+
+
         # Compute Stance Torque ---------------------------------------------------------------------------
         tau.FL = -np.matmul(feet_jac.FL[:, legs_qvel_idx.FL].T, nmpc_GRFs.FL)
         tau.FR = -np.matmul(feet_jac.FR[:, legs_qvel_idx.FR].T, nmpc_GRFs.FR)
@@ -459,6 +471,8 @@ class WBInterface:
                             foot_vel=feet_vel[leg_name],
                             h=legs_qfrc_bias[leg_name],
                             mass_matrix=legs_mass_matrix[leg_name],
+                            early_stance_hitmoments=self.esd.hitmoments[leg_name],
+                            early_stance_hitpoints=self.esd.hitpoints[leg_name],
                         )
                     )
                 else:
@@ -480,6 +494,8 @@ class WBInterface:
                         legs_mass_matrix[leg_name],
                         legs_qfrc_bias[leg_name],
                     )
+
+        self.last_des_foot_pos = des_foot_pos
 
         # Compute PD targets for the joints ----------------------------------------------------------------
         des_joints_pos = LegsAttr(*[np.zeros((3, 1)) for _ in range(4)])
