@@ -12,9 +12,7 @@ from quadruped_pympc import config
 
 # Class that defines the prediction model of the NMPC
 class Centroidal_Model_InputRates:
-    def __init__(
-        self,
-    ) -> None:
+    def __init__(self) -> None:
         """
         This method initializes the foothold generator Centroidal_Model, which creates
         the prediction model of the NMPC.
@@ -335,9 +333,7 @@ class Centroidal_Model_InputRates:
             foot_force_rate_RR,
         )
 
-    def export_robot_model(
-        self,
-    ) -> AcadosModel:
+    def export_robot_model(self) -> AcadosModel:
         """
         This method set some general properties of the NMPC, such as the params,
         prediction mode, etc...! It will be called in centroidal_nmpc.py

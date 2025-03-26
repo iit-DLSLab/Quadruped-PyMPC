@@ -1,13 +1,13 @@
 import numpy as np
 
 np.set_printoptions(precision=3, suppress=True)
-# import example_robot_data as robex
-import copy
-import os
+from numpy.linalg import norm, solve
 import time
 
 import casadi as cs
-import gym_quadruped
+
+# import example_robot_data as robex
+import copy
 
 # Mujoco magic
 import mujoco
@@ -18,6 +18,9 @@ from adam import Representations
 from adam.casadi import KinDynComputations
 from liecasadi import SO3
 
+import gym_quadruped
+import os
+
 dir_path = os.path.dirname(os.path.realpath(__file__))
 gym_quadruped_path = os.path.dirname(gym_quadruped.__file__)
 
@@ -27,9 +30,7 @@ from quadruped_pympc import config
 
 # Class for solving a generic inverse kinematics problem
 class InverseKinematicsNumeric:
-    def __init__(
-        self,
-    ) -> None:
+    def __init__(self) -> None:
         """
         This method initializes the inverse kinematics solver class.
 
@@ -37,38 +38,38 @@ class InverseKinematicsNumeric:
 
         """
 
-        if config.robot == "go2":
-            urdf_filename = gym_quadruped_path + "/robot_model/go2/go2.urdf"
-            xml_filename = gym_quadruped_path + "/robot_model/go2/go2.xml"
-        if config.robot == "go1":
-            urdf_filename = gym_quadruped_path + "/robot_model/go1/go1.urdf"
-            xml_filename = gym_quadruped_path + "/robot_model/go1/go1.xml"
-        elif config.robot == "aliengo":
-            urdf_filename = gym_quadruped_path + "/robot_model/aliengo/aliengo.urdf"
-            xml_filename = gym_quadruped_path + "/robot_model/aliengo/aliengo.xml"
-        elif config.robot == "b2":
-            urdf_filename = gym_quadruped_path + "/robot_model/b2/b2.urdf"
-            xml_filename = gym_quadruped_path + "/robot_model/b2/b2.xml"
-        elif config.robot == "hyqreal":
-            urdf_filename = gym_quadruped_path + "/robot_model/hyqreal/hyqreal.urdf"
-            xml_filename = gym_quadruped_path + "/robot_model/hyqreal/hyqreal.xml"
-        elif config.robot == "mini_cheetah":
-            urdf_filename = gym_quadruped_path + "/robot_model/mini_cheetah/mini_cheetah.urdf"
-            xml_filename = gym_quadruped_path + "/robot_model/mini_cheetah/mini_cheetah.xml"
+        if config.robot == 'go2':
+            urdf_filename = gym_quadruped_path + '/robot_model/go2/go2.urdf'
+            xml_filename = gym_quadruped_path + '/robot_model/go2/go2.xml'
+        if config.robot == 'go1':
+            urdf_filename = gym_quadruped_path + '/robot_model/go1/go1.urdf'
+            xml_filename = gym_quadruped_path + '/robot_model/go1/go1.xml'
+        elif config.robot == 'aliengo':
+            urdf_filename = gym_quadruped_path + '/robot_model/aliengo/aliengo.urdf'
+            xml_filename = gym_quadruped_path + '/robot_model/aliengo/aliengo.xml'
+        elif config.robot == 'b2':
+            urdf_filename = gym_quadruped_path + '/robot_model/b2/b2.urdf'
+            xml_filename = gym_quadruped_path + '/robot_model/b2/b2.xml'
+        elif config.robot == 'hyqreal':
+            urdf_filename = gym_quadruped_path + '/robot_model/hyqreal/hyqreal.urdf'
+            xml_filename = gym_quadruped_path + '/robot_model/hyqreal/hyqreal.xml'
+        elif config.robot == 'mini_cheetah':
+            urdf_filename = gym_quadruped_path + '/robot_model/mini_cheetah/mini_cheetah.urdf'
+            xml_filename = gym_quadruped_path + '/robot_model/mini_cheetah/mini_cheetah.xml'
 
         joint_list = [
-            "FL_hip_joint",
-            "FL_thigh_joint",
-            "FL_calf_joint",
-            "FR_hip_joint",
-            "FR_thigh_joint",
-            "FR_calf_joint",
-            "RL_hip_joint",
-            "RL_thigh_joint",
-            "RL_calf_joint",
-            "RR_hip_joint",
-            "RR_thigh_joint",
-            "RR_calf_joint",
+            'FL_hip_joint',
+            'FL_thigh_joint',
+            'FL_calf_joint',
+            'FR_hip_joint',
+            'FR_thigh_joint',
+            'FR_calf_joint',
+            'RL_hip_joint',
+            'RL_thigh_joint',
+            'RL_calf_joint',
+            'RR_hip_joint',
+            'RR_thigh_joint',
+            'RR_calf_joint',
         ]
 
         self.kindyn = KinDynComputations(urdfstring=urdf_filename, joints_name_list=joint_list)
@@ -84,16 +85,16 @@ class InverseKinematicsNumeric:
         self.jacobian_RL_fun = self.kindyn.jacobian_fun("RL_foot")
         self.jacobian_RR_fun = self.kindyn.jacobian_fun("RR_foot")
 
-        q = cs.SX.sym("q", 12 + 7)
-        FL_foot_target_position = cs.SX.sym("FL_foot_target_position", 3)
-        FR_foot_target_position = cs.SX.sym("FR_foot_target_position", 3)
-        RL_foot_target_position = cs.SX.sym("RL_foot_target_position", 3)
-        RR_foot_target_position = cs.SX.sym("RR_foot_target_position", 3)
+        q = cs.SX.sym('q', 12 + 7)
+        FL_foot_target_position = cs.SX.sym('FL_foot_target_position', 3)
+        FR_foot_target_position = cs.SX.sym('FR_foot_target_position', 3)
+        RL_foot_target_position = cs.SX.sym('RL_foot_target_position', 3)
+        RR_foot_target_position = cs.SX.sym('RR_foot_target_position', 3)
         ik = self.compute_solution(
             q, FL_foot_target_position, FR_foot_target_position, RL_foot_target_position, RR_foot_target_position
         )
         self.fun_compute_solution = cs.Function(
-            "fun_ik",
+            'fun_ik',
             [q, FL_foot_target_position, FR_foot_target_position, RL_foot_target_position, RR_foot_target_position],
             [ik],
         )
@@ -178,21 +179,21 @@ class InverseKinematicsNumeric:
 
 
 if __name__ == "__main__":
-    if config.robot == "go2":
-        urdf_filename = dir_path + "/../../gym-quadruped/gym_quadruped/robot_model/go2/go2.urdf"
-        xml_filename = dir_path + "/../../gym-quadruped/gym_quadruped/robot_model/go2/go2.xml"
-    if config.robot == "go1":
-        urdf_filename = dir_path + "/../../gym-quadruped/gym_quadruped/robot_model/go1/go1.urdf"
-        xml_filename = dir_path + "/../../gym-quadruped/gym_quadruped/robot_model/go1/go1.xml"
-    elif config.robot == "aliengo":
-        urdf_filename = dir_path + "/../../gym-quadruped/gym_quadruped/robot_model/aliengo/aliengo.urdf"
-        xml_filename = dir_path + "/../../gym-quadruped/gym_quadruped/robot_model/aliengo/aliengo.xml"
-    elif config.robot == "hyqreal":
-        urdf_filename = dir_path + "/../../../gym-quadruped/gym_quadruped/robot_model/hyqreal/hyqreal.urdf"
-        xml_filename = dir_path + "/../../../gym-quadruped/gym_quadruped/robot_model/hyqreal/hyqreal.xml"
-    elif config.robot == "mini_cheetah":
-        urdf_filename = dir_path + "/../../../gym-quadruped/gym_quadruped/robot_model/mini_cheetah/mini_cheetah.urdf"
-        xml_filename = dir_path + "/../../../gym-quadruped/gym_quadruped/robot_model/mini_cheetah/mini_cheetah.xml"
+    if config.robot == 'go2':
+        urdf_filename = dir_path + '/../../gym-quadruped/gym_quadruped/robot_model/go2/go2.urdf'
+        xml_filename = dir_path + '/../../gym-quadruped/gym_quadruped/robot_model/go2/go2.xml'
+    if config.robot == 'go1':
+        urdf_filename = dir_path + '/../../gym-quadruped/gym_quadruped/robot_model/go1/go1.urdf'
+        xml_filename = dir_path + '/../../gym-quadruped/gym_quadruped/robot_model/go1/go1.xml'
+    elif config.robot == 'aliengo':
+        urdf_filename = dir_path + '/../../gym-quadruped/gym_quadruped/robot_model/aliengo/aliengo.urdf'
+        xml_filename = dir_path + '/../../gym-quadruped/gym_quadruped/robot_model/aliengo/aliengo.xml'
+    elif config.robot == 'hyqreal':
+        urdf_filename = dir_path + '/../../../gym-quadruped/gym_quadruped/robot_model/hyqreal/hyqreal.urdf'
+        xml_filename = dir_path + '/../../../gym-quadruped/gym_quadruped/robot_model/hyqreal/hyqreal.xml'
+    elif config.robot == 'mini_cheetah':
+        urdf_filename = dir_path + '/../../../gym-quadruped/gym_quadruped/robot_model/mini_cheetah/mini_cheetah.urdf'
+        xml_filename = dir_path + '/../../../gym-quadruped/gym_quadruped/robot_model/mini_cheetah/mini_cheetah.xml'
 
     ik = InverseKinematicsNumeric()
 
@@ -200,15 +201,11 @@ if __name__ == "__main__":
     m = mujoco.MjModel.from_xml_path(xml_filename)
     d = mujoco.MjData(m)
 
-    random_q_joint = np.random.rand(
-        12,
-    )
+    random_q_joint = np.random.rand(12)
     d.qpos[7:] = random_q_joint
 
     # random quaternion
-    rand_quat = np.random.rand(
-        4,
-    )
+    rand_quat = np.random.rand(4)
     rand_quat = rand_quat / np.linalg.norm(rand_quat)
     d.qpos[3:7] = rand_quat
 
@@ -229,9 +226,7 @@ if __name__ == "__main__":
     print("RR foot target position: ", RR_foot_target_position)
 
     initial_q = copy.deepcopy(d.qpos)
-    initial_q[7:] = np.random.rand(
-        12,
-    )
+    initial_q[7:] = np.random.rand(12)
     quaternion = d.qpos[3:7]
     quaternion = np.array([quaternion[1], quaternion[2], quaternion[3], quaternion[0]])
     R = SO3.from_quat(quaternion).as_matrix()

@@ -129,7 +129,7 @@ def check_zmp_constraint_satisfaction(state, contact_status, forces):
     gravity = np.array([0, 0, -9.81])
     linear_com_acc = (1 / config.mass) * temp + gravity
 
-    if config.mpc_params["use_zmp_stability"]:
+    if config.mpc_params['use_zmp_stability']:
         gravity_z = 9.81
         robotHeight = base_w[2]
         zmp = base_w[0:2] - linear_com_acc[0:2] * (robotHeight / gravity_z)

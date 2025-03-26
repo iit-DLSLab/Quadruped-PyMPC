@@ -24,7 +24,7 @@ if __name__ == "__main__":
         qpympc_cfg=qpympc_cfg,
         num_seconds_per_episode=1,
         num_episodes=5,
-        render=True,
+        render=False,
         recording_path=storage_path,
     )
 

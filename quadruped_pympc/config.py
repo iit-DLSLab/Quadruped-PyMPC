@@ -59,8 +59,7 @@ elif robot == "go2":
     urdf_filename = "go2.urdf"
     hip_height = 0.28
 
-
-elif robot == "aliengo":
+elif (robot == 'aliengo'):
     mass = 24.637
     inertia = np.array(
         [
@@ -97,7 +96,8 @@ elif robot == "hyqreal":
     )
     urdf_filename = "hyqreal.urdf"
     hip_height = 0.5
-elif robot == "mini_cheetah":
+    
+elif (robot == 'mini_cheetah'):
     mass = 12.5
     inertia = np.array(
         [
@@ -206,13 +206,14 @@ mpc_params = {
 # -----------------------------------------------------------------------
 
 simulation_params = {
-    "swing_generator": "scipy",  # 'scipy', 'explicit', 'ndcurves'
-    "swing_position_gain_fb": 500,
-    "swing_velocity_gain_fb": 10,
-    "swing_integral_gain_fb": 0,
-    "impedence_joint_position_gain": 10.0,
-    "impedence_joint_velocity_gain": 1.0,
-    "step_height": 0.3 * hip_height,
+    'swing_generator':             'scipy',  # 'scipy', 'explicit', 'ndcurves'
+    'swing_position_gain_fb':      500,
+    'swing_velocity_gain_fb':      10,
+    'impedence_joint_position_gain':  10.0,
+    'impedence_joint_velocity_gain':  1.0,
+
+    'step_height':                 0.3 * hip_height,  
+
     # Visual Foothold adapatation
     "visual_foothold_adaptation": "blind",  #'blind', 'height', 'vfa'
     # this is the integration time used in the simulator

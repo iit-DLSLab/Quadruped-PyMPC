@@ -15,7 +15,7 @@ class QuadrupedPyMPC_Wrapper:
     def __init__(
         self,
         initial_feet_pos: LegsAttr,
-        legs_order: tuple[str, str, str, str] = ("FL", "FR", "RL", "RR"),
+        legs_order: tuple[str, str, str, str] = ('FL', 'FR', 'RL', 'RR'),
         quadrupedpympc_observables_names: tuple[str, ...] = _DEFAULT_OBS,
     ):
         """Constructor of the QuadrupedPyMPC_Wrapper class.
@@ -30,10 +30,10 @@ class QuadrupedPyMPC_Wrapper:
 
         self.srbd_controller_interface = SRBDControllerInterface()
 
-        if cfg.mpc_params["type"] != "sampling" and cfg.mpc_params["optimize_step_freq"]:
+        if cfg.mpc_params['type'] != 'sampling' and cfg.mpc_params['optimize_step_freq']:
             self.srbd_batched_controller_interface = SRBDBatchedControllerInterface()
 
-        self.wb_interface = WBInterface(initial_feet_pos=initial_feet_pos(frame="world"), legs_order=legs_order)
+        self.wb_interface = WBInterface(initial_feet_pos=initial_feet_pos(frame='world'), legs_order=legs_order)
 
         self.nmpc_GRFs = LegsAttr(FL=np.zeros(3), FR=np.zeros(3), RL=np.zeros(3), RR=np.zeros(3))
         self.nmpc_footholds = LegsAttr(FL=np.zeros(3), FR=np.zeros(3), RL=np.zeros(3), RR=np.zeros(3))
@@ -145,13 +145,13 @@ class QuadrupedPyMPC_Wrapper:
                 optimize_swing,
             )
 
-            if cfg.mpc_params["type"] != "sampling" and cfg.mpc_params["use_RTI"]:
+            if cfg.mpc_params['type'] != 'sampling' and cfg.mpc_params['use_RTI']:
                 # If the controller is gradient and is using RTI, we need to linearize the mpc after its computation
                 # this helps to minize the delay between new state->control in a real case scenario.
                 self.srbd_controller_interface.compute_RTI()
 
             # Update the gait
-            if cfg.mpc_params["type"] != "sampling" and cfg.mpc_params["optimize_step_freq"]:
+            if cfg.mpc_params['type'] != 'sampling' and cfg.mpc_params['optimize_step_freq']:
                 self.best_sample_freq = self.srbd_batched_controller_interface.optimize_gait(
                     state_current,
                     ref_state,
@@ -189,8 +189,8 @@ class QuadrupedPyMPC_Wrapper:
 
         # Do some PD control over the joints (these values are normally passed
         # to a low-level motor controller, here we can try to simulate it)
-        kp_joint_motor = cfg.simulation_params["impedence_joint_position_gain"]
-        kd_joint_motor = cfg.simulation_params["impedence_joint_velocity_gain"]
+        kp_joint_motor = cfg.simulation_params['impedence_joint_position_gain']
+        kd_joint_motor = cfg.simulation_params['impedence_joint_velocity_gain']
         # for leg in legs_order:
         #    tau[leg] += kp_joint_motor * (des_joints_pos[leg] - qpos[legs_qpos_idx[leg]]) + \
         #                kd_joint_motor * (des_joints_vel[leg] - qvel[legs_qvel_idx[leg]])
@@ -198,36 +198,36 @@ class QuadrupedPyMPC_Wrapper:
         # Save some observables -------------------------------------------------------------------------------------
         self.quadrupedpympc_observables = {}
         for obs_name in self.quadrupedpympc_observables_names:
-            if obs_name == "ref_base_height":
-                data = {"ref_base_height": ref_state["ref_position"][2]}
-            elif obs_name == "ref_base_angles":
-                data = {"ref_base_angles": ref_state["ref_orientation"]}
-            elif obs_name == "ref_feet_pos":
+            if obs_name == 'ref_base_height':
+                data = {'ref_base_height': ref_state['ref_position'][2]}
+            elif obs_name == 'ref_base_angles':
+                data = {'ref_base_angles': ref_state['ref_orientation']}
+            elif obs_name == 'ref_feet_pos':
                 ref_feet_pos = LegsAttr(
-                    FL=ref_state["ref_foot_FL"].reshape(3, 1),
-                    FR=ref_state["ref_foot_FR"].reshape(3, 1),
-                    RL=ref_state["ref_foot_RL"].reshape(3, 1),
-                    RR=ref_state["ref_foot_RR"].reshape(3, 1),
+                    FL=ref_state['ref_foot_FL'].reshape(3, 1),
+                    FR=ref_state['ref_foot_FR'].reshape(3, 1),
+                    RL=ref_state['ref_foot_RL'].reshape(3, 1),
+                    RR=ref_state['ref_foot_RR'].reshape(3, 1),
                 )
-                data = {"ref_feet_pos": ref_feet_pos}
-            elif obs_name == "ref_feet_constraints":
+                data = {'ref_feet_pos': ref_feet_pos}
+            elif obs_name == 'ref_feet_constraints':
                 ref_feet_constraints = LegsAttr(
-                    FL=ref_state["ref_foot_FL_constraints"],
-                    FR=ref_state["ref_foot_FR_constraints"],
-                    RL=ref_state["ref_foot_RL_constraints"],
-                    RR=ref_state["ref_foot_RR_constraints"],
+                    FL=ref_state['ref_foot_FL_constraints'],
+                    FR=ref_state['ref_foot_FR_constraints'],
+                    RL=ref_state['ref_foot_RL_constraints'],
+                    RR=ref_state['ref_foot_RR_constraints'],
                 )
-                data = {"ref_feet_constraints": ref_feet_constraints}
-            elif obs_name == "nmpc_GRFs":
-                data = {"nmpc_GRFs": self.nmpc_GRFs}
-            elif obs_name == "nmpc_footholds":
-                data = {"nmpc_footholds": self.nmpc_footholds}
-            elif obs_name == "swing_time":
-                data = {"swing_time": self.wb_interface.stc.swing_time}
-            elif obs_name == "phase_signal":
-                data = {"phase_signal": self.wb_interface.pgg._phase_signal}
-            elif obs_name == "lift_off_positions":
-                data = {"lift_off_positions": self.wb_interface.frg.lift_off_positions}
+                data = {'ref_feet_constraints': ref_feet_constraints}
+            elif obs_name == 'nmpc_GRFs':
+                data = {'nmpc_GRFs': self.nmpc_GRFs}
+            elif obs_name == 'nmpc_footholds':
+                data = {'nmpc_footholds': self.nmpc_footholds}
+            elif obs_name == 'swing_time':
+                data = {'swing_time': self.wb_interface.stc.swing_time}
+            elif obs_name == 'phase_signal':
+                data = {'phase_signal': self.wb_interface.pgg._phase_signal}
+            elif obs_name == 'lift_off_positions':
+                data = {'lift_off_positions': self.wb_interface.frg.lift_off_positions}
 
             else:
                 data = {}
@@ -237,9 +237,7 @@ class QuadrupedPyMPC_Wrapper:
 
         return tau
 
-    def get_obs(
-        self,
-    ) -> dict:
+    def get_obs(self) -> dict:
         """Get some user-defined observables from withing the control loop.
 
         Returns:

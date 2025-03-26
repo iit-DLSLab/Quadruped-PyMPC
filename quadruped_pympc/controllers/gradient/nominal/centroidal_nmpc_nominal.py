@@ -2,6 +2,7 @@
 import pathlib
 
 # Authors: Giulio Turrisi -
+
 from acados_template import AcadosOcp, AcadosOcpSolver
 
 ACADOS_INFTY = 1000
@@ -19,8 +20,8 @@ from .centroidal_model_nominal import Centroidal_Model_Nominal
 # Class for the Acados NMPC, the model is in another file!
 class Acados_NMPC_Nominal:
     def __init__(self):
-        self.horizon = config.mpc_params["horizon"]  # Define the number of discretization steps
-        self.dt = config.mpc_params["dt"]
+        self.horizon = config.mpc_params['horizon']  # Define the number of discretization steps
+        self.dt = config.mpc_params['dt']
         self.T_horizon = self.horizon * self.dt
         self.use_RTI = config.mpc_params["use_RTI"]
         self.use_integrators = config.mpc_params["use_integrators"]
@@ -203,8 +204,8 @@ class Acados_NMPC_Nominal:
         ocp.solver_options.hessian_approx = "GAUSS_NEWTON"  # 'GAUSS_NEWTON', 'EXACT'
         ocp.solver_options.integrator_type = "ERK"  # ERK IRK GNSF DISCRETE
         if self.use_DDP:
-            ocp.solver_options.nlp_solver_type = "DDP"
-            ocp.solver_options.nlp_solver_max_iter = config.mpc_params["num_qp_iterations"]
+            ocp.solver_options.nlp_solver_type = 'DDP'
+            ocp.solver_options.nlp_solver_max_iter = config.mpc_params['num_qp_iterations']
             # ocp.solver_options.globalization = 'MERIT_BACKTRACKING'
             ocp.solver_options.with_adaptive_levenberg_marquardt = True
 
@@ -220,16 +221,16 @@ class Acados_NMPC_Nominal:
             ocp.solver_options.nlp_solver_max_iter = 1
             # Set the RTI type for the advanced RTI method
             # (see https://arxiv.org/pdf/2403.07101.pdf)
-            if config.mpc_params["as_rti_type"] == "AS-RTI-A":
+            if config.mpc_params['as_rti_type'] == "AS-RTI-A":
                 ocp.solver_options.as_rti_iter = 1
                 ocp.solver_options.as_rti_level = 0
-            elif config.mpc_params["as_rti_type"] == "AS-RTI-B":
+            elif config.mpc_params['as_rti_type'] == "AS-RTI-B":
                 ocp.solver_options.as_rti_iter = 1
                 ocp.solver_options.as_rti_level = 1
-            elif config.mpc_params["as_rti_type"] == "AS-RTI-C":
+            elif config.mpc_params['as_rti_type'] == "AS-RTI-C":
                 ocp.solver_options.as_rti_iter = 1
                 ocp.solver_options.as_rti_level = 2
-            elif config.mpc_params["as_rti_type"] == "AS-RTI-D":
+            elif config.mpc_params['as_rti_type'] == "AS-RTI-D":
                 ocp.solver_options.as_rti_iter = 1
                 ocp.solver_options.as_rti_level = 3
 
@@ -238,14 +239,14 @@ class Acados_NMPC_Nominal:
             ocp.solver_options.nlp_solver_max_iter = config.mpc_params["num_qp_iterations"]
         # ocp.solver_options.globalization = "MERIT_BACKTRACKING"  # FIXED_STEP, MERIT_BACKTRACKING
 
-        if config.mpc_params["solver_mode"] == "balance":
+        if config.mpc_params['solver_mode'] == "balance":
             ocp.solver_options.hpipm_mode = "BALANCE"
-        elif config.mpc_params["solver_mode"] == "robust":
+        elif config.mpc_params['solver_mode'] == "robust":
             ocp.solver_options.hpipm_mode = "ROBUST"
-        elif config.mpc_params["solver_mode"] == "fast":
+        elif config.mpc_params['solver_mode'] == "fast":
             ocp.solver_options.qp_solver_iter_max = 10
             ocp.solver_options.hpipm_mode = "SPEED"
-        elif config.mpc_params["solver_mode"] == "crazy_speed":
+        elif config.mpc_params['solver_mode'] == "crazy_speed":
             ocp.solver_options.qp_solver_iter_max = 5
             ocp.solver_options.hpipm_mode = "SPEED_ABS"
 
@@ -258,12 +259,12 @@ class Acados_NMPC_Nominal:
         ocp.solver_options.tf = self.T_horizon
 
         # Nonuniform discretization
-        if config.mpc_params["use_nonuniform_discretization"]:
+        if config.mpc_params['use_nonuniform_discretization']:
             time_steps_fine_grained = np.tile(
-                config.mpc_params["dt_fine_grained"], config.mpc_params["horizon_fine_grained"]
+                config.mpc_params['dt_fine_grained'], config.mpc_params['horizon_fine_grained']
             )
             time_steps = np.concatenate(
-                (time_steps_fine_grained, np.tile(self.dt, self.horizon - config.mpc_params["horizon_fine_grained"]))
+                (time_steps_fine_grained, np.tile(self.dt, self.horizon - config.mpc_params['horizon_fine_grained']))
             )
             shooting_nodes = np.zeros((self.horizon + 1,))
             for i in range(len(time_steps)):
@@ -273,9 +274,7 @@ class Acados_NMPC_Nominal:
         return ocp
 
     # Create a constraint for  stability (COM, ZMP or CP inside support polygon)
-    def create_stability_constraints(
-        self,
-    ) -> None:
+    def create_stability_constraints(self) -> None:
         base_w = self.centroidal_model.states[0:3]
         base_vel_w = self.centroidal_model.states[3:6]
 
@@ -382,9 +381,7 @@ class Acados_NMPC_Nominal:
         return Jb, ub, lb
 
     # Create a standard foothold box constraint
-    def create_foothold_constraints(
-        self,
-    ):
+    def create_foothold_constraints(self):
         """
         This function calculates the symbolic foothold constraints for the centroidal NMPC problem.
 
@@ -430,9 +427,7 @@ class Acados_NMPC_Nominal:
         return Jbu, ubu, lbu
 
     # Create the friction cone constraint
-    def create_friction_cone_constraints(
-        self,
-    ) -> None:
+    def create_friction_cone_constraints(self) -> None:
         """
         This function calculates the symbolic friction cone constraints for the centroidal NMPC problem.
 
@@ -916,7 +911,7 @@ class Acados_NMPC_Nominal:
                         FR_contact_sequence, RL_contact_sequence
                     ):
                         # TROT
-                        stability_margin = config.mpc_params["trot_stability_margin"]
+                        stability_margin = config.mpc_params['trot_stability_margin']
                         if FL_contact_sequence[j] == 1 and FR_contact_sequence[j] == 0:
                             ub_support_FL_RR = 0 + stability_margin
                             lb_support_FL_RR = 0 - stability_margin
@@ -929,7 +924,7 @@ class Acados_NMPC_Nominal:
                         FR_contact_sequence, RR_contact_sequence
                     ):
                         # PACE
-                        stability_margin = config.mpc_params["pace_stability_margin"]
+                        stability_margin = config.mpc_params['pace_stability_margin']
                         if FL_contact_sequence[j] == 1 and FR_contact_sequence[j] == 0:
                             ub_support_RL_FL = 0 + stability_margin
                             lb_support_RL_FL = 0 - stability_margin
@@ -1084,16 +1079,16 @@ class Acados_NMPC_Nominal:
             # between 1 and 0, it means that the leg go into swing and a new reference is needed!!!
             if j > 1 and j < self.horizon - 1:
                 if FL_contact_sequence[j] == 0 and FL_contact_sequence[j - 1] == 1:
-                    if reference["ref_foot_FL"].shape[0] > idx_ref_foot_to_assign[0] + 1:
+                    if reference['ref_foot_FL'].shape[0] > idx_ref_foot_to_assign[0] + 1:
                         idx_ref_foot_to_assign[0] += 1
                 if FR_contact_sequence[j] == 0 and FR_contact_sequence[j - 1] == 1:
-                    if reference["ref_foot_FR"].shape[0] > idx_ref_foot_to_assign[1] + 1:
+                    if reference['ref_foot_FR'].shape[0] > idx_ref_foot_to_assign[1] + 1:
                         idx_ref_foot_to_assign[1] += 1
                 if RL_contact_sequence[j] == 0 and RL_contact_sequence[j - 1] == 1:
-                    if reference["ref_foot_RL"].shape[0] > idx_ref_foot_to_assign[2] + 1:
+                    if reference['ref_foot_RL'].shape[0] > idx_ref_foot_to_assign[2] + 1:
                         idx_ref_foot_to_assign[2] += 1
                 if RR_contact_sequence[j] == 0 and RR_contact_sequence[j - 1] == 1:
-                    if reference["ref_foot_RR"].shape[0] > idx_ref_foot_to_assign[3] + 1:
+                    if reference['ref_foot_RR'].shape[0] > idx_ref_foot_to_assign[3] + 1:
                         idx_ref_foot_to_assign[3] += 1
 
             warm_start[8] = state_acados[8]
@@ -1182,16 +1177,16 @@ class Acados_NMPC_Nominal:
             # between 1 and 0, it means that the leg go into swing and a new reference is needed!!!
             if j > 1 and j < self.horizon - 1:
                 if FL_contact_sequence[j + 1] == 0 and FL_contact_sequence[j] == 1:
-                    if reference["ref_foot_FL"].shape[0] > idx_ref_foot_to_assign[0] + 1:
+                    if reference['ref_foot_FL'].shape[0] > idx_ref_foot_to_assign[0] + 1:
                         idx_ref_foot_to_assign[0] += 1
                 if FR_contact_sequence[j + 1] == 0 and FR_contact_sequence[j] == 1:
-                    if reference["ref_foot_FR"].shape[0] > idx_ref_foot_to_assign[1] + 1:
+                    if reference['ref_foot_FR'].shape[0] > idx_ref_foot_to_assign[1] + 1:
                         idx_ref_foot_to_assign[1] += 1
                 if RL_contact_sequence[j + 1] == 0 and RL_contact_sequence[j] == 1:
-                    if reference["ref_foot_RL"].shape[0] > idx_ref_foot_to_assign[2] + 1:
+                    if reference['ref_foot_RL'].shape[0] > idx_ref_foot_to_assign[2] + 1:
                         idx_ref_foot_to_assign[2] += 1
                 if RR_contact_sequence[j + 1] == 0 and RR_contact_sequence[j] == 1:
-                    if reference["ref_foot_RR"].shape[0] > idx_ref_foot_to_assign[3] + 1:
+                    if reference['ref_foot_RR'].shape[0] > idx_ref_foot_to_assign[3] + 1:
                         idx_ref_foot_to_assign[3] += 1
 
                         # Calculate the reference force z for the leg in stance
@@ -1221,14 +1216,7 @@ class Acados_NMPC_Nominal:
                 else:
                     num_l2_penalties = self.ocp.model.cost_y_expr.shape[0] - (self.states_dim + self.inputs_dim)
 
-                yref_tot = np.concatenate(
-                    (
-                        yref,
-                        np.zeros(
-                            num_l2_penalties,
-                        ),
-                    )
-                )
+                yref_tot = np.concatenate((yref, np.zeros(num_l2_penalties)))
                 self.acados_ocp_solver.set(j, "yref", yref_tot)
             else:
                 self.acados_ocp_solver.set(j, "yref", yref)
@@ -1297,9 +1285,9 @@ class Acados_NMPC_Nominal:
             # If we have estimated an external wrench, we can compensate it for all steps
             # or less (maybe the disturbance is not costant along the horizon!)
             if (
-                config.mpc_params["external_wrenches_compensation"]
-                and config.mpc_params["external_wrenches_compensation_num_step"]
-                and j < config.mpc_params["external_wrenches_compensation_num_step"]
+                config.mpc_params['external_wrenches_compensation']
+                and config.mpc_params['external_wrenches_compensation_num_step']
+                and j < config.mpc_params['external_wrenches_compensation_num_step']
             ):
                 external_wrenches_estimated_param = copy.deepcopy(external_wrenches)
                 external_wrenches_estimated_param = external_wrenches_estimated_param.reshape((6,))
@@ -1456,12 +1444,12 @@ class Acados_NMPC_Nominal:
             self.acados_ocp_solver.options_set("rti_phase", 2)
             status = self.acados_ocp_solver.solve()
             if self.verbose:
-                print("feedback phase time: ", self.acados_ocp_solver.get_stats("time_tot"))
+                print("feedback phase time: ", self.acados_ocp_solver.get_stats('time_tot'))
 
         else:
             status = self.acados_ocp_solver.solve()
             if self.verbose:
-                print("ocp time: ", self.acados_ocp_solver.get_stats("time_tot"))
+                print("ocp time: ", self.acados_ocp_solver.get_stats('time_tot'))
 
         # Take the solution
         control = self.acados_ocp_solver.get(0, "u")
@@ -1649,8 +1637,8 @@ class Acados_NMPC_Nominal:
         if optimal_footholds_assigned[3] == False:
             optimal_foothold[3] = reference["ref_foot_RR"][0]
 
-        if config.mpc_params["dt"] <= 0.02 or (
-            config.mpc_params["use_nonuniform_discretization"] and config.mpc_params["dt_fine_grained"] <= 0.02
+        if config.mpc_params['dt'] <= 0.02 or (
+            config.mpc_params['use_nonuniform_discretization'] and config.mpc_params['dt_fine_grained'] <= 0.02
         ):
             optimal_next_state_index = 2
         else:

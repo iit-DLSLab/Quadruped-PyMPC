@@ -6,6 +6,8 @@
 import os
 import time
 
+import os
+
 dir_path = os.path.dirname(os.path.realpath(__file__))
 
 import sys
@@ -19,7 +21,7 @@ from jax import jit, random
 
 from quadruped_pympc import config
 
-dtype_general = "float32"
+dtype_general = 'float32'
 
 
 # Class that defines the prediction model of the NMPC
@@ -46,14 +48,14 @@ class Centroidal_Model_JAX:
         self.inertia = jnp.array(config.inertia)
 
         # Nonuniform discretization
-        if config.mpc_params["use_nonuniform_discretization"]:
+        if config.mpc_params['use_nonuniform_discretization']:
             time_steps_fine_grained = jnp.tile(
-                config.mpc_params["dt_fine_grained"], config.mpc_params["horizon_fine_grained"]
+                config.mpc_params['dt_fine_grained'], config.mpc_params['horizon_fine_grained']
             )
             self.dts = jnp.concatenate(
                 (
                     time_steps_fine_grained,
-                    jnp.tile(self.dt, config.mpc_params["horizon"] - config.mpc_params["horizon_fine_grained"]),
+                    jnp.tile(self.dt, config.mpc_params['horizon'] - config.mpc_params['horizon_fine_grained']),
                 )
             )
         else:

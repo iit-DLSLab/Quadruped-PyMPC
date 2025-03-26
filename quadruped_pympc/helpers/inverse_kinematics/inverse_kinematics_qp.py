@@ -1,11 +1,13 @@
 import numpy as np
 
 np.set_printoptions(precision=3, suppress=True)
-# import example_robot_data as robex
-import os
+from numpy.linalg import norm
 import time
 
 import casadi as cs
+# import example_robot_data as robex
+
+import os
 
 dir_path = os.path.dirname(os.path.realpath(__file__))
 
@@ -24,6 +26,7 @@ import mujoco.viewer
 # Pinocchio magic
 import pinocchio as pin
 from pinocchio import casadi as cpin
+
 
 
 # Class for solving a generic inverse kinematics problem
@@ -193,10 +196,10 @@ if __name__ == "__main__":
     d.qpos[2] = robot.q0[2]
     d.qpos[7:] = robot.q0[7:]
 
-    FL_id = mujoco.mj_name2id(m, mujoco.mjtObj.mjOBJ_GEOM, "FL")
-    FR_id = mujoco.mj_name2id(m, mujoco.mjtObj.mjOBJ_GEOM, "FR")
-    RL_id = mujoco.mj_name2id(m, mujoco.mjtObj.mjOBJ_GEOM, "RL")
-    RR_id = mujoco.mj_name2id(m, mujoco.mjtObj.mjOBJ_GEOM, "RR")
+    FL_id = mujoco.mj_name2id(m, mujoco.mjtObj.mjOBJ_GEOM, 'FL')
+    FR_id = mujoco.mj_name2id(m, mujoco.mjtObj.mjOBJ_GEOM, 'FR')
+    RL_id = mujoco.mj_name2id(m, mujoco.mjtObj.mjOBJ_GEOM, 'RL')
+    RR_id = mujoco.mj_name2id(m, mujoco.mjtObj.mjOBJ_GEOM, 'RR')
 
     joint_FL = solution[7:10]
     joint_FR = solution[10:13]

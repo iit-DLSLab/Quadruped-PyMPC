@@ -4,28 +4,27 @@ from quadruped_pympc import config as cfg
 from quadruped_pympc.helpers.periodic_gait_generator import PeriodicGaitGenerator
 
 
+
 class SRBDBatchedControllerInterface:
     """This is an interface for a batched controller that uses the SRBD method to optimize the gait"""
 
-    def __init__(
-        self,
-    ):
+    def __init__(self):
         """Constructor for the SRBD batched controller interface"""
 
-        self.type = cfg.mpc_params["type"]
-        self.mpc_dt = cfg.mpc_params["dt"]
-        self.horizon = cfg.mpc_params["horizon"]
-        self.optimize_step_freq = cfg.mpc_params["optimize_step_freq"]
-        self.step_freq_available = cfg.mpc_params["step_freq_available"]
+        self.type = cfg.mpc_params['type']
+        self.mpc_dt = cfg.mpc_params['dt']
+        self.horizon = cfg.mpc_params['horizon']
+        self.optimize_step_freq = cfg.mpc_params['optimize_step_freq']
+        self.step_freq_available = cfg.mpc_params['step_freq_available']
 
         from quadruped_pympc.controllers.gradient.nominal.centroidal_nmpc_gait_adaptive import Acados_NMPC_GaitAdaptive
 
         self.batched_controller = Acados_NMPC_GaitAdaptive()
 
         # in the case of nonuniform discretization, we create a list of dts and horizons for each nonuniform discretization
-        if cfg.mpc_params["use_nonuniform_discretization"]:
-            self.contact_sequence_dts = [cfg.mpc_params["dt_fine_grained"], self.mpc_dt]
-            self.contact_sequence_lenghts = [cfg.mpc_params["horizon_fine_grained"], self.horizon]
+        if cfg.mpc_params['use_nonuniform_discretization']:
+            self.contact_sequence_dts = [cfg.mpc_params['dt_fine_grained'], self.mpc_dt]
+            self.contact_sequence_lenghts = [cfg.mpc_params['horizon_fine_grained'], self.horizon]
         else:
             self.contact_sequence_dts = [self.mpc_dt]
             self.contact_sequence_lenghts = [self.horizon]

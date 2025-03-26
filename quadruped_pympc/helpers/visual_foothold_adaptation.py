@@ -8,7 +8,7 @@ except ImportError:
 
 
 class VisualFootholdAdaptation:
-    def __init__(self, legs_order, adaptation_strategy="height"):
+    def __init__(self, legs_order, adaptation_strategy='height'):
         self.footholds_adaptation = LegsAttr(
             FL=np.array([0, 0, 0]), FR=np.array([0, 0, 0]), RL=np.array([0, 0, 0]), RR=np.array([0, 0, 0])
         )
@@ -17,7 +17,7 @@ class VisualFootholdAdaptation:
 
         self.adaptation_strategy = adaptation_strategy
 
-        if self.adaptation_strategy == "vfa":
+        if self.adaptation_strategy == 'vfa':
             self.vfa_evaluators = LegsAttr(FL=None, FR=None, RL=None, RR=None)
             for leg_id, leg_name in enumerate(legs_order):
                 self.vfa_evaluators[leg_name] = VFA(leg=leg_name)
@@ -62,13 +62,13 @@ class VisualFootholdAdaptation:
             if heightmaps[leg_name].data is None:
                 return False
 
-        if self.adaptation_strategy == "height":
+        if self.adaptation_strategy == 'height':
             for leg_id, leg_name in enumerate(legs_order):
                 height_adjustment = heightmaps[leg_name].get_height(reference_footholds[leg_name])
                 if height_adjustment is not None:
                     reference_footholds[leg_name][2] = height_adjustment
 
-        elif self.adaptation_strategy == "vfa":
+        elif self.adaptation_strategy == 'vfa':
             gait_phases = 0.0  # for now
             for leg_id, leg_name in enumerate(legs_order):
                 # Transform the heightmap in hip frame

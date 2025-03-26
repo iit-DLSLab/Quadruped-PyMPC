@@ -7,16 +7,14 @@ from quadruped_pympc import config as cfg
 class SRBDControllerInterface:
     """This is an interface for a controller that uses the SRBD method to optimize the gait"""
 
-    def __init__(
-        self,
-    ):
+    def __init__(self):
         """Constructor for the SRBD controller interface"""
 
-        self.type = cfg.mpc_params["type"]
-        self.mpc_dt = cfg.mpc_params["dt"]
-        self.horizon = cfg.mpc_params["horizon"]
-        self.optimize_step_freq = cfg.mpc_params["optimize_step_freq"]
-        self.step_freq_available = cfg.mpc_params["step_freq_available"]
+        self.type = cfg.mpc_params['type']
+        self.mpc_dt = cfg.mpc_params['dt']
+        self.horizon = cfg.mpc_params['horizon']
+        self.optimize_step_freq = cfg.mpc_params['optimize_step_freq']
+        self.step_freq_available = cfg.mpc_params['step_freq_available']
 
         self.previous_contact_mpc = np.array([1, 1, 1, 1])
 
@@ -38,7 +36,7 @@ class SRBDControllerInterface:
 
                 self.batched_controller = Acados_NMPC_GaitAdaptive()
 
-        elif self.type == "input_rates":
+        elif self.type == 'input_rates':
             from quadruped_pympc.controllers.gradient.input_rates.centroidal_nmpc_input_rates import (
                 Acados_NMPC_InputRates,
             )
@@ -52,7 +50,7 @@ class SRBDControllerInterface:
 
                 self.batched_controller = Acados_NMPC_GaitAdaptive()
 
-        elif cfg.mpc_params["type"] == "lyapunov":
+        elif cfg.mpc_params['type'] == 'lyapunov':
             from quadruped_pympc.controllers.gradient.lyapunov.centroidal_nmpc_lyapunov import Acados_NMPC_Lyapunov
 
             self.controller = Acados_NMPC_Lyapunov()
@@ -64,7 +62,7 @@ class SRBDControllerInterface:
 
                 self.batched_controller = Acados_NMPC_GaitAdaptive()
 
-        elif cfg.mpc_params["type"] == "kinodynamic":
+        elif cfg.mpc_params['type'] == 'kinodynamic':
             from quadruped_pympc.controllers.gradient.kinodynamic.kinodynamic_nmpc import Acados_NMPC_KinoDynamic
 
             self.controller = Acados_NMPC_KinoDynamic()
@@ -117,21 +115,18 @@ class SRBDControllerInterface:
         )
 
         # If we use sampling
-        if self.type == "sampling":
+        if self.type == 'sampling':
             # Convert data to jax and shift previous solution
-            (
-                state_current_jax,
-                reference_state_jax,
-            ) = self.controller.prepare_state_and_reference(
+            state_current_jax, reference_state_jax = self.controller.prepare_state_and_reference(
                 state_current, ref_state, current_contact, self.previous_contact_mpc
             )
             self.previous_contact_mpc = current_contact
 
             for iter_sampling in range(self.controller.num_sampling_iterations):
                 self.controller = self.controller.with_newkey()
-                if self.controller.sampling_method == "cem_mppi":
+                if self.controller.sampling_method == 'cem_mppi':
                     if iter_sampling == 0:
-                        self.controller = self.controller.with_newsigma(cfg.mpc_params["sigma_cem_mppi"])
+                        self.controller = self.controller.with_newsigma(cfg.mpc_params['sigma_cem_mppi'])
 
                     (
                         nmpc_GRFs,
@@ -186,7 +181,7 @@ class SRBDControllerInterface:
 
         # If we use Gradient-Based MPC
         else:
-            if self.type == "kinodynamic":
+            if self.type == 'kinodynamic':
                 (
                     nmpc_GRFs,
                     nmpc_footholds,

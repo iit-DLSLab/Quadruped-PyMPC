@@ -9,6 +9,8 @@ import casadi as cs
 import numpy as np
 from acados_template import AcadosModel
 
+import os
+
 dir_path = os.path.dirname(os.path.realpath(__file__))
 
 import sys
@@ -36,36 +38,34 @@ else:
 
 # Class that defines the prediction model of the NMPC
 class KinoDynamic_Model:
-    def __init__(
-        self,
-    ) -> None:
-        if config.robot == "go2":
-            urdf_filename = dir_path + "/../../../gym-quadruped/gym_quadruped/robot_model/go2/go2.urdf"
-        elif config.robot == "aliengo":
+    def __init__(self) -> None:
+        if config.robot == 'go2':
+            urdf_filename = dir_path + '/../../../gym-quadruped/gym_quadruped/robot_model/go2/go2.urdf'
+        elif config.robot == 'aliengo':
             # urdf_filename = dir_path + '/../../../gym-quadruped/gym_quadruped/robot_model/aliengo/aliengo.urdf'
             urdf_filename = (
-                "/home/iit.local/gturrisi/personal_ws_home/gym-quadruped/gym_quadruped/robot_model/aliengo/aliengo.urdf"
+                '/home/iit.local/gturrisi/personal_ws_home/gym-quadruped/gym_quadruped/robot_model/aliengo/aliengo.urdf'
             )
-        elif config.robot == "hyqreal":
-            urdf_filename = dir_path + "/../../../gym-quadruped/gym_quadruped/robot_model/hyqreal/hyqreal.urdf"
-        elif config.robot == "mini_cheetah":
+        elif config.robot == 'hyqreal':
+            urdf_filename = dir_path + '/../../../gym-quadruped/gym_quadruped/robot_model/hyqreal/hyqreal.urdf'
+        elif config.robot == 'mini_cheetah':
             urdf_filename = (
-                dir_path + "/../../../gym-quadruped/gym_quadruped/robot_model/mini_cheetah/mini_cheetah.urdf"
+                dir_path + '/../../../gym-quadruped/gym_quadruped/robot_model/mini_cheetah/mini_cheetah.urdf'
             )
 
         joint_list = [
-            "FL_hip_joint",
-            "FL_thigh_joint",
-            "FL_calf_joint",
-            "FR_hip_joint",
-            "FR_thigh_joint",
-            "FR_calf_joint",
-            "RL_hip_joint",
-            "RL_thigh_joint",
-            "RL_calf_joint",
-            "RR_hip_joint",
-            "RR_thigh_joint",
-            "RR_calf_joint",
+            'FL_hip_joint',
+            'FL_thigh_joint',
+            'FL_calf_joint',
+            'FR_hip_joint',
+            'FR_thigh_joint',
+            'FR_calf_joint',
+            'RL_hip_joint',
+            'RL_thigh_joint',
+            'RL_calf_joint',
+            'RR_hip_joint',
+            'RR_thigh_joint',
+            'RR_calf_joint',
         ]
 
         self.kindyn = KinDynComputations(urdfstring=urdf_filename, joints_name_list=joint_list)
@@ -435,9 +435,7 @@ class KinoDynamic_Model:
             integral_states,
         )
 
-    def export_robot_model(
-        self,
-    ) -> AcadosModel:
+    def export_robot_model(self) -> AcadosModel:
         """
         This method set some general properties of the NMPC, such as the params,
         prediction mode, etc...! It will be called in centroidal_nmpc.py

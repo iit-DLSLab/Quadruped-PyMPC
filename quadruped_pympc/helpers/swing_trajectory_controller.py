@@ -176,18 +176,18 @@ if __name__ == "__main__":
     simulation_dt = cfg.simulation_params["dt"]
 
     state_observables_names = (
-        "base_pos",
-        "base_lin_vel",
-        "base_ori_euler_xyz",
-        "base_ori_quat_wxyz",
-        "base_ang_vel",
-        "qpos_js",
-        "qvel_js",
-        "tau_ctrl_setpoint",
-        "feet_pos_base",
-        "feet_vel_base",
-        "contact_state",
-        "contact_forces_base",
+        'base_pos',
+        'base_lin_vel',
+        'base_ori_euler_xyz',
+        'base_ori_quat_wxyz',
+        'base_ang_vel',
+        'qpos_js',
+        'qvel_js',
+        'tau_ctrl_setpoint',
+        'feet_pos_base',
+        'feet_vel_base',
+        'contact_state',
+        'contact_forces_base',
     )
 
     # Create the quadruped robot environment -----------------------------------------------------------
@@ -219,7 +219,7 @@ if __name__ == "__main__":
     # Quadruped PyMPC controller initialization -------------------------------------------------------------
     from quadruped_pympc.interfaces.wb_interface import WBInterface
 
-    wb_interface = WBInterface(initial_feet_pos=env.feet_pos(frame="world"), legs_order=legs_order)
+    wb_interface = WBInterface(initial_feet_pos=env.feet_pos(frame='world'), legs_order=legs_order)
 
     nmpc_GRFs = LegsAttr(FL=np.zeros(3), FR=np.zeros(3), RL=np.zeros(3), RR=np.zeros(3))
     nmpc_footholds = LegsAttr(FL=np.zeros(3), FR=np.zeros(3), RL=np.zeros(3), RR=np.zeros(3))
@@ -248,7 +248,7 @@ if __name__ == "__main__":
         ref_base_lin_vel, ref_base_ang_vel = env.target_base_vel()
 
         # Get the inertia matrix
-        if cfg.simulation_params["use_inertia_recomputation"]:
+        if cfg.simulation_params['use_inertia_recomputation']:
             inertia = env.get_base_inertia().flatten()  # Reflected inertia of base at qpos, in world frame
         else:
             inertia = cfg.inertia.flatten()
@@ -262,7 +262,7 @@ if __name__ == "__main__":
         legs_qfrc_bias = env.legs_qfrc_bias
 
         # Compute feet jacobian
-        feet_jac = env.feet_jacobians(frame="world", return_rot_jac=False)
+        feet_jac = env.feet_jacobians(frame='world', return_rot_jac=False)
 
         # Compute jacobian derivatives of the contact points
         jac_feet_dot = (feet_jac - jac_feet_prev) / simulation_dt  # Finite difference approximation
@@ -310,7 +310,7 @@ if __name__ == "__main__":
         wb_interface.frg.lift_off_positions.RL[2] = 0.3
         wb_interface.frg.lift_off_positions.RR[2] = 0.3
         nmpc_footholds = LegsAttr(
-            FL=ref_feet_pos["FL"], FR=ref_feet_pos["FR"], RL=ref_feet_pos["RL"], RR=ref_feet_pos["RR"]
+            FL=ref_feet_pos['FL'], FR=ref_feet_pos['FR'], RL=ref_feet_pos['RL'], RR=ref_feet_pos['RR']
         )
 
         # Compute Swing and Stance Torque ---------------------------------------------------------------------------
@@ -366,7 +366,7 @@ if __name__ == "__main__":
         )
 
         # Update and Plot the heightmap
-        if cfg.simulation_params["visual_foothold_adaptation"] != "blind":
+        if cfg.simulation_params['visual_foothold_adaptation'] != 'blind':
             # if(stc.check_apex_condition(current_contact, interval=0.01)):
             for leg_id, leg_name in enumerate(legs_order):
                 data = heightmaps[

@@ -12,6 +12,8 @@ from acados_template import AcadosOcp, AcadosOcpSolver
 
 from .kinodynamic_model import KinoDynamic_Model
 
+import os
+
 dir_path = os.path.dirname(os.path.realpath(__file__))
 
 import sys
@@ -21,21 +23,22 @@ sys.path.append(dir_path + "/../../")
 
 
 from quadruped_pympc import config
+from liecasadi import SO3
 
 
 # Class for the Acados NMPC, the model is in another file!
 class Acados_NMPC_KinoDynamic:
     def __init__(self):
-        self.horizon = config.mpc_params["horizon"]  # Define the number of discretization steps
-        self.dt = config.mpc_params["dt"]
+        self.horizon = config.mpc_params['horizon']  # Define the number of discretization steps
+        self.dt = config.mpc_params['dt']
         self.T_horizon = self.horizon * self.dt
-        self.use_RTI = config.mpc_params["use_RTI"]
-        self.use_integrators = config.mpc_params["use_integrators"]
-        self.use_warm_start = config.mpc_params["use_warm_start"]
-        self.use_foothold_constraints = config.mpc_params["use_foothold_constraints"]
+        self.use_RTI = config.mpc_params['use_RTI']
+        self.use_integrators = config.mpc_params['use_integrators']
+        self.use_warm_start = config.mpc_params['use_warm_start']
+        self.use_foothold_constraints = config.mpc_params['use_foothold_constraints']
 
-        self.use_static_stability = config.mpc_params["use_static_stability"]
-        self.use_zmp_stability = config.mpc_params["use_zmp_stability"]
+        self.use_static_stability = config.mpc_params['use_static_stability']
+        self.use_zmp_stability = config.mpc_params['use_zmp_stability']
         self.use_stability_constraints = self.use_static_stability or self.use_zmp_stability
 
         self.use_DDP = config.mpc_params["use_DDP"]
@@ -69,7 +72,7 @@ class Acados_NMPC_KinoDynamic:
 
         if self.use_RTI:
             # first preparation phase
-            self.acados_ocp_solver.options_set("rti_phase", 1)
+            self.acados_ocp_solver.options_set('rti_phase', 1)
             status = self.acados_ocp_solver.solve()
 
     # Set cost, constraints and options
@@ -236,8 +239,8 @@ class Acados_NMPC_KinoDynamic:
         ocp.solver_options.hessian_approx = "GAUSS_NEWTON"  # 'GAUSS_NEWTON', 'EXACT'
         ocp.solver_options.integrator_type = "ERK"  # ERK IRK GNSF DISCRETE
         if self.use_DDP:
-            ocp.solver_options.nlp_solver_type = "DDP"
-            ocp.solver_options.nlp_solver_max_iter = config.mpc_params["num_qp_iterations"]
+            ocp.solver_options.nlp_solver_type = 'DDP'
+            ocp.solver_options.nlp_solver_max_iter = config.mpc_params['num_qp_iterations']
             # ocp.solver_options.globalization = 'MERIT_BACKTRACKING'
             ocp.solver_options.with_adaptive_levenberg_marquardt = True
 
@@ -248,32 +251,32 @@ class Acados_NMPC_KinoDynamic:
             ocp.solver_options.nlp_solver_max_iter = 1
             # Set the RTI type for the advanced RTI method
             # (see https://arxiv.org/pdf/2403.07101.pdf)
-            if config.mpc_params["as_rti_type"] == "AS-RTI-A":
+            if config.mpc_params['as_rti_type'] == "AS-RTI-A":
                 ocp.solver_options.as_rti_iter = 1
                 ocp.solver_options.as_rti_level = 0
-            elif config.mpc_params["as_rti_type"] == "AS-RTI-B":
+            elif config.mpc_params['as_rti_type'] == "AS-RTI-B":
                 ocp.solver_options.as_rti_iter = 1
                 ocp.solver_options.as_rti_level = 1
-            elif config.mpc_params["as_rti_type"] == "AS-RTI-C":
+            elif config.mpc_params['as_rti_type'] == "AS-RTI-C":
                 ocp.solver_options.as_rti_iter = 1
                 ocp.solver_options.as_rti_level = 2
-            elif config.mpc_params["as_rti_type"] == "AS-RTI-D":
+            elif config.mpc_params['as_rti_type'] == "AS-RTI-D":
                 ocp.solver_options.as_rti_iter = 1
                 ocp.solver_options.as_rti_level = 3
 
         else:
             ocp.solver_options.nlp_solver_type = "SQP"
-            ocp.solver_options.nlp_solver_max_iter = config.mpc_params["num_qp_iterations"]
+            ocp.solver_options.nlp_solver_max_iter = config.mpc_params['num_qp_iterations']
         # ocp.solver_options.globalization = "MERIT_BACKTRACKING"  # FIXED_STEP, MERIT_BACKTRACKING
 
-        if config.mpc_params["solver_mode"] == "balance":
+        if config.mpc_params['solver_mode'] == "balance":
             ocp.solver_options.hpipm_mode = "BALANCE"
-        elif config.mpc_params["solver_mode"] == "robust":
+        elif config.mpc_params['solver_mode'] == "robust":
             ocp.solver_options.hpipm_mode = "ROBUST"
-        elif config.mpc_params["solver_mode"] == "speed":
+        elif config.mpc_params['solver_mode'] == "speed":
             ocp.solver_options.qp_solver_iter_max = 10
             ocp.solver_options.hpipm_mode = "SPEED"
-        elif config.mpc_params["solver_mode"] == "crazy_speed":
+        elif config.mpc_params['solver_mode'] == "crazy_speed":
             ocp.solver_options.qp_solver_iter_max = 5
             ocp.solver_options.hpipm_mode = "SPEED_ABS"
 
@@ -286,12 +289,12 @@ class Acados_NMPC_KinoDynamic:
         ocp.solver_options.tf = self.T_horizon
 
         # Nonuniform discretization
-        if config.mpc_params["use_nonuniform_discretization"]:
+        if config.mpc_params['use_nonuniform_discretization']:
             time_steps_fine_grained = np.tile(
-                config.mpc_params["dt_fine_grained"], config.mpc_params["horizon_fine_grained"]
+                config.mpc_params['dt_fine_grained'], config.mpc_params['horizon_fine_grained']
             )
             time_steps = np.concatenate(
-                (time_steps_fine_grained, np.tile(self.dt, self.horizon - config.mpc_params["horizon_fine_grained"]))
+                (time_steps_fine_grained, np.tile(self.dt, self.horizon - config.mpc_params['horizon_fine_grained']))
             )
             shooting_nodes = np.zeros((self.horizon + 1,))
             for i in range(len(time_steps)):
@@ -300,9 +303,7 @@ class Acados_NMPC_KinoDynamic:
 
         return ocp
 
-    def create_foot_vel_constraints(
-        self,
-    ) -> None:
+    def create_foot_vel_constraints(self) -> None:
         qvel_joints_FL = self.centroidal_model.inputs[0:3]
         qvel_joints_FR = self.centroidal_model.inputs[3:6]
         qvel_joints_RL = self.centroidal_model.inputs[6:9]
@@ -339,9 +340,7 @@ class Acados_NMPC_KinoDynamic:
         return Jb, ub, lb
 
     # Create a constraint for  stability (COM, ZMP or CP inside support polygon)
-    def create_stability_constraints(
-        self,
-    ) -> None:
+    def create_stability_constraints(self) -> None:
         base_w = self.centroidal_model.states[0:3]
         base_vel_w = self.centroidal_model.states[3:6]
 
@@ -448,9 +447,7 @@ class Acados_NMPC_KinoDynamic:
         return Jb, ub, lb
 
     # Create a standard foothold box constraint
-    def create_foothold_constraints(
-        self,
-    ):
+    def create_foothold_constraints(self):
         """
         This function calculates the symbolic foothold constraints for the centroidal NMPC problem.
 
@@ -496,9 +493,7 @@ class Acados_NMPC_KinoDynamic:
         return Jbu, ubu, lbu
 
     # Create the friction cone constraint
-    def create_friction_cone_constraints(
-        self,
-    ) -> None:
+    def create_friction_cone_constraints(self) -> None:
         """
         This function calculates the symbolic friction cone constraints for the centroidal NMPC problem.
 
@@ -998,7 +993,7 @@ class Acados_NMPC_KinoDynamic:
                     FR_contact_sequence, RL_contact_sequence
                 ):
                     # TROT
-                    stability_margin = config.mpc_params["trot_stability_margin"]
+                    stability_margin = config.mpc_params['trot_stability_margin']
                     if FL_contact_sequence[j] == 1 and FR_contact_sequence[j] == 0:
                         ub_support_FL_RR = 0 + stability_margin
                         lb_support_FL_RR = 0 - stability_margin
@@ -1011,7 +1006,7 @@ class Acados_NMPC_KinoDynamic:
                     FR_contact_sequence, RR_contact_sequence
                 ):
                     # PACE
-                    stability_margin = config.mpc_params["pace_stability_margin"]
+                    stability_margin = config.mpc_params['pace_stability_margin']
                     if FL_contact_sequence[j] == 1 and FR_contact_sequence[j] == 0:
                         ub_support_RL_FL = 0 + stability_margin
                         lb_support_RL_FL = 0 - stability_margin
@@ -1022,7 +1017,7 @@ class Acados_NMPC_KinoDynamic:
 
                 else:
                     # CRAWL BACKDIAGONALCRAWL ONLY
-                    stability_margin = config.mpc_params["crawl_stability_margin"]
+                    stability_margin = config.mpc_params['crawl_stability_margin']
 
                     if FL_contact_sequence[j] == 1:
                         if FR_contact_sequence[j] == 1:
@@ -1250,28 +1245,21 @@ class Acados_NMPC_KinoDynamic:
                 else:
                     num_l2_penalties = self.ocp.model.cost_y_expr.shape[0] - (self.states_dim + self.inputs_dim)
 
-                yref_tot = np.concatenate(
-                    (
-                        yref,
-                        np.zeros(
-                            num_l2_penalties,
-                        ),
-                    )
-                )
+                yref_tot = np.concatenate((yref, np.zeros(num_l2_penalties)))
                 self.acados_ocp_solver.set(j, "yref", yref_tot)
             else:
                 self.acados_ocp_solver.set(j, "yref", yref)
 
         # Fill last step horizon reference (self.states_dim - no control action!!)
         yref_N = np.zeros(shape=(self.states_dim + 12,))
-        yref_N[0:3] = reference["ref_position"]
-        yref_N[3:6] = reference["ref_linear_velocity"]
-        yref_N[6:9] = reference["ref_orientation"]
-        yref_N[9:12] = reference["ref_angular_velocity"]
-        yref_N[12:15] = reference["ref_foot_FL"][-1]
-        yref_N[15:18] = reference["ref_foot_FR"][-1]
-        yref_N[18:21] = reference["ref_foot_RL"][-1]
-        yref_N[21:24] = reference["ref_foot_RR"][-1]
+        yref_N[0:3] = reference['ref_position']
+        yref_N[3:6] = reference['ref_linear_velocity']
+        yref_N[6:9] = reference['ref_orientation']
+        yref_N[9:12] = reference['ref_angular_velocity']
+        yref_N[12:15] = reference['ref_foot_FL'][-1]
+        yref_N[15:18] = reference['ref_foot_FR'][-1]
+        yref_N[18:21] = reference['ref_foot_RL'][-1]
+        yref_N[21:24] = reference['ref_foot_RR'][-1]
         yref_N[self.states_dim :] = reference["ref_joints"]
         # Setting the reference to acados
         self.acados_ocp_solver.set(self.horizon, "yref", yref_N)
@@ -1292,9 +1280,9 @@ class Acados_NMPC_KinoDynamic:
             # If we have estimated an external wrench, we can compensate it for all steps
             # or less (maybe the disturbance is not costant along the horizon!)
             if (
-                config.mpc_params["external_wrenches_compensation"]
-                and config.mpc_params["external_wrenches_compensation_num_step"]
-                and j < config.mpc_params["external_wrenches_compensation_num_step"]
+                config.mpc_params['external_wrenches_compensation']
+                and config.mpc_params['external_wrenches_compensation_num_step']
+                and j < config.mpc_params['external_wrenches_compensation_num_step']
             ):
                 external_wrenches_estimated_param = copy.deepcopy(external_wrenches)
                 external_wrenches_estimated_param = external_wrenches_estimated_param.reshape((6,))
@@ -1444,14 +1432,14 @@ class Acados_NMPC_KinoDynamic:
         control = self.acados_ocp_solver.get(0, "u")
         optimal_joint_velocities = control[0:12]
 
-        if config.mpc_params["use_nonuniform_discretization"]:
+        if config.mpc_params['use_nonuniform_discretization']:
             optimal_joint_acceleration = (
                 optimal_joint_velocities - self.acados_ocp_solver.get(1, "u")[0:12]
-            ) / config.mpc_params["dt_fine_grained"]
+            ) / config.mpc_params['dt_fine_grained']
         else:
             optimal_joint_acceleration = (
                 optimal_joint_velocities - self.acados_ocp_solver.get(1, "u")[0:12]
-            ) / config.mpc_params["dt"]
+            ) / config.mpc_params['dt']
 
         optimal_GRF = control[12:]
 
@@ -1459,7 +1447,7 @@ class Acados_NMPC_KinoDynamic:
         # We first take the foothold in stance now (they are not optimized!)
         # and flag them as True (aka "assigned")
         optimal_foothold = np.zeros((4, 3))
-        optimal_footholds_assigned = np.zeros((4,), dtype="bool")
+        optimal_footholds_assigned = np.zeros((4,), dtype='bool')
         if FL_contact_sequence[0] == 1:
             optimal_foothold[0] = state["foot_FL"]
             optimal_footholds_assigned[0] = True

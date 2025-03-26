@@ -13,7 +13,7 @@ from quadruped_pympc.helpers.swing_trajectory_controller import SwingTrajectoryC
 from quadruped_pympc.helpers.terrain_estimator import TerrainEstimator
 from quadruped_pympc.helpers.velocity_modulator import VelocityModulator
 
-if cfg.simulation_params["visual_foothold_adaptation"] != "blind":
+if cfg.simulation_params['visual_foothold_adaptation'] != 'blind':
     from quadruped_pympc.helpers.visual_foothold_adaptation import VisualFootholdAdaptation
 
 
@@ -24,7 +24,7 @@ class WBInterface:
     swing trajectory control, and terrain estimation.
     """
 
-    def __init__(self, initial_feet_pos: LegsAttr, legs_order: tuple[str, str, str, str] = ("FL", "FR", "RL", "RR")):
+    def __init__(self, initial_feet_pos: LegsAttr, legs_order: tuple[str, str, str, str] = ('FL', 'FR', 'RL', 'RR')):
         """Constructor of the WBInterface class
 
         Args:
@@ -32,17 +32,17 @@ class WBInterface:
             legs_order (tuple[str, str, str, str], optional): order of the leg. Defaults to ('FL', 'FR', 'RL', 'RR').
         """
 
-        mpc_dt = cfg.mpc_params["dt"]
-        horizon = cfg.mpc_params["horizon"]
+        mpc_dt = cfg.mpc_params['dt']
+        horizon = cfg.mpc_params['horizon']
         self.legs_order = legs_order
 
         # Periodic gait generator --------------------------------------------------------------
-        gait_name = cfg.simulation_params["gait"]
-        gait_params = cfg.simulation_params["gait_params"][gait_name]
+        gait_name = cfg.simulation_params['gait']
+        gait_params = cfg.simulation_params['gait_params'][gait_name]
         gait_type, duty_factor, step_frequency = (
-            gait_params["type"],
-            gait_params["duty_factor"],
-            gait_params["step_freq"],
+            gait_params['type'],
+            gait_params['duty_factor'],
+            gait_params['step_freq'],
         )
         # Given the possibility to use nonuniform discretization,
         # we generate a contact sequence two times longer and with a dt half of the one of the mpc
@@ -50,9 +50,9 @@ class WBInterface:
             duty_factor=duty_factor, step_freq=step_frequency, gait_type=gait_type, horizon=horizon
         )
         # in the case of nonuniform discretization, we create a list of dts and horizons for each nonuniform discretization
-        if cfg.mpc_params["use_nonuniform_discretization"]:
-            self.contact_sequence_dts = [cfg.mpc_params["dt_fine_grained"], mpc_dt]
-            self.contact_sequence_lenghts = [cfg.mpc_params["horizon_fine_grained"], horizon]
+        if cfg.mpc_params['use_nonuniform_discretization']:
+            self.contact_sequence_dts = [cfg.mpc_params['dt_fine_grained'], mpc_dt]
+            self.contact_sequence_lenghts = [cfg.mpc_params['horizon_fine_grained'], horizon]
         else:
             self.contact_sequence_dts = [mpc_dt]
             self.contact_sequence_lenghts = [horizon]
@@ -64,11 +64,11 @@ class WBInterface:
         )
 
         # Create swing trajectory generator ------------------------------------------------------
-        self.step_height = cfg.simulation_params["step_height"]
+        self.step_height = cfg.simulation_params['step_height']
         swing_period = (1 - self.pgg.duty_factor) * (1 / self.pgg.step_freq)
-        position_gain_fb = cfg.simulation_params["swing_position_gain_fb"]
-        velocity_gain_fb = cfg.simulation_params["swing_velocity_gain_fb"]
-        swing_generator = cfg.simulation_params["swing_generator"]
+        position_gain_fb = cfg.simulation_params['swing_position_gain_fb']
+        velocity_gain_fb = cfg.simulation_params['swing_velocity_gain_fb']
+        swing_generator = cfg.simulation_params['swing_generator']
         self.stc = SwingTrajectoryController(
             step_height=self.step_height,
             swing_period=swing_period,
@@ -83,10 +83,10 @@ class WBInterface:
         # Inverse Kinematics ---------------------------------------------------------------------
         self.ik = InverseKinematicsNumeric()
 
-        if cfg.simulation_params["visual_foothold_adaptation"] != "blind":
+        if cfg.simulation_params['visual_foothold_adaptation'] != 'blind':
             # Visual foothold adaptation -------------------------------------------------------------
             self.vfa = VisualFootholdAdaptation(
-                legs_order=self.legs_order, adaptation_strategy=cfg.simulation_params["visual_foothold_adaptation"]
+                legs_order=self.legs_order, adaptation_strategy=cfg.simulation_params['visual_foothold_adaptation']
             )
 
         # Velocity modulator ---------------------------------------------------------------------
@@ -211,11 +211,11 @@ class WBInterface:
             base_xy_lin_vel=base_lin_vel[0:2],
             ref_base_xy_lin_vel=ref_base_lin_vel[0:2],
             hips_position=hip_pos,
-            com_height_nominal=cfg.simulation_params["ref_z"],
+            com_height_nominal=cfg.simulation_params['ref_z'],
         )
 
         # Adjust the footholds given the terrain -----------------------------------------------------
-        if cfg.simulation_params["visual_foothold_adaptation"] != "blind":
+        if cfg.simulation_params['visual_foothold_adaptation'] != 'blind':
             time_adaptation = time.time()
             if self.stc.check_apex_condition(self.current_contact, interval=0.01) and self.vfa.initialized == False:
                 for leg_id, leg_name in enumerate(legs_order):
@@ -251,7 +251,7 @@ class WBInterface:
         # we modify the reference to bring the base at the desired height and not the CoM
         ref_pos[2] -= base_pos[2] - (com_pos[2] + self.frg.com_pos_offset_w[2])
 
-        if cfg.mpc_params["type"] != "kinodynamic":
+        if cfg.mpc_params['type'] != 'kinodynamic':
             ref_state = {}
             ref_state |= dict(
                 ref_foot_FL=ref_feet_pos.FL.reshape((1, 3)),
@@ -278,8 +278,8 @@ class WBInterface:
             desired_foot_position_RR = np.zeros((cfg.mpc_params["horizon"], 3))
             for leg_id, leg_name in enumerate(legs_order):
                 lifted_off = [False, False, False, False]
-                for n in range(cfg.mpc_params["horizon"]):
-                    dt_increment_swing = (n) * cfg.mpc_params["dt"]
+                for n in range(cfg.mpc_params['horizon']):
+                    dt_increment_swing = (n) * cfg.mpc_params['dt']
 
                     if lifted_off[leg_id] == False and n >= 0:
                         if contact_sequence[leg_id][n - 1] == 1 and contact_sequence[leg_id][n] == 0:
@@ -367,7 +367,7 @@ class WBInterface:
 
         # -------------------------------------------------------------------------------------------------
 
-        if cfg.mpc_params["optimize_step_freq"]:
+        if cfg.mpc_params['optimize_step_freq']:
             # we can always optimize the step freq, or just at the apex of the swing
             # to avoid possible jittering in the solution
             optimize_swing = self.stc.check_apex_condition(self.current_contact)
@@ -441,7 +441,7 @@ class WBInterface:
         des_foot_pos = LegsAttr(*[np.zeros((3,)) for _ in range(4)])
         des_foot_vel = LegsAttr(*[np.zeros((3,)) for _ in range(4)])
 
-        if cfg.mpc_params["type"] != "kinodynamic":
+        if cfg.mpc_params['type'] != 'kinodynamic':
             # The swing controller is in the end-effector space
             for leg_id, leg_name in enumerate(self.legs_order):
                 if (
@@ -484,7 +484,7 @@ class WBInterface:
         # Compute PD targets for the joints ----------------------------------------------------------------
         des_joints_pos = LegsAttr(*[np.zeros((3, 1)) for _ in range(4)])
         des_joints_vel = LegsAttr(*[np.zeros((3, 1)) for _ in range(4)])
-        if cfg.mpc_params["type"] != "kinodynamic":
+        if cfg.mpc_params['type'] != 'kinodynamic':
             qpos_predicted = copy.deepcopy(qpos)
             # TODO use predicted rotation too
             # qpos_predicted[0:3] = nmpc_predicted_state[0:3]
@@ -549,7 +549,7 @@ class WBInterface:
         # self.stc.reset()
         # self.terrain_computation.reset()
         self.frg.lift_off_positions = initial_feet_pos
-        if cfg.simulation_params["visual_foothold_adaptation"] != "blind":
+        if cfg.simulation_params['visual_foothold_adaptation'] != 'blind':
             self.vfa.reset()
         self.current_contact = np.array([1, 1, 1, 1])
         return

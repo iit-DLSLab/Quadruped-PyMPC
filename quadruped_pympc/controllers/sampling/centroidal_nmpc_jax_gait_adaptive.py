@@ -6,12 +6,12 @@ import os
 
 dir_path = os.path.dirname(os.path.realpath(__file__))
 
-os.environ["XLA_FLAGS"] = "--xla_gpu_triton_gemm_any=True"
-import sys
-
+os.environ['XLA_FLAGS'] = '--xla_gpu_triton_gemm_any=True'
 import jax
 import jax.numpy as jnp
 from jax import random
+
+import sys
 
 sys.path.append(dir_path)
 sys.path.append(dir_path + "/../")
@@ -21,10 +21,7 @@ import copy
 
 from centroidal_model_jax import Centroidal_Model_JAX
 
-from quadruped_pympc import config
-from quadruped_pympc.helpers.periodic_gait_generator_jax import PeriodicGaitGeneratorJax
-
-dtype_general = "float32"
+dtype_general = 'float32'
 
 
 class Sampling_MPC:
@@ -57,7 +54,7 @@ class Sampling_MPC:
                 self.device = jax.devices("cpu")[0]
                 print("GPU not available, using CPU")
         else:
-            self.device = jax.devices("cpu")[0]
+            self.device = jax.devices('cpu')[0]
 
         if self.control_parametrization == "linear_spline_1":
             # Along the horizon, we have only 1 spline per control input (3 forces)
@@ -90,7 +87,7 @@ class Sampling_MPC:
         elif self.control_parametrization == "linear_spline_N":
             # Along the horizon, we have 2 splines per control input (3 forces)
             # Each spline has 2 parameters, but one is shared between the two splines
-            self.num_spline = config.mpc_params["num_splines"]
+            self.num_spline = config.mpc_params['num_splines']
             self.num_control_parameters_single_leg = (self.num_spline + 1) * 3
 
             # In totale we have 4 legs
@@ -133,7 +130,7 @@ class Sampling_MPC:
         elif self.control_parametrization == "cubic_spline_N":
             # Along the horizon, we have 1 splines per control input (3 forces)
             # Each spline has 3 parameters
-            self.num_spline = config.mpc_params["num_splines"]
+            self.num_spline = config.mpc_params['num_splines']
             self.num_control_parameters_single_leg = 4 * 3 * self.num_spline
 
             # In totale we have 4 legs
@@ -158,16 +155,16 @@ class Sampling_MPC:
             self.spline_fun_RL = self.compute_zero_order_spline
             self.spline_fun_RR = self.compute_zero_order_spline
 
-        if self.sampling_method == "random_sampling":
+        if self.sampling_method == 'random_sampling':
             self.compute_control = self.compute_control_random_sampling
-            self.sigma_random_sampling = config.mpc_params["sigma_random_sampling"]
-        elif self.sampling_method == "mppi":
+            self.sigma_random_sampling = config.mpc_params['sigma_random_sampling']
+        elif self.sampling_method == 'mppi':
             self.compute_control = self.compute_control_mppi
-            self.sigma_mppi = config.mpc_params["sigma_mppi"]
-        elif self.sampling_method == "cem_mppi":
+            self.sigma_mppi = config.mpc_params['sigma_mppi']
+        elif self.sampling_method == 'cem_mppi':
             self.compute_control = self.compute_control_cem_mppi
             self.sigma_cem_mppi = (
-                jnp.ones(self.num_control_parameters, dtype=dtype_general) * config.mpc_params["sigma_cem_mppi"]
+                jnp.ones(self.num_control_parameters, dtype=dtype_general) * config.mpc_params['sigma_cem_mppi']
             )
         else:
             # return error and stop execution
@@ -225,8 +222,8 @@ class Sampling_MPC:
         self.mu = config.mpc_params["mu"]
 
         # maximum allowed z contact forces
-        self.f_z_max = config.mpc_params["grf_max"]
-        self.f_z_min = config.mpc_params["grf_min"]
+        self.f_z_max = config.mpc_params['grf_max']
+        self.f_z_min = config.mpc_params['grf_min']
 
         self.best_control_parameters = jnp.zeros((self.num_control_parameters,), dtype=dtype_general)
         self.master_key = jax.random.PRNGKey(42)
@@ -261,12 +258,10 @@ class Sampling_MPC:
 
         temp = self.pgg.get_t()
         temp2 = self.control_parameters_vec.reshape(self.num_parallel_computations, self.num_control_parameters)
-        temp3 = step_frequencies_vec.reshape(
-            self.num_parallel_computations,
-        )
+        temp3 = step_frequencies_vec.reshape(self.num_parallel_computations)
         self.jit_vectorized_rollout(initial_state, initial_reference, temp, temp2, temp3)
 
-        self.step_freq_delta = jnp.array(config.mpc_params["step_freq_available"])
+        self.step_freq_delta = jnp.array(config.mpc_params['step_freq_available'])
 
     def compute_linear_spline_1(self, parameters, step, horizon_leg):
         """
@@ -764,7 +759,7 @@ class Sampling_MPC:
         """
 
         # Shift the previous solution ahead
-        if config.mpc_params["shift_solution"]:
+        if config.mpc_params['shift_solution']:
             index_shift = 1.0 / mpc_frequency
             self.best_control_parameters = self.shift_solution(self.best_control_parameters, index_shift)
 

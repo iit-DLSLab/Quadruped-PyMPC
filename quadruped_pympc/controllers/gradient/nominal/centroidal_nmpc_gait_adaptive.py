@@ -21,8 +21,8 @@ from .centroidal_model_nominal import Centroidal_Model_Nominal
 # Class for the Acados NMPC, the model is in another file!
 class Acados_NMPC_GaitAdaptive:
     def __init__(self):
-        self.horizon = config.mpc_params["horizon"]  # Define the number of discretization steps
-        self.dt = config.mpc_params["dt"]
+        self.horizon = config.mpc_params['horizon']  # Define the number of discretization steps
+        self.dt = config.mpc_params['dt']
         self.T_horizon = self.horizon * self.dt
         self.use_RTI = config.mpc_params["use_RTI"]
         self.use_integrators = config.mpc_params["use_integrators"]
@@ -53,7 +53,7 @@ class Acados_NMPC_GaitAdaptive:
 
         # Create the acados ocp solver
         self.ocp = self.create_ocp_solver_description(
-            acados_model, num_threads_in_batch_solve=len(config.mpc_params["step_freq_available"])
+            acados_model, num_threads_in_batch_solve=len(config.mpc_params['step_freq_available'])
         )
 
         # Batch solver
@@ -63,7 +63,7 @@ class Acados_NMPC_GaitAdaptive:
         # batch_ocp = self.create_ocp_solver_description(acados_model, num_threads_in_batch_solve)
         batch_ocp = self.ocp
         dir_path = os.path.dirname(os.path.realpath(__file__))
-        batch_ocp.code_export_directory = dir_path + "/c_generated_code_gait_adaptive"
+        batch_ocp.code_export_directory = dir_path + '/c_generated_code_gait_adaptive'
         self.batch_solver = AcadosOcpBatchSolver(
             batch_ocp,
             self.batch,
@@ -210,8 +210,8 @@ class Acados_NMPC_GaitAdaptive:
         ocp.solver_options.hessian_approx = "GAUSS_NEWTON"  # 'GAUSS_NEWTON', 'EXACT'
         ocp.solver_options.integrator_type = "ERK"  # ERK IRK GNSF DISCRETE
         if self.use_DDP:
-            ocp.solver_options.nlp_solver_type = "DDP"
-            ocp.solver_options.nlp_solver_max_iter = config.mpc_params["num_qp_iterations"]
+            ocp.solver_options.nlp_solver_type = 'DDP'
+            ocp.solver_options.nlp_solver_max_iter = config.mpc_params['num_qp_iterations']
             # ocp.solver_options.globalization = 'MERIT_BACKTRACKING'
             ocp.solver_options.with_adaptive_levenberg_marquardt = True
 
@@ -227,16 +227,16 @@ class Acados_NMPC_GaitAdaptive:
             ocp.solver_options.nlp_solver_max_iter = 1
             # Set the RTI type for the advanced RTI method
             # (see https://arxiv.org/pdf/2403.07101.pdf)
-            if config.mpc_params["as_rti_type"] == "AS-RTI-A":
+            if config.mpc_params['as_rti_type'] == "AS-RTI-A":
                 ocp.solver_options.as_rti_iter = 1
                 ocp.solver_options.as_rti_level = 0
-            elif config.mpc_params["as_rti_type"] == "AS-RTI-B":
+            elif config.mpc_params['as_rti_type'] == "AS-RTI-B":
                 ocp.solver_options.as_rti_iter = 1
                 ocp.solver_options.as_rti_level = 1
-            elif config.mpc_params["as_rti_type"] == "AS-RTI-C":
+            elif config.mpc_params['as_rti_type'] == "AS-RTI-C":
                 ocp.solver_options.as_rti_iter = 1
                 ocp.solver_options.as_rti_level = 2
-            elif config.mpc_params["as_rti_type"] == "AS-RTI-D":
+            elif config.mpc_params['as_rti_type'] == "AS-RTI-D":
                 ocp.solver_options.as_rti_iter = 1
                 ocp.solver_options.as_rti_level = 3
 
@@ -245,14 +245,14 @@ class Acados_NMPC_GaitAdaptive:
             ocp.solver_options.nlp_solver_max_iter = config.mpc_params["num_qp_iterations"]
         # ocp.solver_options.globalization = "MERIT_BACKTRACKING"  # FIXED_STEP, MERIT_BACKTRACKING
 
-        if config.mpc_params["solver_mode"] == "balance":
+        if config.mpc_params['solver_mode'] == "balance":
             ocp.solver_options.hpipm_mode = "BALANCE"
-        elif config.mpc_params["solver_mode"] == "robust":
+        elif config.mpc_params['solver_mode'] == "robust":
             ocp.solver_options.hpipm_mode = "ROBUST"
-        elif config.mpc_params["solver_mode"] == "fast":
+        elif config.mpc_params['solver_mode'] == "fast":
             ocp.solver_options.qp_solver_iter_max = 10
             ocp.solver_options.hpipm_mode = "SPEED"
-        elif config.mpc_params["solver_mode"] == "crazy_speed":
+        elif config.mpc_params['solver_mode'] == "crazy_speed":
             ocp.solver_options.qp_solver_iter_max = 5
             ocp.solver_options.hpipm_mode = "SPEED_ABS"
 
@@ -266,12 +266,12 @@ class Acados_NMPC_GaitAdaptive:
         ocp.solver_options.tf = self.T_horizon
 
         # Nonuniform discretization
-        if config.mpc_params["use_nonuniform_discretization"]:
+        if config.mpc_params['use_nonuniform_discretization']:
             time_steps_fine_grained = np.tile(
-                config.mpc_params["dt_fine_grained"], config.mpc_params["horizon_fine_grained"]
+                config.mpc_params['dt_fine_grained'], config.mpc_params['horizon_fine_grained']
             )
             time_steps = np.concatenate(
-                (time_steps_fine_grained, np.tile(self.dt, self.horizon - config.mpc_params["horizon_fine_grained"]))
+                (time_steps_fine_grained, np.tile(self.dt, self.horizon - config.mpc_params['horizon_fine_grained']))
             )
             shooting_nodes = np.zeros((self.horizon + 1,))
             for i in range(len(time_steps)):
@@ -281,9 +281,7 @@ class Acados_NMPC_GaitAdaptive:
         return ocp
 
     # Create a constraint for  stability (COM, ZMP or CP inside support polygon)
-    def create_stability_constraints(
-        self,
-    ) -> None:
+    def create_stability_constraints(self) -> None:
         base_w = self.centroidal_model.states[0:3]
         base_vel_w = self.centroidal_model.states[3:6]
 
@@ -390,9 +388,7 @@ class Acados_NMPC_GaitAdaptive:
         return Jb, ub, lb
 
     # Create a standard foothold box constraint
-    def create_foothold_constraints(
-        self,
-    ):
+    def create_foothold_constraints(self):
         """
         This function calculates the symbolic foothold constraints for the centroidal NMPC problem.
 
@@ -438,9 +434,7 @@ class Acados_NMPC_GaitAdaptive:
         return Jbu, ubu, lbu
 
     # Create the friction cone constraint
-    def create_friction_cone_constraints(
-        self,
-    ) -> None:
+    def create_friction_cone_constraints(self) -> None:
         """
         This function calculates the symbolic friction cone constraints for the centroidal NMPC problem.
 
@@ -918,7 +912,7 @@ class Acados_NMPC_GaitAdaptive:
                         FR_contact_sequence, RL_contact_sequence
                     ):
                         # TROT
-                        stability_margin = config.mpc_params["trot_stability_margin"]
+                        stability_margin = config.mpc_params['trot_stability_margin']
                         if FL_contact_sequence[j] == 1 and FR_contact_sequence[j] == 0:
                             ub_support_FL_RR = 0 + stability_margin
                             lb_support_FL_RR = 0 - stability_margin
@@ -931,7 +925,7 @@ class Acados_NMPC_GaitAdaptive:
                         FR_contact_sequence, RR_contact_sequence
                     ):
                         # PACE
-                        stability_margin = config.mpc_params["pace_stability_margin"]
+                        stability_margin = config.mpc_params['pace_stability_margin']
                         if FL_contact_sequence[j] == 1 and FR_contact_sequence[j] == 0:
                             ub_support_RL_FL = 0 + stability_margin
                             lb_support_RL_FL = 0 - stability_margin
@@ -1158,16 +1152,16 @@ class Acados_NMPC_GaitAdaptive:
                 # between 1 and 0, it means that the leg go into swing and a new reference is needed!!!
                 if j > 1 and j < self.horizon - 1:
                     if FL_contact_sequence[j + 1] == 0 and FL_contact_sequence[j] == 1:
-                        if reference["ref_foot_FL"].shape[0] > idx_ref_foot_to_assign[0] + 1:
+                        if reference['ref_foot_FL'].shape[0] > idx_ref_foot_to_assign[0] + 1:
                             idx_ref_foot_to_assign[0] += 1
                     if FR_contact_sequence[j + 1] == 0 and FR_contact_sequence[j] == 1:
-                        if reference["ref_foot_FR"].shape[0] > idx_ref_foot_to_assign[1] + 1:
+                        if reference['ref_foot_FR'].shape[0] > idx_ref_foot_to_assign[1] + 1:
                             idx_ref_foot_to_assign[1] += 1
                     if RL_contact_sequence[j + 1] == 0 and RL_contact_sequence[j] == 1:
-                        if reference["ref_foot_RL"].shape[0] > idx_ref_foot_to_assign[2] + 1:
+                        if reference['ref_foot_RL'].shape[0] > idx_ref_foot_to_assign[2] + 1:
                             idx_ref_foot_to_assign[2] += 1
                     if RR_contact_sequence[j + 1] == 0 and RR_contact_sequence[j] == 1:
-                        if reference["ref_foot_RR"].shape[0] > idx_ref_foot_to_assign[3] + 1:
+                        if reference['ref_foot_RR'].shape[0] > idx_ref_foot_to_assign[3] + 1:
                             idx_ref_foot_to_assign[3] += 1
 
                 # Setting the reference to acados

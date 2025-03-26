@@ -9,6 +9,8 @@ import casadi as cs
 import numpy as np
 from acados_template import AcadosModel
 
+import os
+
 dir_path = os.path.dirname(os.path.realpath(__file__))
 
 import sys
@@ -21,9 +23,7 @@ from quadruped_pympc import config
 
 # Class that defines the prediction model of the NMPC
 class Centroidal_Model_Collaborative:
-    def __init__(
-        self,
-    ) -> None:
+    def __init__(self) -> None:
         """
         This method initializes the foothold generator Centroidal_Model, which creates
         the prediction model of the NMPC.
@@ -262,7 +262,7 @@ class Centroidal_Model_Collaborative:
         passive_arm_force_dot[5] = -K_bar_yaw @ states[11]
 
         # We can choose between a fixed external compensation or a dynamic one
-        if config.mpc_params["passive_arm_compensation"]:
+        if config.mpc_params['passive_arm_compensation']:
             external_wrench_linear = states[30:33]
             external_wrench_angular = states[33:36]
         else:
@@ -341,9 +341,7 @@ class Centroidal_Model_Collaborative:
             passive_arm_force_dot,
         )
 
-    def export_robot_model(
-        self,
-    ) -> AcadosModel:
+    def export_robot_model(self) -> AcadosModel:
         """
         This method set some general properties of the NMPC, such as the params,
         prediction mode, etc...! It will be called in centroidal_nmpc.py

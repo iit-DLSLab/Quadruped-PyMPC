@@ -114,22 +114,22 @@ class SwingTrajectoryGenerator:
         # Plot position
         for i in range(3):
             axs[0].plot(time_points, footPosDes_points[:, i], label=f"Position {i + 1}")
-        axs[0].set_xlabel("Time")
-        axs[0].set_ylabel("Position")
+        axs[0].set_xlabel('Time')
+        axs[0].set_ylabel('Position')
         axs[0].legend()
 
         # Plot velocity
         for i in range(3):
             axs[1].plot(time_points, footVelDes_points[:, i], label=f"Velocity {i + 1}")
-        axs[1].set_xlabel("Time")
-        axs[1].set_ylabel("Velocity")
+        axs[1].set_xlabel('Time')
+        axs[1].set_ylabel('Velocity')
         axs[1].legend()
 
         # Plot acceleration
         for i in range(3):
             axs[2].plot(time_points, footAccDes_points[:, i], label=f"Acceleration {i + 1}")
-        axs[2].set_xlabel("Time")
-        axs[2].set_ylabel("Acceleration")
+        axs[2].set_xlabel('Time')
+        axs[2].set_ylabel('Acceleration')
         axs[2].legend()
 
         plt.tight_layout()

@@ -1,3 +1,8 @@
+import numpy as np
+import matplotlib.pyplot as plt
+
+import ndcurves
+
 # importing tools to plot bezier curves
 # from ndcurves.plot import plotBezier
 import copy
@@ -66,15 +71,15 @@ class SwingTrajectoryGenerator:
         # Plot position
         for i in range(3):
             axs[0].plot(time_points, footPosDes_points[:, i], label=f"Position {i + 1}")
-        axs[0].set_xlabel("Time")
-        axs[0].set_ylabel("Position")
+        axs[0].set_xlabel('Time')
+        axs[0].set_ylabel('Position')
         axs[0].legend()
 
         # Plot velocity
         for i in range(3):
             axs[1].plot(time_points, footVelDes_points[:, i], label=f"Velocity {i + 1}")
-        axs[1].set_xlabel("Time")
-        axs[1].set_ylabel("Velocity")
+        axs[1].set_xlabel('Time')
+        axs[1].set_ylabel('Velocity')
         axs[1].legend()
 
         plt.tight_layout()

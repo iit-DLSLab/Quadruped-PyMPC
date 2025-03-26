@@ -9,6 +9,8 @@ import casadi as cs
 import numpy as np
 from acados_template import AcadosModel
 
+import os
+
 dir_path = os.path.dirname(os.path.realpath(__file__))
 
 import sys
@@ -21,9 +23,7 @@ import config
 
 # Class that defines the prediction model of the NMPC
 class Centroidal_Model_Lyapunov:
-    def __init__(
-        self,
-    ) -> None:
+    def __init__(self) -> None:
         """
         This method initializes the Centroidal_Model, which creates
         the prediction model of the NMPC.
@@ -370,9 +370,7 @@ class Centroidal_Model_Lyapunov:
             phi_dot,
         )
 
-    def export_robot_model(
-        self,
-    ) -> AcadosModel:
+    def export_robot_model(self) -> AcadosModel:
         """
         This method set some general properties of the NMPC, such as the params,
         prediction mode, etc...! It will be called in centroidal_nmpc.py

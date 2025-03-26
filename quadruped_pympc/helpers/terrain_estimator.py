@@ -2,9 +2,7 @@ import numpy as np
 
 
 class TerrainEstimator:
-    def __init__(
-        self,
-    ) -> None:
+    def __init__(self) -> None:
         self.terrain_roll = 0
         self.terrain_pitch = 0
         self.terrain_height = 0

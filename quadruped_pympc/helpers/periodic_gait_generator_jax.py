@@ -3,9 +3,13 @@ import os
 import jax
 import jax.numpy as jnp
 
+import os
+
 dir_path = os.path.dirname(os.path.realpath(__file__))
 
 import sys
+
+sys.path.append(dir_path + '/../')
 
 sys.path.append(dir_path + "/../")
 
@@ -160,10 +164,10 @@ class Gait:
 if __name__ == "__main__":
     # Periodic gait generator
 
-    mpc_dt = config.mpc_params["dt"]
-    horizon = config.mpc_params["horizon"]
-    gait = config.simulation_params["gait"]
-    simulation_dt = config.simulation_params["dt"]
+    mpc_dt = config.mpc_params['dt']
+    horizon = config.mpc_params['horizon']
+    gait = config.simulation_params['gait']
+    simulation_dt = config.simulation_params['dt']
     if gait == "trot":
         step_frequency = 2.65
         duty_factor = 0.65

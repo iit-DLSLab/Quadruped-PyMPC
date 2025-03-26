@@ -1,6 +1,10 @@
 import numpy as np
 
 np.set_printoptions(precision=3, suppress=True)
+from numpy.linalg import norm, solve
+import time
+import casadi as cs
+
 # import example_robot_data as robex
 import copy
 import os
@@ -14,9 +18,14 @@ import mujoco.viewer
 
 # Adam and Liecasadi magic
 
+import gym_quadruped
+import os
+
 dir_path = os.path.dirname(os.path.realpath(__file__))
 gym_quadruped_path = os.path.dirname(gym_quadruped.__file__)
 
+
+from quadruped_pympc import config as cfg
 
 from gym_quadruped.quadruped_env import QuadrupedEnv
 
@@ -30,9 +39,7 @@ damp_matrix = damp * np.eye(12)
 
 # Class for solving a generic inverse kinematics problem
 class InverseKinematicsNumeric:
-    def __init__(
-        self,
-    ) -> None:
+    def __init__(self) -> None:
         """
         This method initializes the inverse kinematics solver class.
 
@@ -82,7 +89,7 @@ class InverseKinematicsNumeric:
         mujoco.mj_fwdPosition(self.env.mjModel, self.env.mjData)
 
         for j in range(IT_MAX):
-            feet_pos = self.env.feet_pos(frame="world")
+            feet_pos = self.env.feet_pos(frame='world')
 
             FL_foot_actual_pos = feet_pos.FL
             FR_foot_actual_pos = feet_pos.FR
@@ -95,7 +102,7 @@ class InverseKinematicsNumeric:
             err_RR = RR_foot_target_position - RR_foot_actual_pos
 
             # Compute feet jacobian
-            feet_jac = self.env.feet_jacobians(frame="world", return_rot_jac=False)
+            feet_jac = self.env.feet_jacobians(frame='world', return_rot_jac=False)
 
             J_FL = feet_jac.FL[:, 6:]
             J_FR = feet_jac.FR[:, 6:]
@@ -122,16 +129,16 @@ class InverseKinematicsNumeric:
 
 
 if __name__ == "__main__":
-    if cfg.robot == "go2":
-        xml_filename = gym_quadruped_path + "/robot_model/go2/go2.xml"
-    if cfg.robot == "go1":
-        xml_filename = gym_quadruped_path + "/robot_model/go1/go1.xml"
-    elif cfg.robot == "aliengo":
-        xml_filename = gym_quadruped_path + "/robot_model/aliengo/aliengo.xml"
-    elif cfg.robot == "hyqreal":
-        xml_filename = gym_quadruped_path + "/robot_model/hyqreal/hyqreal.xml"
-    elif cfg.robot == "mini_cheetah":
-        xml_filename = gym_quadruped_path + "/robot_model/mini_cheetah/mini_cheetah.xml"
+    if cfg.robot == 'go2':
+        xml_filename = gym_quadruped_path + '/robot_model/go2/go2.xml'
+    if cfg.robot == 'go1':
+        xml_filename = gym_quadruped_path + '/robot_model/go1/go1.xml'
+    elif cfg.robot == 'aliengo':
+        xml_filename = gym_quadruped_path + '/robot_model/aliengo/aliengo.xml'
+    elif cfg.robot == 'hyqreal':
+        xml_filename = gym_quadruped_path + '/robot_model/hyqreal/hyqreal.xml'
+    elif cfg.robot == 'mini_cheetah':
+        xml_filename = gym_quadruped_path + '/robot_model/mini_cheetah/mini_cheetah.xml'
 
     ik = InverseKinematicsNumeric()
 
@@ -139,15 +146,11 @@ if __name__ == "__main__":
     m = mujoco.MjModel.from_xml_path(xml_filename)
     d = mujoco.MjData(m)
 
-    random_q_joint = np.random.rand(
-        12,
-    )
+    random_q_joint = np.random.rand(12)
     d.qpos[7:] = random_q_joint
 
     # random quaternion
-    rand_quat = np.random.rand(
-        4,
-    )
+    rand_quat = np.random.rand(4)
     rand_quat = rand_quat / np.linalg.norm(rand_quat)
     d.qpos[3:7] = rand_quat
 
@@ -168,9 +171,7 @@ if __name__ == "__main__":
     print("RR foot target position: ", RR_foot_target_position)
 
     initial_q = copy.deepcopy(d.qpos)
-    initial_q[7:] = np.random.rand(
-        12,
-    )
+    initial_q[7:] = np.random.rand(12)
 
     ik.env.mjData.qpos = initial_q
     mujoco.mj_fwdPosition(ik.env.mjModel, ik.env.mjData)
