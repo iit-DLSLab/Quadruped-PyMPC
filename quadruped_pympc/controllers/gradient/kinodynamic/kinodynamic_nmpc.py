@@ -20,7 +20,6 @@ sys.path.append(dir_path)
 sys.path.append(dir_path + "/../../")
 
 
-
 from quadruped_pympc import config
 
 
