@@ -23,9 +23,13 @@ class EarlyStanceDetector:
         Update the early stance detector.
         
         Parameters:
-            contact : mjContact List of all contacts.
+            feet_pos : Current feet positions.
+            des_feet_pos : Desired feet positions.
             lift_off_positions : Lift off positions of all legs.
             touch_down_positions : Touch down positions of all legs.
+            swing_time : Time of the current swing phase.
+            swing_period : Duration of the swing phase.
+            current_contact : Current contact state of the legs.
         """
         if not self.activated:
             for leg_id,leg_name in enumerate(self.legs_order):
