@@ -128,7 +128,7 @@ mpc_params = {
 
     # if this is off, the mpc will not optimize the footholds and will
     # use only the ones provided in the reference
-    'use_foothold_optimization':               True,
+    'use_foothold_optimization':               False,
 
     # this is set to false automatically is use_foothold_optimization is false
     # because in that case we cannot chose the footholds and foothold
