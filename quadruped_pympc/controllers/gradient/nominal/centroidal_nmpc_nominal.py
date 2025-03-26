@@ -492,8 +492,8 @@ class Acados_NMPC_Nominal:
         # Define the weight matrices for the cost function
 
         Q_position = np.array([0, 0, 1500])  # x, y, z
-        Q_velocity = np.array([200, 200, 200])  # x_vel, y_vel, z_vel
-        Q_base_angle = np.array([500, 500, 0])  # roll, pitch, yaw
+        Q_velocity = np.array([2000, 2000, 2000])  # x_vel, y_vel, z_vel
+        Q_base_angle = np.array([500, 2000, 0])  # roll, pitch, yaw
         Q_base_angle_rates = np.array([100, 200, 200])  # roll_rate, pitch_rate, yaw_rate
         Q_foot_pos = np.array([300, 300, 300])  # f_x, f_y, f_z (should be 4 times this, once per foot)
         Q_com_position_z_integral = np.array([50])  # integral of z_com
