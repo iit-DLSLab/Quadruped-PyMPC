@@ -504,9 +504,9 @@ class Acados_NMPC_Nominal:
         Q_pitch_integral_integral = np.array([10])  # integral of pitch
 
         R_foot_vel = np.array([0.0001, 0.0001, 0.00001])  # v_x, v_y, v_z (should be 4 times this, once per foot)
-        if (config.robot == "hyqreal"):
+        if (config.robot == "hyqreal" or config.robot == "hyqreal2"):
             R_foot_force = np.array(
-                [0.00001, 0.00001, 0.00001])  # f_x, f_y, f_z (should be 4 times this, once per foot)
+                [0.0000001, 0.0000001, 0.00001])  # f_x, f_y, f_z (should be 4 times this, once per foot)
         else:
             R_foot_force = np.array([0.001, 0.001, 0.001])
 
