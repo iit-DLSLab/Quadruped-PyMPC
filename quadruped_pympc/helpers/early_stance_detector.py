@@ -3,9 +3,6 @@ from quadruped_pympc import config as cfg
 from gym_quadruped.utils.quadruped_utils import LegsAttr
 
 
-EARLY_STANCE_TIME_THRESHOLD = 0.05
-EARLY_STANCE_DISTANCE_THRESHOLD = 0.3
-MIN_DISTANCE = 0.1
 
 
 class EarlyStanceDetector:
@@ -16,6 +13,10 @@ class EarlyStanceDetector:
         self.hitpoints = LegsAttr(FL=None, FR=None, RR=None, RL=None)
 
         self.activated = False
+
+        self.early_stance_time_threshold = 0.05
+        self.relative_tracking_error_threshold = 0.3
+        self.absolute_min_distance_error_threshold = 0.1
 
 
     def update_detection(self, feet_pos: LegsAttr, des_feet_pos: LegsAttr, lift_off: LegsAttr, touch_down: LegsAttr, swing_time: list, swing_period: float, current_contact):
@@ -50,7 +51,7 @@ class EarlyStanceDetector:
                     #print("norm(local_disp)/norm(disp): ", np.linalg.norm(local_disp)/np.linalg.norm(disp))
                     if self.early_stance[leg_name] == False:
                         #if np.arccos(np.dot(disp, local_disp) / (np.linalg.norm(disp) * np.linalg.norm(local_disp))) < np.pi/3: 
-                        if (np.linalg.norm(local_disp)/np.linalg.norm(disp)) > EARLY_STANCE_DISTANCE_THRESHOLD and np.linalg.norm(local_disp) > MIN_DISTANCE:
+                        if (np.linalg.norm(local_disp)/np.linalg.norm(disp)) > self.relative_tracking_error_threshold and np.linalg.norm(local_disp) > self.absolute_min_distance_error_threshold:
                             self.hitpoints[leg_name] = feet_pos[leg_name].copy()
                             self.hitmoments[leg_name] = swing_time[leg_id]
                             self.early_stance[leg_name] = True  # acos( disp dot local_disp / |disp| |local_disp|) < 60°
