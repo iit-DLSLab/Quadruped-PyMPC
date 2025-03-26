@@ -2,17 +2,16 @@ import numpy as np
 
 
 class TerrainEstimator:
-    def __init__(self, ) -> None:
-
+    def __init__(
+        self,
+    ) -> None:
         self.terrain_roll = 0
         self.terrain_pitch = 0
         self.terrain_height = 0
 
-    def compute_terrain_estimation(self,
-                                   base_position: np.ndarray,
-                                   yaw: float,
-                                   feet_pos: dict,
-                                   current_contact: np.ndarray) -> [float, float]:
+    def compute_terrain_estimation(
+        self, base_position: np.ndarray, yaw: float, feet_pos: dict, current_contact: np.ndarray
+    ) -> [float, float]:
         """Compute the estimated roll and pitch of the terrain based on the positions of the robot's feet.
 
         Parameters
@@ -36,17 +35,13 @@ class TerrainEstimator:
         """
         # Compute roll and pitch for each foot position
         # Rotation matrix R_yaw
-        R_W2H = np.array([
-            [np.cos(yaw), np.sin(yaw), 0],
-            [-np.sin(yaw), np.cos(yaw), 0],
-            [0, 0, 1]
-            ])
+        R_W2H = np.array([[np.cos(yaw), np.sin(yaw), 0], [-np.sin(yaw), np.cos(yaw), 0], [0, 0, 1]])
 
         # Extracting 3-element segments from liftoff_position_z_ and x_op_
-        seg0 = feet_pos['FL']
-        seg3 = feet_pos['FR']
-        seg6 = feet_pos['RL']
-        seg9 = feet_pos['RR']
+        seg0 = feet_pos["FL"]
+        seg3 = feet_pos["FR"]
+        seg6 = feet_pos["RL"]
+        seg9 = feet_pos["RR"]
 
         # Calculating differences
         # TODO: Feet position in base frame?
@@ -57,11 +52,15 @@ class TerrainEstimator:
 
         # Calculating pitch and roll
         # TODO: Docstring
-        pitch = (np.arctan(np.abs(left_difference[2]) / np.abs(left_difference[0] + 0.001)) +
-                 np.arctan(np.abs(right_difference[2]) / np.abs(right_difference[0] + 0.001))) * 0.5
+        pitch = (
+            np.arctan(np.abs(left_difference[2]) / np.abs(left_difference[0] + 0.001))
+            + np.arctan(np.abs(right_difference[2]) / np.abs(right_difference[0] + 0.001))
+        ) * 0.5
 
-        roll = (np.arctan(np.abs(front_difference[2]) / np.abs(front_difference[1] + 0.001)) +
-                np.arctan(np.abs(back_difference[2]) / np.abs(back_difference[1] + 0.001))) * 0.5
+        roll = (
+            np.arctan(np.abs(front_difference[2]) / np.abs(front_difference[1] + 0.001))
+            + np.arctan(np.abs(back_difference[2]) / np.abs(back_difference[1] + 0.001))
+        ) * 0.5
 
         # Adjusting signs of pitch and roll TODO: Adjusting what and for what?
         if (front_difference[2] * 0.5 + back_difference[2] * 0.5) < 0:
@@ -73,10 +72,10 @@ class TerrainEstimator:
         self.terrain_pitch = self.terrain_pitch * 0.8 + pitch * 0.2
 
         # Update the reference height given the foot in contact
-        z_foot_FL = feet_pos['FL'][2]
-        z_foot_FR = feet_pos['FR'][2]
-        z_foot_RL = feet_pos['RL'][2]
-        z_foot_RR = feet_pos['RR'][2]
+        z_foot_FL = feet_pos["FL"][2]
+        z_foot_FR = feet_pos["FR"][2]
+        z_foot_RL = feet_pos["RL"][2]
+        z_foot_RR = feet_pos["RR"][2]
         """number_foot_in_contact = current_contact[0] + \
                                  current_contact[1] + \
                                  current_contact[2] + \
@@ -87,18 +86,14 @@ class TerrainEstimator:
                                 z_foot_RL * current_contact[2] + \
                                 z_foot_RR * current_contact[3]) / number_foot_in_contact
             self.terrain_height = self.terrain_height * 0.6 + z_foot_mean_temp * 0.4"""
-        
-        z_foot_mean_temp = (z_foot_FL + \
-                            z_foot_FR + \
-                            z_foot_RL + \
-                            z_foot_RR) / 4
+
+        z_foot_mean_temp = (z_foot_FL + z_foot_FR + z_foot_RL + z_foot_RR) / 4
         self.terrain_height = self.terrain_height * 0.6 + z_foot_mean_temp * 0.4
 
-
-        #print("current_contact: ", current_contact)
-        #print("z_foot_FL: ", z_foot_FL)
-        #print("z_foot_FR: ", z_foot_FR)
-        #print("z_foot_RL: ", z_foot_RL)
-        #print("z_foot_RR: ", z_foot_RR)
+        # print("current_contact: ", current_contact)
+        # print("z_foot_FL: ", z_foot_FL)
+        # print("z_foot_FR: ", z_foot_FR)
+        # print("z_foot_RL: ", z_foot_RL)
+        # print("z_foot_RR: ", z_foot_RR)
 
         return self.terrain_roll, self.terrain_pitch, self.terrain_height

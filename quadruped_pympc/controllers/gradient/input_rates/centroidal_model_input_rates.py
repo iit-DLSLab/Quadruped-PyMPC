@@ -3,15 +3,18 @@
 
 # Authors: Giulio Turrisi -
 
-import numpy as np
 import casadi as cs
+import numpy as np
 from acados_template import AcadosModel
+
 from quadruped_pympc import config
 
 
 # Class that defines the prediction model of the NMPC
 class Centroidal_Model_InputRates:
-    def __init__(self, ) -> None:
+    def __init__(
+        self,
+    ) -> None:
         """
         This method initializes the foothold generator Centroidal_Model, which creates
         the prediction model of the NMPC.
@@ -53,50 +56,54 @@ class Centroidal_Model_InputRates:
         foot_force_rl = cs.SX.sym("foot_force_rl", 3, 1)
         foot_force_rr = cs.SX.sym("foot_force_rr", 3, 1)
 
-        self.states = cs.vertcat(com_position_x,
-                                 com_position_y,
-                                 com_position_z,
-                                 com_velocity_x,
-                                 com_velocity_y,
-                                 com_velocity_z,
-                                 roll,
-                                 pitch,
-                                 yaw,
-                                 omega_x,
-                                 omega_y,
-                                 omega_z,
-                                 foot_position_fl,
-                                 foot_position_fr,
-                                 foot_position_rl,
-                                 foot_position_rr,
-                                 com_position_z_integral,
-                                 com_velocity_x_integral,
-                                 com_velocity_y_integral,
-                                 com_velocity_z_integral,
-                                 roll_integral,
-                                 pitch_integral,
-                                 foot_force_fl,
-                                 foot_force_fr,
-                                 foot_force_rl,
-                                 foot_force_rr)
+        self.states = cs.vertcat(
+            com_position_x,
+            com_position_y,
+            com_position_z,
+            com_velocity_x,
+            com_velocity_y,
+            com_velocity_z,
+            roll,
+            pitch,
+            yaw,
+            omega_x,
+            omega_y,
+            omega_z,
+            foot_position_fl,
+            foot_position_fr,
+            foot_position_rl,
+            foot_position_rr,
+            com_position_z_integral,
+            com_velocity_x_integral,
+            com_velocity_y_integral,
+            com_velocity_z_integral,
+            roll_integral,
+            pitch_integral,
+            foot_force_fl,
+            foot_force_fr,
+            foot_force_rl,
+            foot_force_rr,
+        )
 
-        # Define state dot 
-        self.states_dot = cs.vertcat(cs.SX.sym("linear_com_vel", 3, 1),
-                                     cs.SX.sym("linear_com_acc", 3, 1),
-                                     cs.SX.sym("euler_rates_base", 3, 1),
-                                     cs.SX.sym("angular_acc_base", 3, 1),
-                                     cs.SX.sym("linear_vel_foot_FL", 3, 1),
-                                     cs.SX.sym("linear_vel_foot_FR", 3, 1),
-                                     cs.SX.sym("linear_vel_foot_RL", 3, 1),
-                                     cs.SX.sym("linear_vel_foot_RR", 3, 1),
-                                     cs.SX.sym("linear_com_vel_z_integral", 1, 1),
-                                     cs.SX.sym("linear_com_acc_integral", 3, 1),
-                                     cs.SX.sym("euler_rates_roll_integral", 1, 1),
-                                     cs.SX.sym("euler_rates_pitch_integral", 1, 1),
-                                     cs.SX.sym("foot_force_rate_FL", 3, 1),
-                                     cs.SX.sym("foot_force_rate_FR", 3, 1),
-                                     cs.SX.sym("foot_force_rate_RL", 3, 1),
-                                     cs.SX.sym("foot_force_rate_RR", 3, 1), )
+        # Define state dot
+        self.states_dot = cs.vertcat(
+            cs.SX.sym("linear_com_vel", 3, 1),
+            cs.SX.sym("linear_com_acc", 3, 1),
+            cs.SX.sym("euler_rates_base", 3, 1),
+            cs.SX.sym("angular_acc_base", 3, 1),
+            cs.SX.sym("linear_vel_foot_FL", 3, 1),
+            cs.SX.sym("linear_vel_foot_FR", 3, 1),
+            cs.SX.sym("linear_vel_foot_RL", 3, 1),
+            cs.SX.sym("linear_vel_foot_RR", 3, 1),
+            cs.SX.sym("linear_com_vel_z_integral", 1, 1),
+            cs.SX.sym("linear_com_acc_integral", 3, 1),
+            cs.SX.sym("euler_rates_roll_integral", 1, 1),
+            cs.SX.sym("euler_rates_pitch_integral", 1, 1),
+            cs.SX.sym("foot_force_rate_FL", 3, 1),
+            cs.SX.sym("foot_force_rate_FR", 3, 1),
+            cs.SX.sym("foot_force_rate_RL", 3, 1),
+            cs.SX.sym("foot_force_rate_RR", 3, 1),
+        )
 
         # Define input and its casadi variables
         foot_velocity_fl = cs.SX.sym("foot_velocity_fl", 3, 1)
@@ -109,14 +116,16 @@ class Centroidal_Model_InputRates:
         foot_force_rate_rl = cs.SX.sym("foot_force_rate_rl", 3, 1)
         foot_force_rate_rr = cs.SX.sym("foot_force_rate_rr", 3, 1)
 
-        self.inputs = cs.vertcat(foot_velocity_fl,
-                                 foot_velocity_fr,
-                                 foot_velocity_rl,
-                                 foot_velocity_rr,
-                                 foot_force_rate_fl,
-                                 foot_force_rate_fr,
-                                 foot_force_rate_rl,
-                                 foot_force_rate_rr)
+        self.inputs = cs.vertcat(
+            foot_velocity_fl,
+            foot_velocity_fr,
+            foot_velocity_rl,
+            foot_velocity_rr,
+            foot_force_rate_fl,
+            foot_force_rate_fr,
+            foot_force_rate_rl,
+            foot_force_rate_rr,
+        )
 
         # Usefull for debug what things goes where in y_ref in the compute_control function,
         # because there are a lot of variables
@@ -140,10 +149,18 @@ class Centroidal_Model_InputRates:
         self.mass = cs.SX.sym("mass", 1, 1)
 
         # Not so useful, i can instantiate a casadi function for the fd
-        param = cs.vertcat(self.stance_param, self.mu_friction, self.stance_proximity,
-                           self.base_initial, self.base_yaw, self.external_wrench, self.inertia, self.mass)
+        param = cs.vertcat(
+            self.stance_param,
+            self.mu_friction,
+            self.stance_proximity,
+            self.base_initial,
+            self.base_yaw,
+            self.external_wrench,
+            self.inertia,
+            self.mass,
+        )
         fd = self.forward_dynamics(self.states, self.inputs, param)
-        self.fun_forward_dynamics = cs.Function('fun_forward_dynamics', [self.states, self.inputs, param], [fd])
+        self.fun_forward_dynamics = cs.Function("fun_forward_dynamics", [self.states, self.inputs, param], [fd])
 
     def forward_dynamics(self, states: np.ndarray, inputs: np.ndarray, param: np.ndarray) -> cs.SX:
         """
@@ -276,7 +293,7 @@ class Centroidal_Model_InputRates:
         # external_wrench_angular
 
         # FINAL linear_foot_vel STATES (5,6,7,8)
-        if (not config.mpc_params["use_foothold_optimization"]):
+        if not config.mpc_params["use_foothold_optimization"]:
             foot_velocity_fl = foot_velocity_fl @ 0.0
             foot_velocity_fr = foot_velocity_fr @ 0.0
             foot_velocity_rl = foot_velocity_rl @ 0.0
@@ -302,20 +319,41 @@ class Centroidal_Model_InputRates:
         foot_force_rate_RR = foot_force_rate_rr
 
         # The order of the return should be equal to the order of the states_dot
-        return cs.vertcat(linear_com_vel, linear_com_acc, euler_rates_base, angular_acc_base,
-                          linear_foot_vel_FL, linear_foot_vel_FR, linear_foot_vel_RL, linear_foot_vel_RR,
-                          integral_states,
-                          foot_force_rate_FL, foot_force_rate_FR, foot_force_rate_RL, foot_force_rate_RR)
+        return cs.vertcat(
+            linear_com_vel,
+            linear_com_acc,
+            euler_rates_base,
+            angular_acc_base,
+            linear_foot_vel_FL,
+            linear_foot_vel_FR,
+            linear_foot_vel_RL,
+            linear_foot_vel_RR,
+            integral_states,
+            foot_force_rate_FL,
+            foot_force_rate_FR,
+            foot_force_rate_RL,
+            foot_force_rate_RR,
+        )
 
-    def export_robot_model(self, ) -> AcadosModel:
+    def export_robot_model(
+        self,
+    ) -> AcadosModel:
         """
         This method set some general properties of the NMPC, such as the params,
         prediction mode, etc...! It will be called in centroidal_nmpc.py
         """
 
         # dynamics
-        self.param = cs.vertcat(self.stance_param, self.mu_friction, self.stance_proximity,
-                                self.base_initial, self.base_yaw, self.external_wrench, self.inertia, self.mass)
+        self.param = cs.vertcat(
+            self.stance_param,
+            self.mu_friction,
+            self.stance_proximity,
+            self.base_initial,
+            self.base_yaw,
+            self.external_wrench,
+            self.inertia,
+            self.mass,
+        )
         f_expl = self.forward_dynamics(self.states, self.inputs, self.param)
         f_impl = self.states_dot - f_expl
 
