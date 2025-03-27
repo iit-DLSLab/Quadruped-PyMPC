@@ -80,9 +80,6 @@ def run_simulation(
 
     # Initialization of variables used in the main control loop --------------------------------
 
-    # Jacobian matrices
-    jac_feet_prev = LegsAttr(*[np.zeros((3, env.mjModel.nv)) for _ in range(4)])
-    jac_feet_dot = LegsAttr(*[np.zeros((3, env.mjModel.nv)) for _ in range(4)])
     # Torque vector
     tau = LegsAttr(*[np.zeros((env.mjModel.nv, 1)) for _ in range(4)])
     # Torque limits
@@ -178,12 +175,9 @@ def run_simulation(
             legs_mass_matrix = env.legs_mass_matrix
             legs_qfrc_bias = env.legs_qfrc_bias
 
-            # Compute feet jacobian
+            # Compute feet jacobians
             feet_jac = env.feet_jacobians(frame='world', return_rot_jac=False)
-
-            # Compute jacobian derivatives of the contact points
-            jac_feet_dot = (feet_jac - jac_feet_prev) / simulation_dt  # Finite difference approximation
-            jac_feet_prev = feet_jac  # Update previous Jacobians
+            feet_jac_dot = env.feet_jacobians_dot(frame='world', return_rot_jac=False)
 
             # Compute feet velocities
             feet_vel = LegsAttr(**{leg_name: feet_jac[leg_name] @ env.mjData.qvel for leg_name in legs_order})
@@ -211,7 +205,7 @@ def run_simulation(
                 qpos,
                 qvel,
                 feet_jac,
-                jac_feet_dot,
+                feet_jac_dot,
                 feet_vel,
                 legs_qfrc_bias,
                 legs_mass_matrix,
