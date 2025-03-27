@@ -98,6 +98,7 @@ class SwingTrajectoryController:
 
         accelleration = nmpc_joints_acc
         accelleration = accelleration.reshape((3,))
+        
 
         tau_swing = self.position_gain_fb * error_position + self.velocity_gain_fb * error_velocity
         # Feedback linearization

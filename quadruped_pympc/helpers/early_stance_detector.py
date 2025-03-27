@@ -14,7 +14,7 @@ class EarlyStanceDetector:
 
         self.activated = False
 
-        self.early_stance_time_threshold = 0.05
+        self.early_stance_time_threshold = 0.1
         self.relative_tracking_error_threshold = 0.3
         self.absolute_min_distance_error_threshold = 0.1
 
@@ -40,10 +40,12 @@ class EarlyStanceDetector:
         else: 
             for leg_id,leg_name in enumerate(self.legs_order):
                 disp = touch_down[leg_name] - lift_off[leg_name]
-                
                 #if swing_time[leg_id] < EARLY_STANCE_TIME_THRESHOLD or swing_time[leg_id] > swing_period - EARLY_STANCE_TIME_THRESHOLD:
                 if current_contact[leg_id] == 1:
-                    self.early_stance[leg_name] = False  # reset early stance if contact point is close to touch down position or lift off position
+                    self.early_stance[leg_name] = False  # reset early stance in "planned" stance
+                    continue
+                elif self.early_stance[leg_name] == False and swing_time[leg_id] > swing_period - self.early_stance_time_threshold:
+                    self.early_stance[leg_name] = False # avoid early stance in the last 10% of the swing phase
                     continue
                 else:
                     local_disp = (des_feet_pos[leg_name] - feet_pos[leg_name]).squeeze()
