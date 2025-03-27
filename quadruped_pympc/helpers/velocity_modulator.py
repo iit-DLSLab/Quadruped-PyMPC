@@ -4,11 +4,13 @@ from quadruped_pympc import config as cfg
 
 class VelocityModulator:
     def __init__(self):
+        
         self.activated = False
+
         if cfg.robot == "aliengo":
-            self.max_distance = 0.15
+            self.max_distance = 0.2
         elif cfg.robot == "go1" or cfg.robot == "go2":
-            self.max_distance = 0.12
+            self.max_distance = 0.15
         else:
             self.max_distance = 0.2
 
