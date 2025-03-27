@@ -67,7 +67,7 @@ class QuadrupedPyMPC_Wrapper:
         qpos: np.ndarray,
         qvel: np.ndarray,
         feet_jac: LegsAttr,
-        jac_feet_dot: LegsAttr,
+        feet_jac_dot: LegsAttr,
         feet_vel: LegsAttr,
         legs_qfrc_bias: LegsAttr,
         legs_mass_matrix: LegsAttr,
@@ -96,7 +96,7 @@ class QuadrupedPyMPC_Wrapper:
             qpos (np.ndarray): joint positions
             qvel (np.ndarray): joint velocities
             feet_jac (LegsAttr): jacobian of the feet
-            jac_feet_dot (LegsAttr): time derivative of the jacobian of the feet
+            feet_jac_dot (LegsAttr): derivative of the jacobian of the feet
             feet_vel (LegsAttr): velocity of the feet
             legs_qfrc_bias (LegsAttr): gravity compensation, coriolis and centrifugal forces
             legs_mass_matrix (LegsAttr): mass matrix of the legs
@@ -171,7 +171,7 @@ class QuadrupedPyMPC_Wrapper:
             qpos,
             qvel,
             feet_jac,
-            jac_feet_dot,
+            feet_jac_dot,
             feet_pos,
             feet_vel,
             legs_qfrc_bias,

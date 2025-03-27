@@ -388,7 +388,7 @@ class WBInterface:
         qpos: np.ndarray,
         qvel: np.ndarray,
         feet_jac: LegsAttr,
-        jac_feet_dot: LegsAttr,
+        feet_jac_dot: LegsAttr,
         feet_pos: LegsAttr,
         feet_vel: LegsAttr,
         legs_qfrc_bias: LegsAttr,
@@ -411,7 +411,7 @@ class WBInterface:
             simulation_dt (float): simulation time step
             qvel (np.ndarray): joint velocities
             feet_jac (LegsAttr): feet jacobian
-            jac_feet_dot (LegsAttr): jacobian of the feet derivative
+            feet_jac_dot (LegsAttr): derivative of the jacobian
             feet_pos (LegsAttr): feet positions in world frame
             feet_vel (LegsAttr): feet velocities in world frame
             legs_qfrc_bias (LegsAttr): joint forces and torques
@@ -464,7 +464,7 @@ class WBInterface:
                             leg_id=leg_id,
                             q_dot=qvel[legs_qvel_idx[leg_name]],
                             J=feet_jac[leg_name][:, legs_qvel_idx[leg_name]],
-                            J_dot=jac_feet_dot[leg_name][:, legs_qvel_idx[leg_name]],
+                            J_dot=feet_jac_dot[leg_name][:, legs_qvel_idx[leg_name]],
                             lift_off=self.frg.lift_off_positions[leg_name],
                             touch_down=nmpc_footholds[leg_name],
                             foot_pos=feet_pos[leg_name],
@@ -514,10 +514,6 @@ class WBInterface:
             des_joints_pos.RL = np.array(temp[6:9]).reshape((3,))
             des_joints_pos.RR = np.array(temp[9:12]).reshape((3,))
 
-            # des_joints_vel.FL = (des_joints_pos.FL - qpos[legs_qpos_idx.FL])/self.contact_sequence_dts[0]
-            # des_joints_vel.FR = (des_joints_pos.FR - qpos[legs_qpos_idx.FR])/self.contact_sequence_dts[0]
-            # des_joints_vel.RL = (des_joints_pos.RL - qpos[legs_qpos_idx.RL])/self.contact_sequence_dts[0]
-            # des_joints_vel.RR = (des_joints_pos.RR - qpos[legs_qpos_idx.RR])/self.contact_sequence_dts[0]
             # TODO This should be done over the the desired joint positions jacobian
             des_joints_vel.FL = np.linalg.pinv(feet_jac.FL[:, legs_qvel_idx.FL]) @ des_foot_vel.FL
             des_joints_vel.FR = np.linalg.pinv(feet_jac.FR[:, legs_qvel_idx.FR]) @ des_foot_vel.FR
@@ -530,7 +526,7 @@ class WBInterface:
             des_joints_pos = nmpc_joints_vel
 
         # Saturate of desired joint positions and velocities
-        max_joints_pos_difference = 3
+        max_joints_pos_difference = 3.0
         max_joints_vel_difference = 10.0
 
         # Calculate the difference
