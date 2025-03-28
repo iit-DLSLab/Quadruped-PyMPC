@@ -12,7 +12,7 @@ class EarlyStanceDetector:
         self.hitmoments = LegsAttr(FL=-1.0, FR=-1.0, RR=-1.0, RL=-1.0) # swing time of the last contact moment
         self.hitpoints = LegsAttr(FL=None, FR=None, RR=None, RL=None)
 
-        self.activated = False
+        self.activated = True
 
         self.early_stance_time_threshold = 0.07
         self.relative_tracking_error_threshold = 0.2
