@@ -22,7 +22,7 @@ class SwingTrajectoryGenerator:
         scaling_factor = 1.5
         if early_stance_hitmoment != -1 and early_stance_hitmoment < self.swing_period*0.9:
             p1 = x0.copy()
-            p1[:2] = x0[:2] - 0.2 * (xf[:2]-x0[:2])
+            p1[:2] = x0[:2] - 0.02 * (xf[:2]-x0[:2])
             p1 += np.array([0., 0., self.stepHeight / scaling_factor])
             p2 = 0.5 * (x0 + xf) + np.array([0., 0., 0.2 ])
             updated_swing_period = self.swing_period - early_stance_hitmoment

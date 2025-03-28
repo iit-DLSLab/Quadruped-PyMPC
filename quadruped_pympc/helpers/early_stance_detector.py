@@ -14,8 +14,8 @@ class EarlyStanceDetector:
 
         self.activated = False
 
-        self.early_stance_time_threshold = 0.1
-        self.relative_tracking_error_threshold = 0.3
+        self.early_stance_time_threshold = 0.07
+        self.relative_tracking_error_threshold = 0.2
         self.absolute_min_distance_error_threshold = 0.1
 
 

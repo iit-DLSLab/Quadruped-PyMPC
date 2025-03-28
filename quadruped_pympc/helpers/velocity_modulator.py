@@ -10,7 +10,7 @@ class VelocityModulator:
         if cfg.robot == "aliengo":
             self.max_distance = 0.2
         elif cfg.robot == "go1" or cfg.robot == "go2":
-            self.max_distance = 0.15
+            self.max_distance = 0.2
         else:
             self.max_distance = 0.2
 

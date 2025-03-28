@@ -7,6 +7,9 @@ class TerrainEstimator:
         self.terrain_pitch = 0
         self.terrain_height = 0
 
+        self.roll_activated = False
+        self.pitch_activated = True
+
     def compute_terrain_estimation(
         self, base_position: np.ndarray, yaw: float, feet_pos: dict, current_contact: np.ndarray
     ) -> [float, float]:
@@ -66,8 +69,16 @@ class TerrainEstimator:
         if (left_difference[2] * 0.5 + right_difference[2] * 0.5) > 0:
             pitch = -pitch
 
-        self.terrain_roll = self.terrain_roll * 0.8 + roll * 0.2
-        self.terrain_pitch = self.terrain_pitch * 0.8 + pitch * 0.2
+
+        if self.roll_activated:
+            self.terrain_roll = self.terrain_roll * 0.99 + roll * 0.01
+        else:
+            self.terrain_roll = 0.0
+        
+        if self.pitch_activated:
+            self.terrain_pitch = self.terrain_pitch * 0.99 + pitch * 0.01
+        else:
+            self.terrain_pitch = 0.0
 
         # Update the reference height given the foot in contact
         z_foot_FL = feet_pos['FL'][2]
@@ -86,7 +97,7 @@ class TerrainEstimator:
             self.terrain_height = self.terrain_height * 0.6 + z_foot_mean_temp * 0.4"""
 
         z_foot_mean_temp = (z_foot_FL + z_foot_FR + z_foot_RL + z_foot_RR) / 4
-        self.terrain_height = self.terrain_height * 0.6 + z_foot_mean_temp * 0.4
+        self.terrain_height = self.terrain_height * 0.99 + z_foot_mean_temp * 0.01
 
         # print("current_contact: ", current_contact)
         # print("z_foot_FL: ", z_foot_FL)
