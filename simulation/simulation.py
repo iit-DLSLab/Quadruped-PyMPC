@@ -261,6 +261,7 @@ def run_simulation(
                     lift_off_positions=quadrupedpympc_observables["lift_off_positions"],
                     nmpc_footholds=quadrupedpympc_observables["nmpc_footholds"],
                     ref_feet_pos=quadrupedpympc_observables["ref_feet_pos"],
+                    early_stance_detector=quadrupedpympc_wrapper.wb_interface.esd,
                     geom_ids=feet_traj_geom_ids,
                 )
 

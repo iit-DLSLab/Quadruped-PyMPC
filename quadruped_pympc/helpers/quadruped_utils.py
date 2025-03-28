@@ -8,6 +8,7 @@ import numpy as np
 from mujoco.viewer import Handle
 
 from quadruped_pympc.helpers.swing_trajectory_controller import SwingTrajectoryController
+from quadruped_pympc.helpers.early_stance_detector import EarlyStanceDetector
 
 
 class GaitType(Enum):
@@ -31,6 +32,7 @@ def plot_swing_mujoco(
     lift_off_positions: namedtuple,
     nmpc_footholds: namedtuple,
     ref_feet_pos: namedtuple,
+    early_stance_detector: EarlyStanceDetector, 
     geom_ids: namedtuple = None,
 ):
     """Function to plot the desired foot swing trajectory in Mujoco.
@@ -72,7 +74,8 @@ def plot_swing_mujoco(
             continue
         for point_idx, foot_swing_time in enumerate(np.linspace(swing_time[leg_name], swing_period, NUM_TRAJ_POINTS)):
             ref_foot_pos, _, _ = swing_traj_controller.swing_generator.compute_trajectory_references(
-                foot_swing_time, lift_off_positions[leg_name], nmpc_footholds[leg_name]
+                foot_swing_time, lift_off_positions[leg_name], nmpc_footholds[leg_name], 
+                early_stance_detector.hitmoments[leg_name], early_stance_detector.hitpoints[leg_name]
             )
             des_foot_traj[leg_name].append(ref_foot_pos.squeeze())
 
