@@ -99,6 +99,7 @@ class WBInterface:
         self.esd = EarlyStanceDetector()
 
         self.current_contact = np.array([1, 1, 1, 1])
+        self.previous_contact = np.array([1, 1, 1, 1])
 
     def update_state_and_reference(
         self,
@@ -187,14 +188,14 @@ class WBInterface:
             contact_sequence_dts=self.contact_sequence_dts, contact_sequence_lenghts=self.contact_sequence_lenghts
         )
 
-        previous_contact = self.current_contact
+        self.previous_contact = copy.deepcopy(self.current_contact)
         self.current_contact = np.array(
             [contact_sequence[0][0], contact_sequence[1][0], contact_sequence[2][0], contact_sequence[3][0]]
         )
 
         # Compute the reference for the footholds ---------------------------------------------------
         self.frg.update_lift_off_positions(
-            previous_contact,
+            self.previous_contact,
             self.current_contact,
             feet_pos,
             legs_order,
@@ -203,7 +204,7 @@ class WBInterface:
             base_ori_euler_xyz,
         )
         self.frg.update_touch_down_positions(
-            previous_contact,
+            self.previous_contact,
             self.current_contact,
             feet_pos,
             legs_order,
@@ -438,7 +439,9 @@ class WBInterface:
         
         # Update the Early Stance Detector for Reflexes
         self.esd.update_detection(feet_pos, self.last_des_foot_pos, lift_off=self.frg.lift_off_positions, touch_down=nmpc_footholds, 
-                        swing_time=self.stc.swing_time, swing_period=self.stc.swing_period, current_contact=self.current_contact)
+                        swing_time=self.stc.swing_time, swing_period=self.stc.swing_period, 
+                        current_contact=self.current_contact, previous_contact=self.previous_contact,
+                        stc=self.stc)
 
 
         # Compute Stance Torque ---------------------------------------------------------------------------

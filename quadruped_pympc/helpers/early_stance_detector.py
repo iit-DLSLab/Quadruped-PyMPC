@@ -18,8 +18,16 @@ class EarlyStanceDetector:
         self.relative_tracking_error_threshold = 0.2
         self.absolute_min_distance_error_threshold = 0.1
 
+        self.gait_cycles_after_step_height_enanchement = -1
+        self.use_height_enhancement = False
+        self.max_gait_cycles_height_enhancement = 6
 
-    def update_detection(self, feet_pos: LegsAttr, des_feet_pos: LegsAttr, lift_off: LegsAttr, touch_down: LegsAttr, swing_time: list, swing_period: float, current_contact):
+
+    def update_detection(self, feet_pos: LegsAttr, des_feet_pos: LegsAttr, 
+                         lift_off: LegsAttr, touch_down: LegsAttr, 
+                         swing_time: list, swing_period: float, 
+                         current_contact, previous_contact,
+                         stc):
         """ 
         Update the early stance detector.
         
@@ -57,6 +65,7 @@ class EarlyStanceDetector:
                             self.hitpoints[leg_name] = feet_pos[leg_name].copy()
                             self.hitmoments[leg_name] = swing_time[leg_id]
                             self.early_stance[leg_name] = True  # acos( disp dot local_disp / |disp| |local_disp|) < 60°
+                            self.gait_cycles_after_step_height_enanchement = 0
                             break
                         else:
                             self.early_stance[leg_name] = False
@@ -66,4 +75,18 @@ class EarlyStanceDetector:
                 if self.early_stance[leg_name] == False:
                     self.hitmoments[leg_name] = -1.0
                     self.hitpoints[leg_name] = None
+
+        if(self.use_height_enhancement):
+            for leg_id,leg_name in enumerate(self.legs_order):
+                if current_contact[leg_id] == 1 and previous_contact[leg_id] == 0 and self.gait_cycles_after_step_height_enanchement >= 0:
+                    self.gait_cycles_after_step_height_enanchement += 1
+
+                    break
+            
+            if(self.gait_cycles_after_step_height_enanchement >= 0 and self.gait_cycles_after_step_height_enanchement < self.max_gait_cycles_height_enhancement):
+                stc.swing_generator.step_height_enhancement = True 
+            else:
+                stc.swing_generator.step_height_enhancement = False
+                self.gait_cycles_after_step_height_enanchement = -1
+        
 

@@ -15,6 +15,7 @@ class SwingTrajectoryGenerator:
 
         # Stored swing-trajectory properties
         self.stepHeight = step_height
+        self.step_height_enhancement = False
 
     def createCurve(self, x0, xf, early_stance_hitmoment = -1):
 
@@ -37,9 +38,13 @@ class SwingTrajectoryGenerator:
             t = np.array([early_stance_hitmoment, early_stance_hitmoment+updated_swing_period/4, early_stance_hitmoment+updated_swing_period/2, early_stance_hitmoment+updated_swing_period*3/4, self.swing_period])
 
         else:
-            p1 = x0 + np.array([0., 0., self.stepHeight / scaling_factor])
-            p2 = 0.5 * (x0 + xf) + np.array([0., 0., self.stepHeight ])
-            p3 = xf + np.array([0.0, 0.0, self.stepHeight / scaling_factor])
+            if(self.step_height_enhancement):
+                temp_step_height = 0.15
+            else:
+                temp_step_height = self.stepHeight
+            p1 = x0 + np.array([0., 0., temp_step_height / scaling_factor])
+            p2 = 0.5 * (x0 + xf) + np.array([0., 0., temp_step_height])
+            p3 = xf + np.array([0.0, 0.0, temp_step_height / scaling_factor])
 
             x = np.array([x0[0], p1[0], p2[0], p3[0], xf[0]])
             y = np.array([x0[1], p1[1], p2[1], p3[1], xf[1]])
