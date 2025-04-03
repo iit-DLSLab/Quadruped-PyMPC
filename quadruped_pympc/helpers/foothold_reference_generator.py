@@ -1,11 +1,11 @@
 import collections
+import copy
 
 import mujoco
-import copy
 import numpy as np
+from gym_quadruped.utils.quadruped_utils import LegsAttr
 from scipy.spatial.transform import Rotation
 
-from gym_quadruped.utils.quadruped_utils import LegsAttr
 from quadruped_pympc.helpers.quadruped_utils import GaitType
 
 
@@ -131,7 +131,7 @@ class FootholdReferenceGenerator:
         ref_feet.RR[0:2] = R_W2H.T @ ref_feet.RR[:2] + base_position[0:2]
 
         # Add offset to the feet positions for manual com offset
-        R_B2W = Rotation.from_euler('xyz', base_ori_euler_xyz).as_matrix()
+        R_B2W = Rotation.from_euler("xyz", base_ori_euler_xyz).as_matrix()
         self.com_pos_offset_w = R_B2W @ self.com_pos_offset_b
         ref_feet.FL[0:2] += self.com_pos_offset_w[0:2]
         ref_feet.FR[0:2] += self.com_pos_offset_w[0:2]
@@ -189,14 +189,14 @@ class FootholdReferenceGenerator:
 
 
 if __name__ == "__main__":
-    m = mujoco.MjModel.from_xml_path('./../simulation/unitree_go1/scene.xml')
+    m = mujoco.MjModel.from_xml_path("./../simulation/unitree_go1/scene.xml")
     d = mujoco.MjData(m)
     mujoco.mj_step(m, d)
 
-    FL_hip_id = mujoco.mj_name2id(m, mujoco.mjtObj.mjOBJ_BODY, 'FL_hip')
-    FR_hip_id = mujoco.mj_name2id(m, mujoco.mjtObj.mjOBJ_BODY, 'FR_hip')
-    RL_hip_id = mujoco.mj_name2id(m, mujoco.mjtObj.mjOBJ_BODY, 'RL_hip')
-    RR_hip_id = mujoco.mj_name2id(m, mujoco.mjtObj.mjOBJ_BODY, 'RR_hip')
+    FL_hip_id = mujoco.mj_name2id(m, mujoco.mjtObj.mjOBJ_BODY, "FL_hip")
+    FR_hip_id = mujoco.mj_name2id(m, mujoco.mjtObj.mjOBJ_BODY, "FR_hip")
+    RL_hip_id = mujoco.mj_name2id(m, mujoco.mjtObj.mjOBJ_BODY, "RL_hip")
+    RR_hip_id = mujoco.mj_name2id(m, mujoco.mjtObj.mjOBJ_BODY, "RR_hip")
 
     hip_pos = np.array(
         ([d.body(FL_hip_id).xpos], [d.body(FR_hip_id).xpos], [d.body(RL_hip_id).xpos], [d.body(RR_hip_id).xpos])

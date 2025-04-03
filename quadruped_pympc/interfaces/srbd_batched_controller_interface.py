@@ -1,8 +1,8 @@
 import numpy as np
 
+from quadruped_pympc import config as cfg
 from quadruped_pympc.helpers.periodic_gait_generator import PeriodicGaitGenerator
 
-from quadruped_pympc import config as cfg
 
 
 class SRBDBatchedControllerInterface:

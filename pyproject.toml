@@ -13,7 +13,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "quadruped_pympc"
-version = "0.1.1"
+version = "0.1.2"
 description = "A model predictive controller for quadruped robots based on the single rigid body model and written in python. Gradient-based (acados) or Sampling-based (jax)."
 authors = [
     { name="Giulio Turrisi", email="giulio.turrisi@iit.it" },

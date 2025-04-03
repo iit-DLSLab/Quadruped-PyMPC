@@ -1,4 +1,3 @@
-import os
 import numpy as np
 
 
@@ -145,11 +144,12 @@ class SwingTrajectoryController:
 # Example:
 if __name__ == "__main__":
     import time
+
     import numpy as np
-    from tqdm import tqdm
 
     # Gym and Simulation related imports
     from gym_quadruped.quadruped_env import QuadrupedEnv
+    from gym_quadruped.utils.mujoco.visual import render_sphere, render_vector
     from gym_quadruped.utils.quadruped_utils import LegsAttr
 
     # Config imports
@@ -157,8 +157,6 @@ if __name__ == "__main__":
 
     # Helper functions for plotting
     from quadruped_pympc.helpers.quadruped_utils import plot_swing_mujoco
-    from gym_quadruped.utils.mujoco.visual import render_vector
-    from gym_quadruped.utils.mujoco.visual import render_sphere
 
     np.set_printoptions(precision=3, suppress=True)
 
@@ -166,8 +164,8 @@ if __name__ == "__main__":
     hip_height = cfg.hip_height
     robot_leg_joints = cfg.robot_leg_joints
     robot_feet_geom_names = cfg.robot_feet_geom_names
-    scene_name = cfg.simulation_params['scene']
-    simulation_dt = cfg.simulation_params['dt']
+    scene_name = cfg.simulation_params["scene"]
+    simulation_dt = cfg.simulation_params["dt"]
 
     state_observables_names = (
         'base_pos',
@@ -211,8 +209,6 @@ if __name__ == "__main__":
     tau = LegsAttr(*[np.zeros((env.mjModel.nv, 1)) for _ in range(4)])
 
     # Quadruped PyMPC controller initialization -------------------------------------------------------------
-    from quadruped_pympc.interfaces.srbd_controller_interface import SRBDControllerInterface
-    from quadruped_pympc.interfaces.srbd_batched_controller_interface import SRBDBatchedControllerInterface
     from quadruped_pympc.interfaces.wb_interface import WBInterface
 
     wb_interface = WBInterface(initial_feet_pos=env.feet_pos(frame='world'), legs_order=legs_order)
@@ -233,10 +229,10 @@ if __name__ == "__main__":
         env.mjData.qvel[3:7] = 0
 
         # Update value from SE or Simulator ----------------------
-        feet_pos = env.feet_pos(frame='world')
-        hip_pos = env.hip_positions(frame='world')
-        base_lin_vel = env.base_lin_vel(frame='world')
-        base_ang_vel = env.base_ang_vel(frame='world')
+        feet_pos = env.feet_pos(frame="world")
+        hip_pos = env.hip_positions(frame="world")
+        base_lin_vel = env.base_lin_vel(frame="world")
+        base_ang_vel = env.base_ang_vel(frame="world")
         base_ori_euler_xyz = env.base_ori_euler_xyz
         base_pos = env.base_pos
 

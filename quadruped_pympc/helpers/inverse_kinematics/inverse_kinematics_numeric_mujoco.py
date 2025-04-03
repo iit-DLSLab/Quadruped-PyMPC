@@ -7,15 +7,16 @@ import casadi as cs
 
 # import example_robot_data as robex
 import copy
+import os
+import time
+
+import gym_quadruped
 
 # Mujoco magic
 import mujoco
 import mujoco.viewer
 
 # Adam and Liecasadi magic
-from adam.casadi import KinDynComputations
-from adam import Representations
-from liecasadi import SO3
 
 import gym_quadruped
 import os
@@ -28,6 +29,7 @@ from quadruped_pympc import config as cfg
 
 from gym_quadruped.quadruped_env import QuadrupedEnv
 
+from quadruped_pympc import config as cfg
 
 IT_MAX = 5
 DT = 1e-2
@@ -154,10 +156,10 @@ if __name__ == "__main__":
 
     mujoco.mj_fwdPosition(m, d)
 
-    FL_id = mujoco.mj_name2id(m, mujoco.mjtObj.mjOBJ_GEOM, 'FL')
-    FR_id = mujoco.mj_name2id(m, mujoco.mjtObj.mjOBJ_GEOM, 'FR')
-    RL_id = mujoco.mj_name2id(m, mujoco.mjtObj.mjOBJ_GEOM, 'RL')
-    RR_id = mujoco.mj_name2id(m, mujoco.mjtObj.mjOBJ_GEOM, 'RR')
+    FL_id = mujoco.mj_name2id(m, mujoco.mjtObj.mjOBJ_GEOM, "FL")
+    FR_id = mujoco.mj_name2id(m, mujoco.mjtObj.mjOBJ_GEOM, "FR")
+    RL_id = mujoco.mj_name2id(m, mujoco.mjtObj.mjOBJ_GEOM, "RL")
+    RR_id = mujoco.mj_name2id(m, mujoco.mjtObj.mjOBJ_GEOM, "RR")
     FL_foot_target_position = d.geom_xpos[FL_id]
     FR_foot_target_position = d.geom_xpos[FR_id]
     RL_foot_target_position = d.geom_xpos[RL_id]
@@ -173,7 +175,7 @@ if __name__ == "__main__":
 
     ik.env.mjData.qpos = initial_q
     mujoco.mj_fwdPosition(ik.env.mjModel, ik.env.mjData)
-    feet = ik.env.feet_pos(frame='world')
+    feet = ik.env.feet_pos(frame="world")
 
     print("joints start position: ", initial_q)
     print("FL foot start position", feet.FL)
@@ -203,7 +205,7 @@ if __name__ == "__main__":
     print("MUJOCO IK SOLUTION")
     ik.env.mjData.qpos[7:] = solution
     mujoco.mj_fwdPosition(ik.env.mjModel, ik.env.mjData)
-    feet = ik.env.feet_pos(frame='world')
+    feet = ik.env.feet_pos(frame="world")
 
     print("joints solution: ", ik.env.mjData.qpos)
     print("FL foot solution position", feet.FL)

@@ -3,9 +3,10 @@
 
 # Authors: Giulio Turrisi -
 
-import numpy as np
 import casadi as cs
+import numpy as np
 from acados_template import AcadosModel
+
 from quadruped_pympc import config
 
 
@@ -157,7 +158,7 @@ class Centroidal_Model_InputRates:
             self.mass,
         )
         fd = self.forward_dynamics(self.states, self.inputs, param)
-        self.fun_forward_dynamics = cs.Function('fun_forward_dynamics', [self.states, self.inputs, param], [fd])
+        self.fun_forward_dynamics = cs.Function("fun_forward_dynamics", [self.states, self.inputs, param], [fd])
 
     def forward_dynamics(self, states: np.ndarray, inputs: np.ndarray, param: np.ndarray) -> cs.SX:
         """

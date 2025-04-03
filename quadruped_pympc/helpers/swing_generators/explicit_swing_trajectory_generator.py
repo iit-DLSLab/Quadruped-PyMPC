@@ -1,9 +1,5 @@
-import numpy as np
 import matplotlib.pyplot as plt
-
-
-from scipy.interpolate import CubicSpline, Akima1DInterpolator, CubicHermiteSpline
-import copy
+import numpy as np
 
 
 class SwingTrajectoryGenerator:
@@ -17,11 +13,11 @@ class SwingTrajectoryGenerator:
         curve_points = np.array(curve_points)
 
         fig = plt.figure()
-        ax = fig.add_subplot(111, projection='3d')
+        ax = fig.add_subplot(111, projection="3d")
         ax.plot(curve_points[:, 0], curve_points[:, 1], curve_points[:, 2])
         ax.legend()
 
-        plt.title('3D Bézier Curve')
+        plt.title("3D Bézier Curve")
         plt.show()
 
     def plot_trajectory_references(self, tp, fp, vp, ap):

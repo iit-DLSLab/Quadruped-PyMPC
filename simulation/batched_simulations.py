@@ -5,10 +5,10 @@
 # Giulio Turrisi
 
 import multiprocessing
-from multiprocessing import Process
 import time
+from multiprocessing import Process
+
 import numpy as np
-import matplotlib.pyplot as plt
 
 # Import the simulation module that will run mujoco
 import simulation
@@ -18,7 +18,7 @@ NUM_PROCESSES = 5
 NUM_EPISODES = 20
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     render = False
     render_only_first = True
     output_simulations_tracking = None
@@ -50,25 +50,25 @@ if __name__ == '__main__':
         for ep_i in range(NUM_EPISODES):
             if output_simulations_tracking is None:
                 output_simulations_tracking = return_dict[
-                    'process' + str(proc_j) + '_ctrl_state_history_ep' + str(ep_i)
+                    "process" + str(proc_j) + "_ctrl_state_history_ep" + str(ep_i)
                 ]
             else:
                 output_simulations_tracking = np.concatenate(
                     (
                         output_simulations_tracking,
-                        return_dict['process' + str(proc_j) + '_ctrl_state_history_ep' + str(ep_i)],
+                        return_dict["process" + str(proc_j) + "_ctrl_state_history_ep" + str(ep_i)],
                     )
                 )
 
             if output_simulations_success_rate is None:
                 output_simulations_success_rate = np.array(
-                    [return_dict['process' + str(proc_j) + '_success_rate_ep' + str(ep_i)]]
+                    [return_dict["process" + str(proc_j) + "_success_rate_ep" + str(ep_i)]]
                 )
             else:
                 output_simulations_success_rate = np.concatenate(
                     (
                         output_simulations_success_rate,
-                        np.array([return_dict['process' + str(proc_j) + '_success_rate_ep' + str(ep_i)]]),
+                        np.array([return_dict["process" + str(proc_j) + "_success_rate_ep" + str(ep_i)]]),
                     )
                 )
 

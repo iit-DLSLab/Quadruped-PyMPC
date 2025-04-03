@@ -2,15 +2,15 @@
 
 # Authors: Giulio Turrisi -
 
-from acados_template import AcadosOcp, AcadosOcpSolver
-from .kinodynamic_model import KinoDynamic_Model
+import copy
+import os
+
+import casadi as cs
 import numpy as np
 import scipy.linalg
-import casadi as cs
-import copy
-import math
+from acados_template import AcadosOcp, AcadosOcpSolver
 
-import time
+from .kinodynamic_model import KinoDynamic_Model
 
 import os
 
@@ -19,7 +19,7 @@ dir_path = os.path.dirname(os.path.realpath(__file__))
 import sys
 
 sys.path.append(dir_path)
-sys.path.append(dir_path + '/../../')
+sys.path.append(dir_path + "/../../")
 
 
 from quadruped_pympc import config
@@ -41,7 +41,7 @@ class Acados_NMPC_KinoDynamic:
         self.use_zmp_stability = config.mpc_params['use_zmp_stability']
         self.use_stability_constraints = self.use_static_stability or self.use_zmp_stability
 
-        self.use_DDP = config.mpc_params['use_DDP']
+        self.use_DDP = config.mpc_params["use_DDP"]
 
         self.previous_status = -1
         self.previous_contact_sequence = np.zeros((4, self.horizon))
@@ -506,8 +506,8 @@ class Acados_NMPC_KinoDynamic:
         t = np.array([1, 0, 0])
         b = np.array([0, 1, 0])
         mu = self.centroidal_model.mu_friction
-        f_max = config.mpc_params['grf_max']
-        f_min = config.mpc_params['grf_min']
+        f_max = config.mpc_params["grf_max"]
+        f_min = config.mpc_params["grf_min"]
 
         # Derivation can be found in the paper
         # "High-slope terrain locomotion for torque-controlled quadruped robots",
@@ -1207,14 +1207,14 @@ class Acados_NMPC_KinoDynamic:
         # idx_ref_foot_to_assign = np.array([0, 0, 0, 0])
         for j in range(self.horizon):
             yref = np.zeros(shape=(self.states_dim + self.inputs_dim + 12,))
-            yref[0:3] = reference['ref_position']
-            yref[3:6] = reference['ref_linear_velocity']
-            yref[6:9] = reference['ref_orientation']
-            yref[9:12] = reference['ref_angular_velocity']
-            yref[12:15] = reference['ref_foot_FL'][j]
-            yref[15:18] = reference['ref_foot_FR'][j]
-            yref[18:21] = reference['ref_foot_RL'][j]
-            yref[21:24] = reference['ref_foot_RR'][j]
+            yref[0:3] = reference["ref_position"]
+            yref[3:6] = reference["ref_linear_velocity"]
+            yref[6:9] = reference["ref_orientation"]
+            yref[9:12] = reference["ref_angular_velocity"]
+            yref[12:15] = reference["ref_foot_FL"][j]
+            yref[15:18] = reference["ref_foot_FR"][j]
+            yref[18:21] = reference["ref_foot_RL"][j]
+            yref[21:24] = reference["ref_foot_RR"][j]
 
             # Calculate the reference force z for the leg in stance
             # It's simply mass*acc/number_of_legs_in_stance!!
@@ -1266,7 +1266,7 @@ class Acados_NMPC_KinoDynamic:
 
         # Fill stance param, friction and stance proximity
         # (stance proximity will disable foothold optimization near a stance!!)
-        mu = config.mpc_params['mu']
+        mu = config.mpc_params["mu"]
         yaw = state["orientation"][2]
 
         # Stance Proximity - to be removed
@@ -1420,13 +1420,13 @@ class Acados_NMPC_KinoDynamic:
         # Solve ocp via RTI or normal ocp
         if self.use_RTI:
             # feedback phase
-            self.acados_ocp_solver.options_set('rti_phase', 2)
+            self.acados_ocp_solver.options_set("rti_phase", 2)
             status = self.acados_ocp_solver.solve()
-            print("feedback phase time: ", self.acados_ocp_solver.get_stats('time_tot'))
+            print("feedback phase time: ", self.acados_ocp_solver.get_stats("time_tot"))
 
         else:
             status = self.acados_ocp_solver.solve()
-            print("ocp time: ", self.acados_ocp_solver.get_stats('time_tot'))
+            print("ocp time: ", self.acados_ocp_solver.get_stats("time_tot"))
 
         # Take the solution
         control = self.acados_ocp_solver.get(0, "u")

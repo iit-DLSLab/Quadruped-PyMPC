@@ -1,4 +1,5 @@
 import numpy as np
+
 from quadruped_pympc import config as cfg
 
 

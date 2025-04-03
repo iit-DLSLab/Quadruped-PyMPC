@@ -10,7 +10,7 @@ dir_path = os.path.dirname(os.path.realpath(__file__))
 
 import sys
 
-sys.path.append(dir_path + '/../')
+sys.path.append(dir_path + "/../")
 
 # Parameters for both MPC and simulation
 from quadruped_pympc import config
@@ -55,7 +55,7 @@ class SrbInertiaComputation:
                 if self.robot_full.existJointName(jn):
                     self.jointsToLockIDs.append(self.robot_full.getJointId(jn))
                 else:
-                    print('Warning: joint ' + str(jn) + ' does not belong to the model!')
+                    print("Warning: joint " + str(jn) + " does not belong to the model!")
         else:
             self.kindyn = KinDynComputations(urdfstring=urdf_filename)
             self.kindyn.set_frame_velocity_representation(representation=Representations.BODY_FIXED_REPRESENTATION)

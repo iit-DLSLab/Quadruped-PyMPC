@@ -3,6 +3,7 @@
 
 # Authors: Giulio Turrisi -
 
+import os
 import time
 
 import os
@@ -12,15 +13,13 @@ dir_path = os.path.dirname(os.path.realpath(__file__))
 import sys
 
 sys.path.append(dir_path)
-sys.path.append(dir_path + '/../')
+sys.path.append(dir_path + "/../")
+
+import jax
+import jax.numpy as jnp
+from jax import jit, random
 
 from quadruped_pympc import config
-
-import jax.numpy as jnp
-from jax import jit
-import jax
-from jax import random
-
 
 dtype_general = 'float32'
 
@@ -37,12 +36,12 @@ class Centroidal_Model_JAX:
 
         if device == "gpu":
             try:
-                self.device = jax.devices('gpu')[0]
+                self.device = jax.devices("gpu")[0]
             except:
-                self.device = jax.devices('cpu')[0]
+                self.device = jax.devices("cpu")[0]
                 print("GPU not available, using CPU")
         else:
-            self.device = jax.devices('cpu')[0]
+            self.device = jax.devices("cpu")[0]
 
         # Mass and Inertia robot dependant
         self.mass = config.mass
@@ -60,7 +59,7 @@ class Centroidal_Model_JAX:
                 )
             )
         else:
-            self.dts = jnp.tile(self.dt, config.mpc_params['horizon'])
+            self.dts = jnp.tile(self.dt, config.mpc_params["horizon"])
 
         # We precompute the inverse of the inertia
         self.inertia_inv = self.calculate_inverse(self.inertia)

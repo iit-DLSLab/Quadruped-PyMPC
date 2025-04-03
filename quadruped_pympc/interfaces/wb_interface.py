@@ -1,16 +1,16 @@
-import numpy as np
-import time
-from scipy.spatial.transform import Rotation as R
 import copy
+import time
 
+import numpy as np
 from gym_quadruped.utils.quadruped_utils import LegsAttr
-from quadruped_pympc import config as cfg
+from scipy.spatial.transform import Rotation as R
 
+from quadruped_pympc import config as cfg
 from quadruped_pympc.helpers.foothold_reference_generator import FootholdReferenceGenerator
+from quadruped_pympc.helpers.inverse_kinematics.inverse_kinematics_numeric import InverseKinematicsNumeric
 from quadruped_pympc.helpers.periodic_gait_generator import PeriodicGaitGenerator
 from quadruped_pympc.helpers.swing_trajectory_controller import SwingTrajectoryController
 from quadruped_pympc.helpers.terrain_estimator import TerrainEstimator
-from quadruped_pympc.helpers.inverse_kinematics.inverse_kinematics_numeric import InverseKinematicsNumeric
 from quadruped_pympc.helpers.velocity_modulator import VelocityModulator
 from quadruped_pympc.helpers.early_stance_detector import EarlyStanceDetector
 
@@ -248,9 +248,9 @@ class WBInterface:
         )
 
         ref_pos = np.array([0, 0, cfg.hip_height])
-        ref_pos[2] = cfg.simulation_params['ref_z'] + terrain_height
+        ref_pos[2] = cfg.simulation_params["ref_z"] + terrain_height
         # Rotate the reference base linear velocity to the terrain frame
-        ref_base_lin_vel = R.from_euler('xyz', [terrain_roll, terrain_pitch, 0]).as_matrix() @ ref_base_lin_vel
+        ref_base_lin_vel = R.from_euler("xyz", [terrain_roll, terrain_pitch, 0]).as_matrix() @ ref_base_lin_vel
 
         # Update state reference ------------------------------------------------------------------------
 
@@ -279,10 +279,10 @@ class WBInterface:
             # In the case of the kinodynamic model,
             # we should pass as a reference the X-Y-Z spline of the feet for the horizon,
             # since in the kynodimic model we are using the feet position as a reference
-            desired_foot_position_FL = np.zeros((cfg.mpc_params['horizon'], 3))
-            desired_foot_position_FR = np.zeros((cfg.mpc_params['horizon'], 3))
-            desired_foot_position_RL = np.zeros((cfg.mpc_params['horizon'], 3))
-            desired_foot_position_RR = np.zeros((cfg.mpc_params['horizon'], 3))
+            desired_foot_position_FL = np.zeros((cfg.mpc_params["horizon"], 3))
+            desired_foot_position_FR = np.zeros((cfg.mpc_params["horizon"], 3))
+            desired_foot_position_RL = np.zeros((cfg.mpc_params["horizon"], 3))
+            desired_foot_position_RR = np.zeros((cfg.mpc_params["horizon"], 3))
             for leg_id, leg_name in enumerate(legs_order):
                 lifted_off = [False, False, False, False]
                 for n in range(cfg.mpc_params['horizon']):

@@ -1,14 +1,12 @@
-from quadruped_pympc.interfaces.srbd_controller_interface import SRBDControllerInterface
+import numpy as np
+from gym_quadruped.utils.quadruped_utils import LegsAttr
+
+from quadruped_pympc import config as cfg
 from quadruped_pympc.interfaces.srbd_batched_controller_interface import SRBDBatchedControllerInterface
+from quadruped_pympc.interfaces.srbd_controller_interface import SRBDControllerInterface
 from quadruped_pympc.interfaces.wb_interface import WBInterface
 
-from gym_quadruped.utils.quadruped_utils import LegsAttr
-from quadruped_pympc import config as cfg
-
-import numpy as np
-
-
-_DEFAULT_OBS = ('ref_base_height', 'ref_base_angles', 'nmpc_GRFs', 'nmpc_footholds', 'swing_time')
+_DEFAULT_OBS = ("ref_base_height", "ref_base_angles", "nmpc_GRFs", "nmpc_footholds", "swing_time")
 
 
 class QuadrupedPyMPC_Wrapper:
@@ -28,7 +26,7 @@ class QuadrupedPyMPC_Wrapper:
             quadrupedpympc_observables_names (tuple[str, ...], optional): list of observable to save. Defaults to _DEFAULT_OBS.
         """
 
-        self.mpc_frequency = cfg.simulation_params['mpc_frequency']
+        self.mpc_frequency = cfg.simulation_params["mpc_frequency"]
 
         self.srbd_controller_interface = SRBDControllerInterface()
 

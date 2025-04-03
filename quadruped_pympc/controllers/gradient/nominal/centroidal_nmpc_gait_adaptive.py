@@ -2,18 +2,19 @@
 
 # Authors: Giulio Turrisi -
 
-import numpy as np
-import scipy.linalg
+import copy
 import os
 import time
-import copy
 
 import casadi as cs
+import numpy as np
+import scipy.linalg
 from acados_template import AcadosOcp, AcadosOcpBatchSolver
 
 ACADOS_INFTY = 1000
 
 from quadruped_pympc import config
+
 from .centroidal_model_nominal import Centroidal_Model_Nominal
 
 
@@ -23,16 +24,16 @@ class Acados_NMPC_GaitAdaptive:
         self.horizon = config.mpc_params['horizon']  # Define the number of discretization steps
         self.dt = config.mpc_params['dt']
         self.T_horizon = self.horizon * self.dt
-        self.use_RTI = config.mpc_params['use_RTI']
-        self.use_integrators = config.mpc_params['use_integrators']
-        self.use_warm_start = config.mpc_params['use_warm_start']
-        self.use_foothold_constraints = config.mpc_params['use_foothold_constraints']
+        self.use_RTI = config.mpc_params["use_RTI"]
+        self.use_integrators = config.mpc_params["use_integrators"]
+        self.use_warm_start = config.mpc_params["use_warm_start"]
+        self.use_foothold_constraints = config.mpc_params["use_foothold_constraints"]
 
-        self.use_static_stability = config.mpc_params['use_static_stability']
-        self.use_zmp_stability = config.mpc_params['use_zmp_stability']
+        self.use_static_stability = config.mpc_params["use_static_stability"]
+        self.use_zmp_stability = config.mpc_params["use_zmp_stability"]
         self.use_stability_constraints = self.use_static_stability or self.use_zmp_stability
 
-        self.use_DDP = config.mpc_params['use_DDP']
+        self.use_DDP = config.mpc_params["use_DDP"]
 
         self.previous_status = -1
         self.previous_contact_sequence = np.zeros((4, self.horizon))
@@ -56,8 +57,8 @@ class Acados_NMPC_GaitAdaptive:
         )
 
         # Batch solver
-        use_batch_solver = config.mpc_params['optimize_step_freq']
-        num_batch = len(config.mpc_params['step_freq_available'])
+        use_batch_solver = config.mpc_params["optimize_step_freq"]
+        num_batch = len(config.mpc_params["step_freq_available"])
         self.batch = num_batch
         # batch_ocp = self.create_ocp_solver_description(acados_model, num_threads_in_batch_solve)
         batch_ocp = self.ocp
@@ -214,8 +215,8 @@ class Acados_NMPC_GaitAdaptive:
             # ocp.solver_options.globalization = 'MERIT_BACKTRACKING'
             ocp.solver_options.with_adaptive_levenberg_marquardt = True
 
-            ocp.cost.cost_type = 'NONLINEAR_LS'
-            ocp.cost.cost_type_e = 'NONLINEAR_LS'
+            ocp.cost.cost_type = "NONLINEAR_LS"
+            ocp.cost.cost_type_e = "NONLINEAR_LS"
             ocp.model.cost_y_expr = cs.vertcat(ocp.model.x, ocp.model.u)
             ocp.model.cost_y_expr_e = ocp.model.x
 
@@ -241,7 +242,7 @@ class Acados_NMPC_GaitAdaptive:
 
         else:
             ocp.solver_options.nlp_solver_type = "SQP"
-            ocp.solver_options.nlp_solver_max_iter = config.mpc_params['num_qp_iterations']
+            ocp.solver_options.nlp_solver_max_iter = config.mpc_params["num_qp_iterations"]
         # ocp.solver_options.globalization = "MERIT_BACKTRACKING"  # FIXED_STEP, MERIT_BACKTRACKING
 
         if config.mpc_params['solver_mode'] == "balance":
@@ -446,8 +447,8 @@ class Acados_NMPC_GaitAdaptive:
         t = np.array([1, 0, 0])
         b = np.array([0, 1, 0])
         mu = self.centroidal_model.mu_friction
-        f_max = config.mpc_params['grf_max']
-        f_min = config.mpc_params['grf_min']
+        f_max = config.mpc_params["grf_max"]
+        f_min = config.mpc_params["grf_min"]
 
         # Derivation can be found in the paper
         # "High-slope terrain locomotion for torque-controlled quadruped robots",
@@ -935,7 +936,7 @@ class Acados_NMPC_GaitAdaptive:
 
                     else:
                         # CRAWL BACKDIAGONALCRAWL ONLY
-                        stability_margin = config.mpc_params['crawl_stability_margin']
+                        stability_margin = config.mpc_params["crawl_stability_margin"]
 
                         if FL_contact_sequence[j] == 1:
                             if FR_contact_sequence[j] == 1:
@@ -1085,20 +1086,20 @@ class Acados_NMPC_GaitAdaptive:
         # Fill reference (self.states_dim+self.inputs_dim)
         idx_ref_foot_to_assign = np.array([0, 0, 0, 0])
         yref = np.zeros(shape=(self.states_dim + self.inputs_dim,))
-        yref[0:3] = reference['ref_position']
-        yref[3:6] = reference['ref_linear_velocity']
-        yref[6:9] = reference['ref_orientation']
-        yref[9:12] = reference['ref_angular_velocity']
-        yref[12:15] = reference['ref_foot_FL'][idx_ref_foot_to_assign[0]]
-        yref[15:18] = reference['ref_foot_FR'][idx_ref_foot_to_assign[1]]
-        yref[18:21] = reference['ref_foot_RL'][idx_ref_foot_to_assign[2]]
-        yref[21:24] = reference['ref_foot_RR'][idx_ref_foot_to_assign[3]]
+        yref[0:3] = reference["ref_position"]
+        yref[3:6] = reference["ref_linear_velocity"]
+        yref[6:9] = reference["ref_orientation"]
+        yref[9:12] = reference["ref_angular_velocity"]
+        yref[12:15] = reference["ref_foot_FL"][idx_ref_foot_to_assign[0]]
+        yref[15:18] = reference["ref_foot_FR"][idx_ref_foot_to_assign[1]]
+        yref[18:21] = reference["ref_foot_RL"][idx_ref_foot_to_assign[2]]
+        yref[21:24] = reference["ref_foot_RR"][idx_ref_foot_to_assign[3]]
 
         yref_N = np.zeros(shape=(self.states_dim,))
-        yref_N[0:3] = reference['ref_position']
-        yref_N[3:6] = reference['ref_linear_velocity']
-        yref_N[6:9] = reference['ref_orientation']
-        yref_N[9:12] = reference['ref_angular_velocity']
+        yref_N[0:3] = reference["ref_position"]
+        yref_N[3:6] = reference["ref_linear_velocity"]
+        yref_N[6:9] = reference["ref_orientation"]
+        yref_N[9:12] = reference["ref_angular_velocity"]
 
         # Set initial state constraint. We teleported the robot foothold
         # to the previous optimal foothold. This is done to avoid the optimization
@@ -1122,7 +1123,7 @@ class Acados_NMPC_GaitAdaptive:
 
         # Fill stance param, friction and stance proximity
         # (stance proximity will disable foothold optimization near a stance!!)
-        mu = config.mpc_params['mu']
+        mu = config.mpc_params["mu"]
 
         state_acados = np.concatenate(
             (
@@ -1167,10 +1168,10 @@ class Acados_NMPC_GaitAdaptive:
                 self.batch_solver.ocp_solvers[n].set(j, "yref", yref)
 
                 # Fill last step horizon reference (self.states_dim - no control action!!)
-            yref_N[12:15] = reference['ref_foot_FL'][idx_ref_foot_to_assign[0]]
-            yref_N[15:18] = reference['ref_foot_FR'][idx_ref_foot_to_assign[1]]
-            yref_N[18:21] = reference['ref_foot_RL'][idx_ref_foot_to_assign[2]]
-            yref_N[21:24] = reference['ref_foot_RR'][idx_ref_foot_to_assign[3]]
+            yref_N[12:15] = reference["ref_foot_FL"][idx_ref_foot_to_assign[0]]
+            yref_N[15:18] = reference["ref_foot_FR"][idx_ref_foot_to_assign[1]]
+            yref_N[18:21] = reference["ref_foot_RL"][idx_ref_foot_to_assign[2]]
+            yref_N[21:24] = reference["ref_foot_RR"][idx_ref_foot_to_assign[3]]
 
             # Setting the reference to acados
             self.batch_solver.ocp_solvers[n].set(self.horizon, "yref", yref_N)

@@ -3,6 +3,7 @@ import numpy as np
 np.set_printoptions(precision=3, suppress=True)
 from numpy.linalg import norm, solve
 import time
+
 import casadi as cs
 
 # import example_robot_data as robex
@@ -11,10 +12,10 @@ import copy
 # Mujoco magic
 import mujoco
 import mujoco.viewer
+from adam import Representations
 
 # Adam and Liecasadi magic
 from adam.casadi import KinDynComputations
-from adam import Representations
 from liecasadi import SO3
 
 import gym_quadruped
@@ -210,10 +211,10 @@ if __name__ == "__main__":
 
     mujoco.mj_step(m, d)
 
-    FL_id = mujoco.mj_name2id(m, mujoco.mjtObj.mjOBJ_GEOM, 'FL')
-    FR_id = mujoco.mj_name2id(m, mujoco.mjtObj.mjOBJ_GEOM, 'FR')
-    RL_id = mujoco.mj_name2id(m, mujoco.mjtObj.mjOBJ_GEOM, 'RL')
-    RR_id = mujoco.mj_name2id(m, mujoco.mjtObj.mjOBJ_GEOM, 'RR')
+    FL_id = mujoco.mj_name2id(m, mujoco.mjtObj.mjOBJ_GEOM, "FL")
+    FR_id = mujoco.mj_name2id(m, mujoco.mjtObj.mjOBJ_GEOM, "FR")
+    RL_id = mujoco.mj_name2id(m, mujoco.mjtObj.mjOBJ_GEOM, "RL")
+    RR_id = mujoco.mj_name2id(m, mujoco.mjtObj.mjOBJ_GEOM, "RR")
     FL_foot_target_position = d.geom_xpos[FL_id]
     FR_foot_target_position = d.geom_xpos[FR_id]
     RL_foot_target_position = d.geom_xpos[RL_id]
