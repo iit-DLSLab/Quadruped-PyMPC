@@ -118,16 +118,16 @@ class Sampling_MPC:
         self.Q = jnp.identity(self.state_dim, dtype=dtype_general) * 0
         self.Q = self.Q.at[0, 0].set(0.0)
         self.Q = self.Q.at[1, 1].set(0.0)
-        self.Q = self.Q.at[2, 2].set(111500)  # com_z
-        self.Q = self.Q.at[3, 3].set(5000)  # com_vel_x
-        self.Q = self.Q.at[4, 4].set(5000)  # com_vel_y
+        self.Q = self.Q.at[2, 2].set(1500)  # com_z
+        self.Q = self.Q.at[3, 3].set(200)  # com_vel_x
+        self.Q = self.Q.at[4, 4].set(200)  # com_vel_y
         self.Q = self.Q.at[5, 5].set(200)  # com_vel_z
-        self.Q = self.Q.at[6, 6].set(11200)  # base_angle_roll
-        self.Q = self.Q.at[7, 7].set(11200)  # base_angle_pitch
+        self.Q = self.Q.at[6, 6].set(500)  # base_angle_roll
+        self.Q = self.Q.at[7, 7].set(500)  # base_angle_pitch
         self.Q = self.Q.at[8, 8].set(0.0)  # base_angle_yaw
         self.Q = self.Q.at[9, 9].set(20)  # base_angle_rates_x
         self.Q = self.Q.at[10, 10].set(20)  # base_angle_rates_y
-        self.Q = self.Q.at[11, 11].set(600)  # base_angle_rates_z
+        self.Q = self.Q.at[11, 11].set(50)  # base_angle_rates_z
 
         self.R = jnp.identity(self.control_dim, dtype=dtype_general)
         self.R = self.R.at[0, 0].set(0.0)  # foot_pos_x_FL
