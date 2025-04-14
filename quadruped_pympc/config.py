@@ -160,7 +160,8 @@ mpc_params = {
 
     # this is used only in the case 'sampling'.
     'sampling_method':                         'random_sampling',  # 'random_sampling', 'mppi', 'cem_mppi'
-    'control_parametrization':                 'cubic_spline_1',
+    'control_parametrization':                 'cubic_spline',
+    'num_splines':                             2,  # number of splines to use for the control parametrization
     # 'cubic_spline_1', 'cubic_spline_2', 'linear_spline_1', 'linear_spline_2', 'zero_order'
     'num_parallel_computations':               10000,  # More is better, but slower computation!
     'num_sampling_iterations':                 1,  # More is better, but slower computation!
