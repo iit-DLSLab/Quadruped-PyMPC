@@ -11,6 +11,7 @@ from jax import random
 import sys
 import copy
 
+from quadruped_pympc.helpers.periodic_gait_generator_jax import PeriodicGaitGeneratorJax
 from .centroidal_model_jax import Centroidal_Model_JAX
 import quadruped_pympc.config as config
 
@@ -175,30 +176,12 @@ class Sampling_MPC:
         self.pgg = PeriodicGaitGeneratorJax(duty_factor=0.65, step_freq=1.65, horizon=self.horizon, mpc_dt=self.dt)
         _, _ = self.pgg.compute_contact_sequence(simulation_dt=0.002, t=self.pgg.get_t(), step_freq=1.65)
         self.jitted_compute_contact_sequence = jax.jit(self.pgg.compute_contact_sequence, device=self.device)
+        self.step_freq_delta = jnp.array(config.mpc_params['step_freq_available'])
+
 
         # jitting the vmap function!
         self.vectorized_rollout = jax.vmap(self.compute_rollout, in_axes=(None, None, None, 0, 0), out_axes=0)
         self.jit_vectorized_rollout = jax.jit(self.vectorized_rollout, device=self.device)
-
-        # the first call of jax is very slow, hence we should do this since the beginning
-        # creating a fake initial state, reference and contact sequence
-        initial_state = jnp.zeros((self.state_dim,), dtype=dtype_general)
-        initial_reference = jnp.zeros((self.reference_dim,), dtype=dtype_general)
-
-        self.control_parameters_vec = random.uniform(
-            self.master_key,
-            (self.num_control_parameters * self.num_parallel_computations,),
-            minval=-100.0,
-            maxval=100.0,
-        )
-        step_frequencies_vec = jax.random.uniform(self.master_key, shape=(self.num_parallel_computations, 1))
-
-        temp = self.pgg.get_t()
-        temp2 = self.control_parameters_vec.reshape(self.num_parallel_computations, self.num_control_parameters)
-        temp3 = step_frequencies_vec.reshape(self.num_parallel_computations)
-        self.jit_vectorized_rollout(initial_state, initial_reference, temp, temp2, temp3)
-
-        self.step_freq_delta = jnp.array(config.mpc_params['step_freq_available'])
 
 
     def compute_linear_spline(self, parameters, step, horizon_leg):

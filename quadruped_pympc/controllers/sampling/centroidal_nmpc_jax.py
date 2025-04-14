@@ -173,24 +173,6 @@ class Sampling_MPC:
         self.vectorized_rollout = jax.vmap(self.compute_rollout, in_axes=(None, None, 0, None), out_axes=0)
         self.jit_vectorized_rollout = jax.jit(self.vectorized_rollout, device=self.device)
 
-        # the first call of jax is very slow, hence we should do this since the beginning
-        # creating a fake initial state, reference and contact sequence
-        initial_state = jnp.zeros((self.state_dim,), dtype=dtype_general)
-        initial_reference = jnp.zeros((self.reference_dim,), dtype=dtype_general)
-        contact_sequence = jnp.ones((4, self.horizon), dtype=dtype_general)
-
-        self.control_parameters_vec = random.uniform(
-            self.master_key,
-            (self.num_control_parameters * self.num_parallel_computations,),
-            minval=-100.0,
-            maxval=100.0,
-        )
-        self.jit_vectorized_rollout(
-            initial_state,
-            initial_reference,
-            self.control_parameters_vec.reshape(self.num_parallel_computations, self.num_control_parameters),
-            contact_sequence,
-        )
 
 
     def compute_linear_spline(self, parameters, step, horizon_leg):
