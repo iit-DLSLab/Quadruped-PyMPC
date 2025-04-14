@@ -12,6 +12,7 @@ from jax import jit, random
 from quadruped_pympc import config
 
 dtype_general = 'float32'
+jax.config.update("jax_default_matmul_precision", "float32")
 
 
 # Class that defines the prediction model of the NMPC

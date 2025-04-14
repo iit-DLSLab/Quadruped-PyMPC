@@ -16,6 +16,7 @@ from .centroidal_model_jax import Centroidal_Model_JAX
 import quadruped_pympc.config as config
 
 dtype_general = 'float32'
+jax.config.update("jax_default_matmul_precision", "float32")
 
 
 class Sampling_MPC:
