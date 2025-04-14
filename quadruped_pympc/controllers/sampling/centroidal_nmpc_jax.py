@@ -1,20 +1,17 @@
 import numpy as np
-
 np.set_printoptions(precision=3, suppress=True)
 
 import os
-
 os.environ['XLA_FLAGS'] = '--xla_gpu_triton_gemm_any=True'
+
 import jax
 import jax.numpy as jnp
 from jax import random
 
 import sys
-
 import copy
 
 from .centroidal_model_jax import Centroidal_Model_JAX
-
 import quadruped_pympc.config as config
 
 dtype_general = "float32"
@@ -59,35 +56,7 @@ class Sampling_MPC:
         else:
             self.device = jax.devices('cpu')[0]
 
-        if self.control_parametrization == "linear_spline_1":
-            # Along the horizon, we have only 1 spline per control input (3 forces)
-            # Each spline has 2 parameters
-            self.num_control_parameters_single_leg = 2 * 3
-
-            # In totale we have 4 legs
-            self.num_control_parameters = self.num_control_parameters_single_leg * 4
-
-            # We have 4 different spline functions, one for each leg
-            self.spline_fun_FL = self.compute_linear_spline_1
-            self.spline_fun_FR = self.compute_linear_spline_1
-            self.spline_fun_RL = self.compute_linear_spline_1
-            self.spline_fun_RR = self.compute_linear_spline_1
-
-        elif self.control_parametrization == "linear_spline_2":
-            # Along the horizon, we have 2 splines per control input (3 forces)
-            # Each spline has 2 parameters, but one is shared between the two splines
-            self.num_control_parameters_single_leg = 3 * 3
-
-            # In totale we have 4 legs
-            self.num_control_parameters = self.num_control_parameters_single_leg * 4
-
-            # We have 4 different spline functions, one for each leg
-            self.spline_fun_FL = self.compute_linear_spline_2
-            self.spline_fun_FR = self.compute_linear_spline_2
-            self.spline_fun_RL = self.compute_linear_spline_2
-            self.spline_fun_RR = self.compute_linear_spline_2
-
-        elif self.control_parametrization == "linear_spline_N":
+        if self.control_parametrization == "linear_spline":
             # Along the horizon, we have 2 splines per control input (3 forces)
             # Each spline has 2 parameters, but one is shared between the two splines
             self.num_spline = config.mpc_params['num_splines']
@@ -97,40 +66,12 @@ class Sampling_MPC:
             self.num_control_parameters = self.num_control_parameters_single_leg * 4
 
             # We have 4 different spline functions, one for each leg
-            self.spline_fun_FL = self.compute_linear_spline_N
-            self.spline_fun_FR = self.compute_linear_spline_N
-            self.spline_fun_RL = self.compute_linear_spline_N
-            self.spline_fun_RR = self.compute_linear_spline_N
+            self.spline_fun_FL = self.compute_linear_spline
+            self.spline_fun_FR = self.compute_linear_spline
+            self.spline_fun_RL = self.compute_linear_spline
+            self.spline_fun_RR = self.compute_linear_spline
 
-        elif self.control_parametrization == "cubic_spline_1":
-            # Along the horizon, we have 1 splines per control input (3 forces)
-            # Each spline has 3 parameters
-            self.num_control_parameters_single_leg = 4 * 3
-
-            # In totale we have 4 legs
-            self.num_control_parameters = self.num_control_parameters_single_leg * 4
-
-            # We have 4 different spline functions, one for each leg
-            self.spline_fun_FL = self.compute_cubic_spline
-            self.spline_fun_FR = self.compute_cubic_spline
-            self.spline_fun_RL = self.compute_cubic_spline
-            self.spline_fun_RR = self.compute_cubic_spline
-
-        elif self.control_parametrization == "cubic_spline_2":
-            # Along the horizon, we have 1 splines per control input (3 forces)
-            # Each spline has 3 parameters
-            self.num_control_parameters_single_leg = 4 * 3 + 4 * 3
-
-            # In totale we have 4 legs
-            self.num_control_parameters = self.num_control_parameters_single_leg * 4
-
-            # We have 4 different spline functions, one for each leg
-            self.spline_fun_FL = self.compute_cubic_spline_2
-            self.spline_fun_FR = self.compute_cubic_spline_2
-            self.spline_fun_RL = self.compute_cubic_spline_2
-            self.spline_fun_RR = self.compute_cubic_spline_2
-
-        elif self.control_parametrization == "cubic_spline_N":
+        elif self.control_parametrization == "cubic_spline":
             # Along the horizon, we have 1 splines per control input (3 forces)
             # Each spline has 3 parameters
             self.num_spline = config.mpc_params['num_splines']
@@ -140,10 +81,10 @@ class Sampling_MPC:
             self.num_control_parameters = self.num_control_parameters_single_leg * 4
 
             # We have 4 different spline functions, one for each leg
-            self.spline_fun_FL = self.compute_cubic_spline_N
-            self.spline_fun_FR = self.compute_cubic_spline_N
-            self.spline_fun_RL = self.compute_cubic_spline_N
-            self.spline_fun_RR = self.compute_cubic_spline_N
+            self.spline_fun_FL = self.compute_cubic_spline
+            self.spline_fun_FR = self.compute_cubic_spline
+            self.spline_fun_RL = self.compute_cubic_spline
+            self.spline_fun_RR = self.compute_cubic_spline
 
         else:
             # We have 1 parameters for every 3 force direction (x,y,z)...for each time horizon!!
@@ -157,6 +98,7 @@ class Sampling_MPC:
             self.spline_fun_FR = self.compute_zero_order_spline
             self.spline_fun_RL = self.compute_zero_order_spline
             self.spline_fun_RR = self.compute_zero_order_spline
+            
 
         if self.sampling_method == 'random_sampling':
             self.compute_control = self.compute_control_random_sampling
@@ -260,54 +202,20 @@ class Sampling_MPC:
             contact_sequence,
         )
 
-    def compute_linear_spline_1(self, parameters, step, horizon_leg):
-        """
-        Compute a linear spline parametrization of the GRF
-        """
 
-        tau = step / (horizon_leg)
-
-        q = (tau - 0.0) / (1.0 - 0.0)
-
-        index = 0
-        f_x = (1 - q) * parameters[index + 0] + q * parameters[index + 1]
-        f_y = (1 - q) * parameters[index + 2] + q * parameters[index + 3]
-        f_z = (1 - q) * parameters[index + 4] + q * parameters[index + 5]
-
-        return f_x, f_y, f_z
-
-    def compute_linear_spline_2(self, parameters, step, horizon_leg):
-        """
-        Compute the linear spline parametrization of the GRF (2 splines)
-        """
-
-        tau = step / (horizon_leg)
-
-        index = 0
-        index = jax.numpy.where(step > self.horizon / 2, 1, index)
-
-        tau = jax.numpy.where(step > self.horizon / 2, tau - 1, tau)
-        q = (tau - 0.0) / (1.0 - 0.0)
-
-        f_x = (1 - q) * parameters[index + 0] + q * parameters[index + 1]
-        f_y = (1 - q) * parameters[index + 3] + q * parameters[index + 4]
-        f_z = (1 - q) * parameters[index + 6] + q * parameters[index + 7]
-
-        return f_x, f_y, f_z
-
-    def compute_linear_spline_N(self, parameters, step, horizon_leg):
+    def compute_linear_spline(self, parameters, step, horizon_leg):
         """
         Compute the linear spline parametrization of the GRF (N splines)
         """
-
-        tau = step / (horizon_leg)
 
         # Adding the last boundary for the case when step is exactly self.horizon
         chunk_boundaries = jnp.linspace(0, self.horizon, self.num_spline + 1)
         # Find the chunk index by checking in which interval the step falls
         index = jnp.max(jnp.where(step >= chunk_boundaries, jnp.arange(self.num_spline + 1), 0))
+        
+        tau = step / (horizon_leg/self.num_spline)
+        tau = tau - 1*index
 
-        tau = jax.numpy.where(jnp.isin(step, chunk_boundaries[1:]), tau - 1, tau)
         q = (tau - 0.0) / (1.0 - 0.0)
 
         shift = self.num_spline + 1
@@ -317,96 +225,20 @@ class Sampling_MPC:
 
         return f_x, f_y, f_z
 
+
     def compute_cubic_spline(self, parameters, step, horizon_leg):
-        """
-        Compute the cubic spline parametrization of the GRF
-        """
-
-        tau = step / (horizon_leg)
-        q = (tau - 0.0) / (1.0 - 0.0)
-        a = 2 * q * q * q - 3 * q * q + 1
-        b = (q * q * q - 2 * q * q + q) * 1.0
-        c = -2 * q * q * q + 3 * q * q
-        d = (q * q * q - q * q) * 1.0
-
-        phi = (1.0 / 2.0) * (((parameters[2] - parameters[1]) / 1.0) + ((parameters[1] - parameters[0]) / 1.0))
-        phi_next = (1.0 / 2.0) * (((parameters[3] - parameters[2]) / 1.0) + ((parameters[2] - parameters[1]) / 1.0))
-        f_x = a * parameters[1] + b * phi + c * parameters[2] + d * phi_next
-
-        phi = (1.0 / 2.0) * (((parameters[6] - parameters[5]) / 1.0) + ((parameters[5] - parameters[4]) / 1.0))
-        phi_next = (1.0 / 2.0) * (((parameters[7] - parameters[6]) / 1.0) + ((parameters[6] - parameters[5]) / 1.0))
-        f_y = a * parameters[5] + b * phi + c * parameters[6] + d * phi_next
-
-        phi = (1.0 / 2.0) * (((parameters[10] - parameters[9]) / 1.0) + ((parameters[9] - parameters[8]) / 1.0))
-        phi_next = (1.0 / 2.0) * (((parameters[11] - parameters[10]) / 1.0) + ((parameters[10] - parameters[9]) / 1.0))
-        f_z = a * parameters[9] + b * phi + c * parameters[10] + d * phi_next
-
-        return f_x, f_y, f_z
-
-    def compute_cubic_spline_2(self, parameters, step, horizon_leg):
-        """
-        Compute the cubic spline parametrization of the GRF
-        """
-
-        tau = step / (horizon_leg)
-
-        index = 0
-        index = jax.numpy.where(step > self.horizon / 2, 1, index)
-        tau = jax.numpy.where(step > self.horizon / 2, tau - 1, tau)
-
-        start_index = 10 * index
-
-        q = (tau - 0.0) / (1.0 - 0.0)
-        a = 2 * q * q * q - 3 * q * q + 1
-        b = (q * q * q - 2 * q * q + q) * 1.0
-        c = -2 * q * q * q + 3 * q * q
-        d = (q * q * q - q * q) * 1.0
-
-        phi = (1.0 / 2.0) * (
-            ((parameters[start_index + 2] - parameters[start_index + 1]) / 1.0)
-            + ((parameters[start_index + 1] - parameters[start_index + 0]) / 1.0)
-        )
-        phi_next = (1.0 / 2.0) * (
-            ((parameters[start_index + 3] - parameters[start_index + 2]) / 1.0)
-            + ((parameters[start_index + 2] - parameters[start_index + 1]) / 1.0)
-        )
-        f_x = a * parameters[start_index + 1] + b * phi + c * parameters[start_index + 2] + d * phi_next
-
-        phi = (1.0 / 2.0) * (
-            ((parameters[start_index + 6] - parameters[start_index + 5]) / 1.0)
-            + ((parameters[start_index + 5] - parameters[start_index + 4]) / 1.0)
-        )
-        phi_next = (1.0 / 2.0) * (
-            ((parameters[start_index + 7] - parameters[start_index + 6]) / 1.0)
-            + ((parameters[start_index + 6] - parameters[start_index + 5]) / 1.0)
-        )
-        f_y = a * parameters[start_index + 5] + b * phi + c * parameters[start_index + 6] + d * phi_next
-
-        phi = (1.0 / 2.0) * (
-            ((parameters[start_index + 10] - parameters[start_index + 9]) / 1.0)
-            + ((parameters[start_index + 9] - parameters[start_index + 8]) / 1.0)
-        )
-        phi_next = (1.0 / 2.0) * (
-            ((parameters[start_index + 11] - parameters[start_index + 10]) / 1.0)
-            + ((parameters[start_index + 10] - parameters[start_index + 9]) / 1.0)
-        )
-        f_z = a * parameters[start_index + 9] + b * phi + c * parameters[start_index + 10] + d * phi_next
-
-        return f_x, f_y, f_z
-
-    def compute_cubic_spline_N(self, parameters, step, horizon_leg):
         """
         Compute the cubic spline parametrization of the GRF (N splines)
         """
-
-        tau = step / (horizon_leg)
 
         # Adding the last boundary for the case when step is exactly self.horizon
         chunk_boundaries = jnp.linspace(0, self.horizon, self.num_spline + 1)
         # Find the chunk index by checking in which interval the step falls
         index = jnp.max(jnp.where(step >= chunk_boundaries, jnp.arange(self.num_spline + 1), 0))
+        
+        tau = step / (horizon_leg/self.num_spline)
+        tau = tau - 1*index
 
-        tau = jax.numpy.where(jnp.isin(step, chunk_boundaries[1:]), tau - 1, tau)
         q = (tau - 0.0) / (1.0 - 0.0)
 
         start_index = 10 * index
@@ -638,13 +470,13 @@ class Sampling_MPC:
             )
             state_next = self.robot.integrate_jax(state, input, current_contact, n)
 
-            # Compute the cost
 
             # Calculate cost regulation state
             state_error = state_next - reference[0 : self.state_dim]
             error_cost = state_error.T @ self.Q @ state_error
 
-            input_for_cost = jnp.array(
+            # Calculate cost regulation input
+            """input_for_cost = jnp.array(
                 [
                     jnp.float32(0),
                     jnp.float32(0),
@@ -674,10 +506,9 @@ class Sampling_MPC:
                 dtype=dtype_general,
             )
 
-            # Calculate cost regulation input
-            # error_cost += input_for_cost.T@self.R@input_for_cost
+            error_cost += input_for_cost.T@self.R@input_for_cost"""
 
-            # saturate in the case of NaN
+            # Saturate in the case of NaN
             # state_next = jnp.where(jnp.isnan(state_next), 100, state_next)
             # error_cost = jnp.where(jnp.isnan(error_cost), 1000, error_cost)
             # cost = jnp.where(jnp.isnan(cost), 10000, cost)
@@ -726,19 +557,19 @@ class Sampling_MPC:
         )
 
         FL_control_temp = copy.deepcopy(FL_control)
-        FL_control[0], FL_control[2], FL_control[4] = self.spline_fun_FL(FL_control_temp, step)
+        FL_control[0], FL_control[2], FL_control[4] = self.spline_fun_FL(FL_control_temp, step, self.horizon)
         # FL_control[1], FL_control[3], FL_control[5] = controller.spline_fun_FL(FL_control_temp, controller.horizon+step)
 
         FR_control_temp = copy.deepcopy(FR_control)
-        FR_control[0], FR_control[2], FR_control[4] = self.spline_fun_FR(FR_control_temp, step)
+        FR_control[0], FR_control[2], FR_control[4] = self.spline_fun_FR(FR_control_temp, step, self.horizon)
         # FR_control[1], FR_control[3], FR_control[5] = controller.spline_fun_FR(FR_control_temp, controller.horizon+step)
 
         RL_control_temp = copy.deepcopy(RL_control)
-        RL_control[0], RL_control[2], RL_control[4] = self.spline_fun_RL(RL_control_temp, step)
+        RL_control[0], RL_control[2], RL_control[4] = self.spline_fun_RL(RL_control_temp, step, self.horizon)
         # RL_control[1], RL_control[3], RL_control[5] = controller.spline_fun_RL(RL_control_temp, controller.horizon+step)
 
         RR_control_temp = copy.deepcopy(RR_control)
-        RR_control[0], RR_control[2], RR_control[4] = self.spline_fun_RR(RR_control_temp, step)
+        RR_control[0], RR_control[2], RR_control[4] = self.spline_fun_RR(RR_control_temp, step, self.horizon)
         # RR_control[1], RR_control[3], RR_control[5] = controller.spline_fun_RR(RR_control_temp, controller.horizon+step)
 
         best_control_parameters[0 : self.num_control_parameters_single_leg] = FL_control
