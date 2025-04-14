@@ -21,18 +21,8 @@ class Sampling_MPC:
 
     def __init__(
         self,
-        horizon=200,
-        dt=0.01,
-        num_parallel_computations=10000,
-        sampling_method='random_sampling',
-        control_parametrization="linear_spline_1",
         device="gpu",
     ):
-        """
-        Args:
-            horizon (int): how much to look into the future for optimizing the gains
-            dt (int): desidered sampling time
-        """
 
         self.num_parallel_computations = config.mpc_params["num_parallel_computations"]
         self.sampling_method = config.mpc_params["sampling_method"]

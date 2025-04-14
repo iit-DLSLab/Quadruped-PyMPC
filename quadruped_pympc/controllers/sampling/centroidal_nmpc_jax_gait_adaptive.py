@@ -20,12 +20,10 @@ dtype_general = 'float32'
 class Sampling_MPC:
     """This is a small class that implements a sampling based control law"""
 
-    def __init__(self, device="gpu"):
-        """
-        Args:
-            horizon (int): how much to look into the future for optimizing the gains
-            dt (int): desidered sampling time
-        """
+    def __init__(
+        self,
+        device="gpu",
+    ):
 
         self.num_parallel_computations = config.mpc_params["num_parallel_computations"]
         self.sampling_method = config.mpc_params["sampling_method"]
