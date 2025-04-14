@@ -4,8 +4,6 @@ np.set_printoptions(precision=3, suppress=True)
 
 import os
 
-dir_path = os.path.dirname(os.path.realpath(__file__))
-
 os.environ['XLA_FLAGS'] = '--xla_gpu_triton_gemm_any=True'
 import jax
 import jax.numpy as jnp
@@ -13,14 +11,11 @@ from jax import random
 
 import sys
 
-sys.path.append(dir_path)
-sys.path.append(dir_path + "/../")
-
 import copy
 
-from centroidal_model_jax import Centroidal_Model_JAX
+from .centroidal_model_jax import Centroidal_Model_JAX
 
-dtype_general = 'float32'
+import quadruped_pympc.config as config
 
 dtype_general = "float32"
 

@@ -14,8 +14,11 @@ class EarlyStanceDetector:
 
         self.activated = True
 
+        if(cfg.mpc_params['type'] == 'sampling'):
+            self.activated = False # TO FIX
+
         self.early_stance_time_threshold = 0.07
-        self.relative_tracking_error_threshold = 0.2
+        self.relative_tracking_error_threshold = 0.5
         self.absolute_min_distance_error_threshold = 0.1
 
         self.gait_cycles_after_step_height_enanchement = -1

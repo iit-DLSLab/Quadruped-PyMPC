@@ -3,17 +3,7 @@
 
 # Authors: Giulio Turrisi -
 
-import os
 import time
-
-import os
-
-dir_path = os.path.dirname(os.path.realpath(__file__))
-
-import sys
-
-sys.path.append(dir_path)
-sys.path.append(dir_path + "/../")
 
 import jax
 import jax.numpy as jnp
