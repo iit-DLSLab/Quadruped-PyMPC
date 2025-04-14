@@ -21,9 +21,9 @@ class Sampling_MPC:
 
     def __init__(
         self,
-        device="gpu",
     ):
 
+        device = config.mpc_params["device"]
         self.num_parallel_computations = config.mpc_params["num_parallel_computations"]
         self.sampling_method = config.mpc_params["sampling_method"]
         self.control_parametrization = config.mpc_params["control_parametrization"]
