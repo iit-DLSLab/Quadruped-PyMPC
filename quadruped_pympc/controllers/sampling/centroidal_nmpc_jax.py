@@ -36,7 +36,9 @@ class Sampling_MPC:
         self.control_dim = 24
         self.reference_dim = self.state_dim
 
-        self.max_sampling_forces = 30
+        self.max_sampling_forces_x = 10
+        self.max_sampling_forces_y = 10
+        self.max_sampling_forces_z = 30
 
         if device == "gpu":
             try:
@@ -165,8 +167,8 @@ class Sampling_MPC:
         self.master_key = jax.random.PRNGKey(42)
         self.initial_random_parameters = jax.random.uniform(
             key=self.master_key,
-            minval=-self.max_sampling_forces,
-            maxval=self.max_sampling_forces,
+            minval=-self.max_sampling_forces_z,
+            maxval=self.max_sampling_forces_z,
             shape=(self.num_parallel_computations, self.num_control_parameters),
         )
 
@@ -383,20 +385,20 @@ class Sampling_MPC:
             f_z_RR = reference_force_stance_legs + f_z_RR
 
             # Foot in swing (contact sequence = 0) have zero force
-            f_x_FL = f_x_FL * contact_sequence[0][n]
-            f_y_FL = f_y_FL * contact_sequence[0][n]
+            f_x_FL = f_x_FL * contact_sequence[0][n] / (self.max_sampling_forces_z/self.max_sampling_forces_x)
+            f_y_FL = f_y_FL * contact_sequence[0][n] / (self.max_sampling_forces_z/self.max_sampling_forces_y)
             f_z_FL = f_z_FL * contact_sequence[0][n]
 
-            f_x_FR = f_x_FR * contact_sequence[1][n]
-            f_y_FR = f_y_FR * contact_sequence[1][n]
+            f_x_FR = f_x_FR * contact_sequence[1][n] / (self.max_sampling_forces_z/self.max_sampling_forces_x)
+            f_y_FR = f_y_FR * contact_sequence[1][n] / (self.max_sampling_forces_z/self.max_sampling_forces_y)
             f_z_FR = f_z_FR * contact_sequence[1][n]
 
-            f_x_RL = f_x_RL * contact_sequence[2][n]
-            f_y_RL = f_y_RL * contact_sequence[2][n]
+            f_x_RL = f_x_RL * contact_sequence[2][n] / (self.max_sampling_forces_z/self.max_sampling_forces_x)
+            f_y_RL = f_y_RL * contact_sequence[2][n] / (self.max_sampling_forces_z/self.max_sampling_forces_y)
             f_z_RL = f_z_RL * contact_sequence[2][n]
 
-            f_x_RR = f_x_RR * contact_sequence[3][n]
-            f_y_RR = f_y_RR * contact_sequence[3][n]
+            f_x_RR = f_x_RR * contact_sequence[3][n] / (self.max_sampling_forces_z/self.max_sampling_forces_x)
+            f_y_RR = f_y_RR * contact_sequence[3][n] / (self.max_sampling_forces_z/self.max_sampling_forces_y)
             f_z_RR = f_z_RR * contact_sequence[3][n]
 
             # Enforce force constraints
@@ -422,16 +424,16 @@ class Sampling_MPC:
                     jnp.float32(0),
                     f_x_FL,
                     f_y_FL,
-                    f_z_FL,  # foot position fl
+                    f_z_FL,  
                     f_x_FR,
                     f_y_FR,
-                    f_z_FR,  # foot position fr
+                    f_z_FR,  
                     f_x_RL,
                     f_y_RL,
-                    f_z_RL,  # foot position rl
+                    f_z_RL,  
                     f_x_RR,
                     f_y_RR,
-                    f_z_RR,  # foot position rr
+                    f_z_RR,
                 ],
                 dtype=dtype_general,
             )
@@ -719,20 +721,20 @@ class Sampling_MPC:
         fz_RL = reference_force_stance_legs + fz_RL
         fz_RR = reference_force_stance_legs + fz_RR
 
-        fx_FL = fx_FL * contact_sequence[0][0]
-        fy_FL = fy_FL * contact_sequence[0][0]
-        fz_FL = fz_FL * contact_sequence[0][0]
+        fx_FL = fx_FL * contact_sequence[0][0] / (self.max_sampling_forces_z/self.max_sampling_forces_x)
+        fy_FL = fy_FL * contact_sequence[0][0] / (self.max_sampling_forces_z/self.max_sampling_forces_y)
+        fz_FL = fz_FL * contact_sequence[0][0] 
 
-        fx_FR = fx_FR * contact_sequence[1][0]
-        fy_FR = fy_FR * contact_sequence[1][0]
+        fx_FR = fx_FR * contact_sequence[1][0] / (self.max_sampling_forces_z/self.max_sampling_forces_x)
+        fy_FR = fy_FR * contact_sequence[1][0] / (self.max_sampling_forces_z/self.max_sampling_forces_y)
         fz_FR = fz_FR * contact_sequence[1][0]
 
-        fx_RL = fx_RL * contact_sequence[2][0]
-        fy_RL = fy_RL * contact_sequence[2][0]
+        fx_RL = fx_RL * contact_sequence[2][0] / (self.max_sampling_forces_z/self.max_sampling_forces_x)
+        fy_RL = fy_RL * contact_sequence[2][0] / (self.max_sampling_forces_z/self.max_sampling_forces_y)
         fz_RL = fz_RL * contact_sequence[2][0]
 
-        fx_RR = fx_RR * contact_sequence[3][0]
-        fy_RR = fy_RR * contact_sequence[3][0]
+        fx_RR = fx_RR * contact_sequence[3][0] / (self.max_sampling_forces_z/self.max_sampling_forces_x)
+        fy_RR = fy_RR * contact_sequence[3][0] / (self.max_sampling_forces_z/self.max_sampling_forces_y)
         fz_RR = fz_RR * contact_sequence[3][0]
 
         # Enforce force constraints
@@ -863,20 +865,20 @@ class Sampling_MPC:
         fz_RL = reference_force_stance_legs + fz_RL
         fz_RR = reference_force_stance_legs + fz_RR
 
-        fx_FL = fx_FL * contact_sequence[0][0]
-        fy_FL = fy_FL * contact_sequence[0][0]
-        fz_FL = fz_FL * contact_sequence[0][0]
+        fx_FL = fx_FL * contact_sequence[0][0] / (self.max_sampling_forces_z/self.max_sampling_forces_x)
+        fy_FL = fy_FL * contact_sequence[0][0] / (self.max_sampling_forces_z/self.max_sampling_forces_y)
+        fz_FL = fz_FL * contact_sequence[0][0] 
 
-        fx_FR = fx_FR * contact_sequence[1][0]
-        fy_FR = fy_FR * contact_sequence[1][0]
+        fx_FR = fx_FR * contact_sequence[1][0] / (self.max_sampling_forces_z/self.max_sampling_forces_x)
+        fy_FR = fy_FR * contact_sequence[1][0] / (self.max_sampling_forces_z/self.max_sampling_forces_y)
         fz_FR = fz_FR * contact_sequence[1][0]
 
-        fx_RL = fx_RL * contact_sequence[2][0]
-        fy_RL = fy_RL * contact_sequence[2][0]
+        fx_RL = fx_RL * contact_sequence[2][0] / (self.max_sampling_forces_z/self.max_sampling_forces_x)
+        fy_RL = fy_RL * contact_sequence[2][0] / (self.max_sampling_forces_z/self.max_sampling_forces_y)
         fz_RL = fz_RL * contact_sequence[2][0]
 
-        fx_RR = fx_RR * contact_sequence[3][0]
-        fy_RR = fy_RR * contact_sequence[3][0]
+        fx_RR = fx_RR * contact_sequence[3][0] / (self.max_sampling_forces_z/self.max_sampling_forces_x)
+        fy_RR = fy_RR * contact_sequence[3][0] / (self.max_sampling_forces_z/self.max_sampling_forces_y)
         fz_RR = fz_RR * contact_sequence[3][0]
 
         # Enforce force constraints
@@ -1009,20 +1011,20 @@ class Sampling_MPC:
         fz_RL = reference_force_stance_legs + fz_RL
         fz_RR = reference_force_stance_legs + fz_RR
 
-        fx_FL = fx_FL * contact_sequence[0][0]
-        fy_FL = fy_FL * contact_sequence[0][0]
-        fz_FL = fz_FL * contact_sequence[0][0]
+        fx_FL = fx_FL * contact_sequence[0][0] / (self.max_sampling_forces_z/self.max_sampling_forces_x)
+        fy_FL = fy_FL * contact_sequence[0][0] / (self.max_sampling_forces_z/self.max_sampling_forces_y)
+        fz_FL = fz_FL * contact_sequence[0][0] 
 
-        fx_FR = fx_FR * contact_sequence[1][0]
-        fy_FR = fy_FR * contact_sequence[1][0]
+        fx_FR = fx_FR * contact_sequence[1][0] / (self.max_sampling_forces_z/self.max_sampling_forces_x)
+        fy_FR = fy_FR * contact_sequence[1][0] / (self.max_sampling_forces_z/self.max_sampling_forces_y)
         fz_FR = fz_FR * contact_sequence[1][0]
 
-        fx_RL = fx_RL * contact_sequence[2][0]
-        fy_RL = fy_RL * contact_sequence[2][0]
+        fx_RL = fx_RL * contact_sequence[2][0] / (self.max_sampling_forces_z/self.max_sampling_forces_x)
+        fy_RL = fy_RL * contact_sequence[2][0] / (self.max_sampling_forces_z/self.max_sampling_forces_y)
         fz_RL = fz_RL * contact_sequence[2][0]
 
-        fx_RR = fx_RR * contact_sequence[3][0]
-        fy_RR = fy_RR * contact_sequence[3][0]
+        fx_RR = fx_RR * contact_sequence[3][0] / (self.max_sampling_forces_z/self.max_sampling_forces_x)
+        fy_RR = fy_RR * contact_sequence[3][0] / (self.max_sampling_forces_z/self.max_sampling_forces_y)
         fz_RR = fz_RR * contact_sequence[3][0]
 
         # Enforce force constraints
