@@ -26,7 +26,7 @@ class SwingTrajectoryController:
         self.swing_time = [0, 0, 0, 0]
 
         self.use_feedback_linearization = True
-        self.use_gravity_compensation_only = False
+        self.use_friction_compensation = True
 
     def regenerate_swing_trajectory_generator(self, step_height: float, swing_period: float) -> None:
         if self.generator == "scipy":
@@ -40,7 +40,7 @@ class SwingTrajectoryController:
         self.swing_period = swing_period
 
     def compute_swing_control_cartesian_space(
-        self, leg_id, q_dot, J, J_dot, lift_off, touch_down, foot_pos, foot_vel, h, mass_matrix, early_stance_hitmoments, early_stance_hitpoints
+        self, leg_id, q_dot, J, J_dot, lift_off, touch_down, foot_pos, foot_vel, passive_force, h, mass_matrix, early_stance_hitmoments, early_stance_hitpoints
     ):
         """TODO: Docstring.
 
@@ -83,6 +83,9 @@ class SwingTrajectoryController:
         tau_swing = J.T @ (self.position_gain_fb * (err_pos) + self.velocity_gain_fb * (err_vel))
         if self.use_feedback_linearization:
             tau_swing += mass_matrix @ np.linalg.pinv(J) @ (accelleration - J_dot @ q_dot) + h
+        
+        if self.use_friction_compensation:
+            tau_swing -= passive_force
 
         return tau_swing, des_foot_pos, des_foot_vel
 

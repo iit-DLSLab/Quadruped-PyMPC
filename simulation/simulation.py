@@ -187,9 +187,10 @@ def run_simulation(
             legs_qpos_idx = env.legs_qpos_idx  # leg_name: [idx1, idx2, idx3] ...
             joints_pos = LegsAttr(FL=legs_qvel_idx.FL, FR=legs_qvel_idx.FR, RL=legs_qvel_idx.RL, RR=legs_qvel_idx.RR)
 
-            # Get Centrifugal, Coriolis, Gravity for the swing controller
+            # Get Centrifugal, Coriolis, Gravity, Friction for the swing controller
             legs_mass_matrix = env.legs_mass_matrix
             legs_qfrc_bias = env.legs_qfrc_bias
+            legs_qfrc_passive = env.legs_qfrc_passive
 
             # Compute feet jacobians
             feet_jac = env.feet_jacobians(frame='world', return_rot_jac=False)
@@ -219,6 +220,7 @@ def run_simulation(
                 feet_jac,
                 feet_jac_dot,
                 feet_vel,
+                legs_qfrc_passive,
                 legs_qfrc_bias,
                 legs_mass_matrix,
                 legs_qpos_idx,
@@ -315,7 +317,7 @@ def run_simulation(
                     print("Environment terminated")
                 else:
                     state_obs_history.append(ep_state_history)
-                    ctrl_state_history.append(ep_ctrl_state_history)
+                    ctrl_state_history.append(ep_ctrl_state_history)     
 
                 env.reset(random=True)
                 quadrupedpympc_wrapper.reset(initial_feet_pos=env.feet_pos(frame="world"))

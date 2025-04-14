@@ -67,6 +67,7 @@ class QuadrupedPyMPC_Wrapper:
         feet_jac: LegsAttr,
         feet_jac_dot: LegsAttr,
         feet_vel: LegsAttr,
+        legs_qfrc_passive: LegsAttr,
         legs_qfrc_bias: LegsAttr,
         legs_mass_matrix: LegsAttr,
         legs_qpos_idx: LegsAttr,
@@ -96,6 +97,7 @@ class QuadrupedPyMPC_Wrapper:
             feet_jac (LegsAttr): jacobian of the feet
             feet_jac_dot (LegsAttr): derivative of the jacobian of the feet
             feet_vel (LegsAttr): velocity of the feet
+            legs_qfrc_passive (LegsAttr): passive forces acting on the joints
             legs_qfrc_bias (LegsAttr): gravity compensation, coriolis and centrifugal forces
             legs_mass_matrix (LegsAttr): mass matrix of the legs
             legs_qvel_idx (LegsAttr): indices of the joint velocities
@@ -172,6 +174,7 @@ class QuadrupedPyMPC_Wrapper:
             feet_jac_dot,
             feet_pos,
             feet_vel,
+            legs_qfrc_passive,
             legs_qfrc_bias,
             legs_mass_matrix,
             self.nmpc_GRFs,

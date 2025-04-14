@@ -392,6 +392,7 @@ class WBInterface:
         feet_jac_dot: LegsAttr,
         feet_pos: LegsAttr,
         feet_vel: LegsAttr,
+        legs_qfrc_passive: LegsAttr,
         legs_qfrc_bias: LegsAttr,
         legs_mass_matrix: LegsAttr,
         nmpc_GRFs: LegsAttr,
@@ -415,6 +416,7 @@ class WBInterface:
             feet_jac_dot (LegsAttr): derivative of the jacobian
             feet_pos (LegsAttr): feet positions in world frame
             feet_vel (LegsAttr): feet velocities in world frame
+            legs_qfrc_passive (LegsAttr): passive forces and torques
             legs_qfrc_bias (LegsAttr): joint forces and torques
             legs_mass_matrix (LegsAttr): mass matrix of the legs
             nmpc_GRFs (LegsAttr): ground reaction forces from the MPC in world frame
@@ -472,6 +474,7 @@ class WBInterface:
                             touch_down=nmpc_footholds[leg_name],
                             foot_pos=feet_pos[leg_name],
                             foot_vel=feet_vel[leg_name],
+                            passive_force=legs_qfrc_passive[leg_name],
                             h=legs_qfrc_bias[leg_name],
                             mass_matrix=legs_mass_matrix[leg_name],
                             early_stance_hitmoments=self.esd.hitmoments[leg_name],
