@@ -19,7 +19,7 @@ class SwingTrajectoryGenerator:
         scaling_factor = 1.5
         
         if early_stance_hitmoment != -1:# and early_stance_hitmoment < self.swing_period*0.9:
-            reflex_maximum_height = 0.2 # this should be per robot basis
+            reflex_maximum_height = 0.15 # this should be per robot basis
             
             p1 = x0.copy()
             p1[:2] = x0[:2] - 0.01 * (xf[:2]-x0[:2])
