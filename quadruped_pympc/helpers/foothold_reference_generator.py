@@ -43,6 +43,11 @@ class FootholdReferenceGenerator:
         # the default foothold, we need to use a variable to add an offset
         self.hip_offset = 0.1
 
+        # Placeholder for the last reference footholds before modification from height/vfa
+        self.last_reference_footholds = LegsAttr(
+            FL=np.array([0, 0, 0]), FR=np.array([0, 0, 0]), RL=np.array([0, 0, 0]), RR=np.array([0, 0, 0])
+        )
+
     def compute_footholds_reference(
         self,
         base_position: np.ndarray,
@@ -143,6 +148,10 @@ class FootholdReferenceGenerator:
         for leg_id in ['FL', 'FR', 'RL', 'RR']:
             ref_feet[leg_id][2] = self.lift_off_positions[leg_id][2]  # - 0.02
 
+        # Update the last reference footholds to the current ones in order
+        # to keep track of the modifcations done to vision (if any)
+        self.last_reference_footholds = copy.deepcopy(ref_feet)
+        
         return ref_feet
 
     def update_lift_off_positions(
