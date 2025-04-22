@@ -6,7 +6,7 @@ from quadruped_pympc.helpers.quadruped_utils import GaitType
 
 # These are used both for a real experiment and a simulation -----------
 # These are the only attributes needed per quadruped, the rest can be computed automatically ----------------------
-robot = 'aliengo'  # 'go1', 'go2', 'b2', 'aliengo', 'hyqreal', 'mini_cheetah'  # TODO: Load from robot_descriptions.py
+robot = 'b2'  # 'go1', 'go2', 'b2', 'aliengo', 'hyqreal', 'mini_cheetah'  # TODO: Load from robot_descriptions.py
 
 from gym_quadruped.robot_cfgs import RobotConfig, get_robot_config
 robot_cfg: RobotConfig = get_robot_config(robot_name=robot)
@@ -184,6 +184,9 @@ simulation_params = {
     'impedence_joint_velocity_gain':  1.0,
 
     'step_height':                 0.3 * hip_height,  
+    'randomize_joint_friction':    None,    # 1.0,
+    'randomize_joint_damping':     None,    # 5.0,
+    'randomize_joint_stiffness':   None,    
 
     # Visual Foothold adapatation
     "visual_foothold_adaptation":  'blind', #'blind', 'height', 'vfa'
@@ -213,5 +216,11 @@ simulation_params = {
 
     'scene':                       'flat',  # flat, random_boxes, random_pyramids, perlin
 
+    # Network parameters
+    'network':                     'lstm',  # 'mlp', 'lstm'
+
+    'pre_trained_model':           'flat',
+
+    'trained_model':               'flat',
     }
 # -----------------------------------------------------------------------
