@@ -132,6 +132,8 @@ For a real-robot deployment, remember to put inside the script these flags to fa
   USE_MUJOCO_SIMULATION = False
   ```
 
+and to use a nice [state estimator](https://github.com/iit-DLSLab/muse). 
+
 ## Citing this work
 
 If you find the work useful, please consider citing one of our works: 
