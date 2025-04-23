@@ -80,7 +80,7 @@ The first time you run the simulation with acados, in the terminal you will be a
     pip install -e .
     ```
 
-## How to run
+## How to run - Simulation
 
 1. activate the conda environment
    
@@ -103,7 +103,29 @@ arrow left, arrow right -> add positive or negative yaw velocity
 ctrl -> set zero all velocities
 ```
 
+## How to run - ROS2
+Point 1 is the same as above.
 
+2. go in ros2/msgs_ws and compile the messages
+  
+  ```
+  colcon build
+  source install/setup.bash
+  ```
+
+3. you can run now the node
+
+  ```
+  python3 src/run_controller.py
+  ```
+
+For a real-robot deployment, put inside the node these flags to false
+
+  ```
+  USE_MUJOCO_RENDER = False
+  USE_MUJOCO_SIMULATION = False
+  ```
+  
 ## Citing this work
 
 If you find the work useful, please consider citing one of our works: 
