@@ -24,7 +24,7 @@ class Console():
         self.controller_node.wb_interface.stc.position_gain_fb = 100
         self.controller_node.wb_interface.stc.velocity_gain_fb = 10
         self.controller_node.wb_interface.stc.use_feedback_linearization = False
-        self.controller_node.wb_interface.stc.use_gravity_compensation_only = False
+        self.controller_node.wb_interface.stc.use_friction_compensation = False
 
         # Step Height holder to keep track of the step height
         self.step_height_holder = cfg.simulation_params['step_height']
@@ -214,13 +214,13 @@ class Console():
                             self.controller_node.wb_interface.stc.use_feedback_linearization = False
 
                     
-                    print("Use Gravity Comp. only: ", self.controller_node.wb_interface.stc.use_gravity_compensation_only)
-                    temp = input("Use Gravity Comp. only: >>> ")
+                    print("Use Friction Comp. only: ", self.controller_node.wb_interface.stc.use_friction_compensation)
+                    temp = input("Use Friction Comp. only: >>> ")
                     if(temp != ""):
                         if(temp == "True"):
-                            self.controller_node.wb_interface.stc.use_gravity_compensation_only = True
+                            self.controller_node.wb_interface.stc.use_friction_compensation = True
                         elif(temp == "False"):
-                            self.controller_node.wb_interface.stc.use_gravity_compensation_only = False
+                            self.controller_node.wb_interface.stc.use_friction_compensation = False
                     
                     
 
