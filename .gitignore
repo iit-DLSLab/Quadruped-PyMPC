@@ -320,4 +320,4 @@ quadruped_pympc/controllers/gradient/nominal/c_generated_code_gait_adaptive/
 # ROS2
 ros2/msgs_ws/build/
 ros2/msgs_ws/install/
-ros2/msgs_ws/logs/
+ros2/msgs_ws/log/
