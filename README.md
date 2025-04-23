@@ -104,28 +104,28 @@ ctrl -> set zero all velocities
 ```
 
 ## How to run - ROS2
-In the installation, use the file mamba_environment_ros2.yml. Then:
+During the installation procedure, use the file **mamba_environment_ros2.yml**. Then:
 
 1. activate the conda environment
    
    ```
-   conda activate quadruped_pympc_env
+   conda activate quadruped_pympc_ros2_env
    ```
 
-2. go in ros2/msgs_ws and compile the messages
+2. go in the folder [ros2/msgs_ws](https://github.com/iit-DLSLab/Quadruped-PyMPC/tree/main/ros2/msgs_ws) and compile the messages
   
   ```
   colcon build
   source install/setup.bash
   ```
 
-3. you can run now the node
+3. you can run now the script
 
   ```
   python3 src/run_controller.py
   ```
 
-For a real-robot deployment, put inside the node these flags to false
+For a real-robot deployment, remember to put inside the script these flags to false
 
   ```
   USE_MUJOCO_RENDER = False
