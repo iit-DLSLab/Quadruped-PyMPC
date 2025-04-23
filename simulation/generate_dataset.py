@@ -53,12 +53,17 @@ if __name__ == "__main__":
 
     # We can also convert the dataset to a npy file
     n_trajs = dataset.n_trajectories
+    desired_fps = 50.0
+    actual_fps = 1.0 / reproduced_env.mjModel.opt.timestep
+    skipping_factor = int(actual_fps / desired_fps)
     for traj_id in range(n_trajs):
-        obs_t = {obs_name: dataset.recordings[obs_name][traj_id] for obs_name in reproduced_env.state_obs_names}
+        
+        obs_t = {obs_name: dataset.recordings[obs_name][traj_id][::skipping_factor] for obs_name in reproduced_env.state_obs_names}
+        
         base_pos = obs_t['base_pos']
         base_ori_quat_xyzw = np.roll(obs_t['base_ori_quat_wxyz'],-1)
         qpos_js = obs_t['qpos_js']
-        fps = 1./reproduced_env.mjModel.opt.timestep
+        
         data = {
             "joints_list": ["FL_hip_joint", "FL_thigh_joint", "FL_calf_joint", 
                             "FR_hip_joint", "FR_thigh_joint", "FR_calf_joint", 
@@ -67,7 +72,7 @@ if __name__ == "__main__":
             "joint_positions": [row for row in qpos_js],
             'root_position': [row for row in base_pos],
             'root_quaternion': [row for row in base_ori_quat_xyzw],
-            "fps": fps,
+            "fps": desired_fps,
         }
         # Save the data to an .npy file
         output_file = f"datasets/traj_{traj_id}.npy"
