@@ -104,7 +104,13 @@ ctrl -> set zero all velocities
 ```
 
 ## How to run - ROS2
-Point 1 is the same as above.
+In the installation, use the file mamba_environment_ros2.yml. Then:
+
+1. activate the conda environment
+   
+   ```
+   conda activate quadruped_pympc_env
+   ```
 
 2. go in ros2/msgs_ws and compile the messages
   
@@ -125,7 +131,7 @@ For a real-robot deployment, put inside the node these flags to false
   USE_MUJOCO_RENDER = False
   USE_MUJOCO_SIMULATION = False
   ```
-  
+
 ## Citing this work
 
 If you find the work useful, please consider citing one of our works: 
