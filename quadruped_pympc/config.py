@@ -173,6 +173,7 @@ mpc_params = {
 
     # ----- END properties for the sampling-based mpc -----
 
+    'reflex_trigger':                          'tracking', # 'tracking', 'geom_contact'
     }
 # -----------------------------------------------------------------------
 

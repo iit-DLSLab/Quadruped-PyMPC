@@ -25,7 +25,10 @@ class WBInterface:
     swing trajectory control, and terrain estimation.
     """
 
-    def __init__(self, initial_feet_pos: LegsAttr, legs_order: tuple[str, str, str, str] = ('FL', 'FR', 'RL', 'RR')):
+    def __init__(self,
+                 initial_feet_pos: LegsAttr,
+                 legs_order: tuple[str, str, str, str] = ('FL', 'FR', 'RL', 'RR'),
+                 feet_geom_id : LegsAttr = None):
         """Constructor of the WBInterface class
 
         Args:
@@ -96,7 +99,7 @@ class WBInterface:
         self.vm = VelocityModulator()
 
         # Early Stance detector -------------------------------------------------------------------
-        self.esd = EarlyStanceDetector()
+        self.esd = EarlyStanceDetector(feet_geom_id)
 
         self.current_contact = np.array([1, 1, 1, 1])
         self.previous_contact = np.array([1, 1, 1, 1])
@@ -406,6 +409,7 @@ class WBInterface:
         nmpc_joints_vel,
         nmpc_joints_acc,
         nmpc_predicted_state,
+        mujoco_contact,
     ) -> LegsAttr:
         """Compute the stance and swing torque.
 
@@ -442,7 +446,7 @@ class WBInterface:
         # Update the Early Stance Detector for Reflexes
         self.esd.update_detection(feet_pos, self.last_des_foot_pos, lift_off=self.frg.lift_off_positions, touch_down=nmpc_footholds, 
                         swing_time=self.stc.swing_time, swing_period=self.stc.swing_period, 
-                        current_contact=self.current_contact, previous_contact=self.previous_contact,
+                        current_contact=self.current_contact, previous_contact=self.previous_contact, mujoco_contact=mujoco_contact,
                         stc=self.stc)
 
 
