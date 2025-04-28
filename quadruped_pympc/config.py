@@ -6,7 +6,7 @@ from quadruped_pympc.helpers.quadruped_utils import GaitType
 
 # These are used both for a real experiment and a simulation -----------
 # These are the only attributes needed per quadruped, the rest can be computed automatically ----------------------
-robot = 'b2'  # 'go1', 'go2', 'b2', 'aliengo', 'hyqreal', 'mini_cheetah'  # TODO: Load from robot_descriptions.py
+robot = 'aliengo'  # 'go1', 'go2', 'b2', 'aliengo', 'hyqreal', 'mini_cheetah'  # TODO: Load from robot_descriptions.py
 
 from gym_quadruped.robot_cfgs import RobotConfig, get_robot_config
 robot_cfg: RobotConfig = get_robot_config(robot_name=robot)
@@ -172,8 +172,6 @@ mpc_params = {
     'shift_solution':                          False,
 
     # ----- END properties for the sampling-based mpc -----
-
-    'reflex_trigger':                          'tracking', # 'tracking', 'geom_contact'
     }
 # -----------------------------------------------------------------------
 
@@ -199,6 +197,11 @@ simulation_params = {
                                     'bound': {'step_freq': 1.8, 'duty_factor': 0.65, 'type': GaitType.BOUNDING.value},
                                     'full_stance': {'step_freq': 2, 'duty_factor': 0.65, 'type': GaitType.FULL_STANCE.value},
                                    },
+
+    # This is used to activate or deactivate the reflexes upon contact detection
+    'reflex_trigger_mode':       'tracking', # 'tracking', 'geom_contact', False
+    'reflex_height_enhancement': True,
+    'velocity_modulator': False,
 
     # velocity mode: human will give you the possibility to use the keyboard, the other are
     # forward only random linear-velocity, random will give you random linear-velocity and yaw-velocity

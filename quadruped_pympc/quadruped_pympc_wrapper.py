@@ -16,6 +16,7 @@ class QuadrupedPyMPC_Wrapper:
         self,
         initial_feet_pos: LegsAttr,
         legs_order: tuple[str, str, str, str] = ('FL', 'FR', 'RL', 'RR'),
+        feet_geom_id: LegsAttr = None,
         quadrupedpympc_observables_names: tuple[str, ...] = _DEFAULT_OBS,
     ):
         """Constructor of the QuadrupedPyMPC_Wrapper class.
@@ -33,7 +34,7 @@ class QuadrupedPyMPC_Wrapper:
         if cfg.mpc_params['type'] != 'sampling' and cfg.mpc_params['optimize_step_freq']:
             self.srbd_batched_controller_interface = SRBDBatchedControllerInterface()
 
-        self.wb_interface = WBInterface(initial_feet_pos=initial_feet_pos(frame='world'), legs_order=legs_order)
+        self.wb_interface = WBInterface(initial_feet_pos=initial_feet_pos(frame='world'), legs_order=legs_order, feet_geom_id =  feet_geom_id)
 
         self.nmpc_GRFs = LegsAttr(FL=np.zeros(3), FR=np.zeros(3), RL=np.zeros(3), RR=np.zeros(3))
         self.nmpc_footholds = LegsAttr(FL=np.zeros(3), FR=np.zeros(3), RL=np.zeros(3), RR=np.zeros(3))
@@ -74,6 +75,7 @@ class QuadrupedPyMPC_Wrapper:
         legs_qvel_idx: LegsAttr,
         tau: LegsAttr,
         inertia: np.ndarray,
+        mujoco_contact: np.ndarray,
     ) -> LegsAttr:
         """Given the current state of the robot (and the reference),
             compute the torques to be applied to the motors.
@@ -124,6 +126,7 @@ class QuadrupedPyMPC_Wrapper:
                 simulation_dt,
                 ref_base_lin_vel,
                 ref_base_ang_vel,
+                mujoco_contact,
             )
         )
 
@@ -188,6 +191,7 @@ class QuadrupedPyMPC_Wrapper:
             self.nmpc_joints_vel,
             self.nmpc_joints_acc,
             self.nmpc_predicted_state,
+            mujoco_contact,
         )
 
         # Do some PD control over the joints (these values are normally passed
