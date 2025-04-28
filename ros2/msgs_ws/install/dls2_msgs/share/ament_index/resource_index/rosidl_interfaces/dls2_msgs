@@ -1,8 +1,0 @@
-msg/BaseStateMsg.idl
-msg/BaseStateMsg.msg
-msg/BlindStateMsg.idl
-msg/BlindStateMsg.msg
-msg/ControlSignalMsg.idl
-msg/ControlSignalMsg.msg
-msg/TrajectoryGeneratorMsg.idl
-msg/TrajectoryGeneratorMsg.msg
