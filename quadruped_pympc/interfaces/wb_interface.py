@@ -119,7 +119,7 @@ class WBInterface:
         simulation_dt: float,
         ref_base_lin_vel: np.ndarray,
         ref_base_ang_vel: np.ndarray,
-        mujoco_contact: np.ndarray,
+        mujoco_contact: np.ndarray = None,
     ) -> [dict, dict, list, LegsAttr, list, list, float, bool]:
         """Update the state and reference for the whole body controller, including the contact sequence, footholds, and terrain estimation.
 
@@ -410,7 +410,7 @@ class WBInterface:
         nmpc_joints_vel,
         nmpc_joints_acc,
         nmpc_predicted_state,
-        mujoco_contact,
+        mujoco_contact: np.ndarray = None,
     ) -> LegsAttr:
         """Compute the stance and swing torque.
 
