@@ -15,12 +15,15 @@ class EarlyStanceDetector:
         self.hitmoments = LegsAttr(FL=-1.0, FR=-1.0, RR=-1.0, RL=-1.0) # swing time of the last contact moment
         self.hitpoints = LegsAttr(FL=None, FR=None, RR=None, RL=None)
 
-        self.activated = True
 
         if(cfg.mpc_params['type'] == 'sampling'):
             self.activated = False # TO FIX
 
-        self.trigger = cfg.mpc_params['reflex_trigger']
+        self.trigger_mode = cfg.simulation_params['reflex_trigger_mode']
+        if(self.trigger_mode == False):
+            self.activated = False
+        else:
+            self.activated = True
             
 
         self.early_stance_time_threshold = 0.07
@@ -28,7 +31,7 @@ class EarlyStanceDetector:
         self.absolute_min_distance_error_threshold = 0.1
 
         self.gait_cycles_after_step_height_enanchement = -1
-        self.use_height_enhancement = False
+        self.use_height_enhancement = cfg.simulation_params['reflex_trigger_mode']
         self.max_gait_cycles_height_enhancement = 6
 
 
@@ -55,7 +58,7 @@ class EarlyStanceDetector:
                 self.hitmoments[leg_name] = -1.0
                 self.hitpoints[leg_name] = None
         else: 
-            if self.trigger == 'tracking':
+            if self.trigger_mode == 'tracking':
                 for leg_id,leg_name in enumerate(self.legs_order):
                     disp = touch_down[leg_name] - lift_off[leg_name]
                     #if swing_time[leg_id] < EARLY_STANCE_TIME_THRESHOLD or swing_time[leg_id] > swing_period - EARLY_STANCE_TIME_THRESHOLD:
@@ -86,7 +89,7 @@ class EarlyStanceDetector:
                         self.hitmoments[leg_name] = -1.0
                         self.hitpoints[leg_name] = None
                         
-            elif self.trigger == 'geom_contact':
+            elif self.trigger_mode == 'geom_contact':
                 self.contact = mujoco_contact
                 for leg_id,leg_name in enumerate(self.legs_order):
                     contact_points = self.contact_points(leg_name)

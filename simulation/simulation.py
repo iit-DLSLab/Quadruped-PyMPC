@@ -128,6 +128,7 @@ def run_simulation(
     quadrupedpympc_wrapper = QuadrupedPyMPC_Wrapper(
         initial_feet_pos=env.feet_pos,
         legs_order=tuple(legs_order),
+        feet_geom_id=env._feet_geom_id,
         quadrupedpympc_observables_names=quadrupedpympc_observables_names,
     )
 
@@ -227,6 +228,7 @@ def run_simulation(
                 legs_qvel_idx,
                 tau,
                 inertia,
+                env.mjData.contact,
             )
             # Limit tau between tau_limits
             for leg in ["FL", "FR", "RL", "RR"]:

@@ -6,7 +6,7 @@ from quadruped_pympc import config as cfg
 class VelocityModulator:
     def __init__(self):
         
-        self.activated = False
+        self.activated = cfg.simulation_params['velocity_modulator']
 
         if cfg.robot == "aliengo":
             self.max_distance = 0.2

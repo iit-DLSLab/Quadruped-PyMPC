@@ -1,0 +1,23 @@
+// generated from rosidl_adapter/resource/msg.idl.em
+// with input from dls2_msgs/msg/ControlSignalMsg.msg
+// generated code does not contain a copyright notice
+
+
+module dls2_msgs {
+  module msg {
+    typedef double double__12[12];
+    @verbatim (language="comment", text=
+      "Header")
+    struct ControlSignalMsg {
+      string frame_id;
+
+      uint32 sequence_id;
+
+      double timestamp;
+
+      double__12 torques;
+
+      uint64 signal_reconstruction_method;
+    };
+  };
+};

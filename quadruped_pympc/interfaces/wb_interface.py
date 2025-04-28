@@ -119,6 +119,7 @@ class WBInterface:
         simulation_dt: float,
         ref_base_lin_vel: np.ndarray,
         ref_base_ang_vel: np.ndarray,
+        mujoco_contact: np.ndarray,
     ) -> [dict, dict, list, LegsAttr, list, list, float, bool]:
         """Update the state and reference for the whole body controller, including the contact sequence, footholds, and terrain estimation.
 
