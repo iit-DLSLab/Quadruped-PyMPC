@@ -1,9 +1,7 @@
 import numpy as np
-from quadruped_pympc import config as cfg
 from gym_quadruped.utils.quadruped_utils import LegsAttr
 
-
-
+from quadruped_pympc import config as cfg
 
 class EarlyStanceDetector:
     def __init__(self, feet_geom_id : LegsAttr = None,
@@ -31,7 +29,7 @@ class EarlyStanceDetector:
         self.absolute_min_distance_error_threshold = 0.1
 
         self.gait_cycles_after_step_height_enanchement = -1
-        self.use_height_enhancement = cfg.simulation_params['reflex_trigger_mode']
+        self.use_height_enhancement = cfg.simulation_params['reflex_height_enhancement']
         self.max_gait_cycles_height_enhancement = 6
 
 

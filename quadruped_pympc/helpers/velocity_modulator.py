@@ -29,6 +29,10 @@ class VelocityModulator:
             np.square(feet_pos.RR[0] - hip_pos.RR[0]) + np.square(feet_pos.RR[1] - hip_pos.RR[1])
         )
 
+        if(ref_base_lin_vel[0] < 0.01 and ref_base_lin_vel[1] < 0.01):
+            # If the robot is not moving, we don't need to modulate the velocities
+            return ref_base_lin_vel, ref_base_ang_vel
+
         if (
             distance_FL_to_hip_xy > self.max_distance
             or distance_FR_to_hip_xy > self.max_distance

@@ -200,8 +200,8 @@ simulation_params = {
 
     # This is used to activate or deactivate the reflexes upon contact detection
     'reflex_trigger_mode':       'tracking', # 'tracking', 'geom_contact', False
-    'reflex_height_enhancement': True,
-    'velocity_modulator': False,
+    'reflex_height_enhancement': False,
+    'velocity_modulator': True,
 
     # velocity mode: human will give you the possibility to use the keyboard, the other are
     # forward only random linear-velocity, random will give you random linear-velocity and yaw-velocity

@@ -2,6 +2,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 from scipy.interpolate import CubicSpline
 
+from quadruped_pympc import config as cfg
 
 class SwingTrajectoryGenerator:
     def __init__(self, step_height: float, swing_period: float) -> None:
@@ -13,6 +14,11 @@ class SwingTrajectoryGenerator:
         # Stored swing-trajectory properties
         self.stepHeight = step_height
         self.step_height_enhancement = False
+
+        if(cfg.simulation_params['visual_foothold_adaptation'] == 'blind'):
+            self.z_height_enhancement = True
+        else:
+            self.z_height_enhancement = False
 
     def createCurve(self, x0, xf, early_stance_hitmoment = -1):
 
@@ -29,7 +35,10 @@ class SwingTrajectoryGenerator:
 
             x = np.array([x0[0], p1[0], p2[0], p3[0], xf[0]])
             y = np.array([x0[1], p1[1], p2[1], p3[1], xf[1]])
-            z = np.array([x0[2], p1[2], p2[2], p3[2], xf[2] + reflex_maximum_height / (scaling_factor+0.5)])
+            if(self.z_height_enhancement):
+                z = np.array([x0[2], p1[2], p2[2], p3[2], xf[2] + reflex_maximum_height / (scaling_factor+0.5)])
+            else:
+                z = np.array([x0[2], p1[2], p2[2], p3[2], xf[2]])
 
             updated_swing_period = self.swing_period - early_stance_hitmoment
             t = np.array([early_stance_hitmoment, early_stance_hitmoment+updated_swing_period/4, early_stance_hitmoment+updated_swing_period/2, early_stance_hitmoment+updated_swing_period*3/4, self.swing_period])

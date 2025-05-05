@@ -46,7 +46,7 @@ def run_simulation(
     simulation_dt = qpympc_cfg.simulation_params["dt"]
 
     # Save all observables available.
-    state_obs_names = list(QuadrupedEnv.ALL_OBS)  # + list(IMU.ALL_OBS)
+    state_obs_names = [] #list(QuadrupedEnv.ALL_OBS)  # + list(IMU.ALL_OBS)
 
     # Create the quadruped robot environment -----------------------------------------------------------
     env = QuadrupedEnv(
