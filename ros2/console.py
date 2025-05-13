@@ -207,8 +207,8 @@ class Console():
                             self.controller_node.wb_interface.stc.use_feedback_linearization = False
 
                     
-                    print("Use Friction Comp. only: ", self.controller_node.wb_interface.stc.use_friction_compensation)
-                    temp = input("Use Friction Comp. only: >>> ")
+                    print("Use Friction Compensation: ", self.controller_node.wb_interface.stc.use_friction_compensation)
+                    temp = input("Use Friction Compensation: >>> ")
                     if(temp != ""):
                         if(temp == "True"):
                             self.controller_node.wb_interface.stc.use_friction_compensation = True
