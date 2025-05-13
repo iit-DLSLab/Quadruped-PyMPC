@@ -304,20 +304,16 @@ class Quadruped_PyMPC_Node(Node):
         # Update the loop time
         if(USE_FIXED_LOOP_TIME):
             simulation_dt = 1./SCHEDULER_FREQ
-        elif(USE_SATURATED_LOOP_TIME):
-            start_time = time.perf_counter()
-            if(self.last_start_time is not None):
-                self.loop_time = (start_time - self.last_start_time)
-            self.last_start_time = start_time
-            simulation_dt = self.loop_time
-            if(simulation_dt > 0.005):
-                simulation_dt = 0.005
         else:
             start_time = time.perf_counter()
             if(self.last_start_time is not None):
                 self.loop_time = (start_time - self.last_start_time)
             self.last_start_time = start_time
             simulation_dt = self.loop_time
+            
+            if(USE_SATURATED_LOOP_TIME):
+                if(simulation_dt > 0.005):
+                    simulation_dt = 0.005
 
         # Safety check to not do anything until a first base and blind state are received
         if(not USE_MUJOCO_SIMULATION and self.first_message_base_arrived==False and self.first_message_joints_arrived==False):
