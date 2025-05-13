@@ -180,6 +180,12 @@ class Quadruped_PyMPC_Node(Node):
         thread_console.start()
 
 
+        # Init for real robot and simulation gain, since real robot needs different values
+        if(USE_MUJOCO_SIMULATION == False):
+            self.wb_interface.stc.position_gain_fb = 100
+            self.wb_interface.stc.velocity_gain_fb = 10
+            self.wb_interface.stc.use_feedback_linearization = False
+            self.wb_interface.stc.use_friction_compensation = False
 
 
     def compute_mpc_thread_callback(self):

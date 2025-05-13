@@ -20,15 +20,8 @@ class Console():
         # Pitch Up and Pitch Down
         self.pitch_delta = 0
 
-        # Init gain Aliengo
-        self.controller_node.wb_interface.stc.position_gain_fb = 100
-        self.controller_node.wb_interface.stc.velocity_gain_fb = 10
-        self.controller_node.wb_interface.stc.use_feedback_linearization = False
-        self.controller_node.wb_interface.stc.use_friction_compensation = False
-
         # Step Height holder to keep track of the step height
         self.step_height_holder = cfg.simulation_params['step_height']
-
 
         # Autocomplete setup
         self.commands = [
