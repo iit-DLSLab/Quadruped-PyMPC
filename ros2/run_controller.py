@@ -64,8 +64,8 @@ class Quadruped_PyMPC_Node(Node):
         self.subscription_blind_state = self.create_subscription(BlindStateMsg,"/dls2/blind_state", self.get_blind_state_callback, 1)
         self.publisher_control_signal = self.create_publisher(ControlSignalMsg,"dls2/quadruped_pympc_torques", 1)
         self.publisher_trajectory_generator = self.create_publisher(TrajectoryGeneratorMsg,"dls2/trajectory_generator", 1)
-        if(USE_SCHEDULER):
-            self.timer = self.create_timer(1.0/SCHEDULER_FREQ, self.compute_whole_body_control)
+        if(USE_SCHEDULER or USE_MUJOCO_SIMULATION):
+            self.timer = self.create_timer(1.0/SCHEDULER_FREQ, self.compute_control_callback)
 
         # Safety check to not do anything until a first base and blind state are received
         self.first_message_base_arrived = False
@@ -201,6 +201,7 @@ class Quadruped_PyMPC_Node(Node):
                                                                             self.wb_interface.pgg.phase_signal,
                                                                             self.wb_interface.pgg.step_freq,
                                                                             self.optimize_swing)
+                    
                     if(cfg.mpc_params['type'] != 'sampling' and cfg.mpc_params['use_RTI']):
                         # If the controller is gradient and is using RTI, we need to linearize the mpc after its computation
                         # this helps to minize the delay between new state->control in a real case scenario.
@@ -254,10 +255,6 @@ class Quadruped_PyMPC_Node(Node):
                         # If the controller is gradient and is using RTI, we need to linearize the mpc after its computation
                         # this helps to minize the delay between new state->control in a real case scenario.
                         self.srbd_controller_interface.compute_RTI()
-                        
-                
-
-
 
 
     def get_base_state_callback(self, msg):
@@ -268,8 +265,7 @@ class Quadruped_PyMPC_Node(Node):
         self.linear_velocity = np.array(msg.linear_velocity)
         # For the angular velocity, mujoco is in the base frame, and DLS2 is in the world frame
         self.angular_velocity = np.array(msg.angular_velocity) 
-        #R = self.env.base_configuration[0:3, 0:3]
-        #self.angular_velocity = R.T @ self.angular_velocity # To comment if robot real
+
         self.stance_status = np.array(msg.stance_status)
 
         self.first_message_base_arrived = True
@@ -292,12 +288,12 @@ class Quadruped_PyMPC_Node(Node):
         
 
         if(not USE_SCHEDULER):
-            self.compute_whole_body_control()
+            self.compute_control_callback()
 
 
 
 
-    def compute_whole_body_control(self):
+    def compute_control_callback(self):
         
         # Update the loop time
         if(USE_FIXED_LOOP_TIME):
@@ -346,7 +342,6 @@ class Quadruped_PyMPC_Node(Node):
         base_ori_euler_xyz = self.env.base_ori_euler_xyz
         base_pos = self.env.base_pos
         com_pos = self.env.com
-
 
 
 
@@ -454,17 +449,6 @@ class Quadruped_PyMPC_Node(Node):
                     # this helps to minize the delay between new state->control in a real case scenario.
                     self.srbd_controller_interface.compute_RTI()
         
-
-                # Update the gait
-                if(cfg.mpc_params['type'] != 'sampling' and cfg.mpc_params['optimize_step_freq']):
-                    self.best_sample_freq = self.srbd_batched_controller_interface.optimize_gait(state_current,
-                                                                            ref_state,
-                                                                            inertia,
-                                                                            self.wb_interface.pgg.phase_signal,
-                                                                            self.wb_interface.pgg.step_freq,
-                                                                            self.wb_interface.pgg.duty_factor,
-                                                                            self.wb_interface.pgg.gait_type,
-                                                                            optimize_swing)
                     
                 self.last_mpc_time = time.time()
                 
@@ -566,21 +550,6 @@ class Quadruped_PyMPC_Node(Node):
                                                         geom_ids=self.feet_traj_geom_ids)
                 
                 
-                # Update and Plot the heightmap
-                if(cfg.simulation_params['visual_foothold_adaptation'] != 'blind'):
-                    #if(stc.check_apex_condition(current_contact, interval=0.01)):
-                    for leg_id, leg_name in enumerate(legs_order):
-                        data = heightmaps[leg_name].data#.update_height_map(ref_feet_pos[leg_name], yaw=env.base_ori_euler_xyz[2])
-                        if(data is not None):
-                            for i in range(data.shape[0]):
-                                for j in range(data.shape[1]):
-                                        heightmaps[leg_name].geom_ids[i, j] = render_sphere(viewer=self.env.viewer,
-                                                                                            position=([data[i][j][0][0],data[i][j][0][1],data[i][j][0][2]]),
-                                                                                            diameter=0.01,
-                                                                                            color=[0, 1, 0, .5],
-                                                                                            geom_id=heightmaps[leg_name].geom_ids[i, j]
-                                                                                            )
-                            
                 # Plot the GRF
                 for leg_id, leg_name in enumerate(legs_order):
                     self.feet_GRF_geom_ids[leg_name] = render_vector(self.env.viewer,
@@ -600,14 +569,9 @@ def main():
 
     controller_node = Quadruped_PyMPC_Node()
 
-    if(USE_MUJOCO_SIMULATION):
-        while True:
-            controller_node.compute_whole_body_control()
-    else:
-        rclpy.spin(controller_node)
-        controller_node.destroy_node()
-        rclpy.shutdown()
-
+    rclpy.spin(controller_node)
+    controller_node.destroy_node()
+    rclpy.shutdown()
 
 
 if __name__ == '__main__':

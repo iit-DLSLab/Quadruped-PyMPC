@@ -122,7 +122,7 @@ During the installation procedure, use the file **mamba_environment_ros2.yml**. 
 3. you can run now the script
 
   ```
-  python3 src/run_controller.py
+  python3 ros2/run_controller.py
   ```
 
 For a real-robot deployment, remember to put inside the script these flags to false
