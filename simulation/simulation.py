@@ -165,6 +165,7 @@ def run_simulation(
         for _ in tqdm(range(N_STEPS_PER_EPISODE), desc=f"Ep:{episode_num:d}-steps:", total=N_STEPS_PER_EPISODE):
             # Update value from SE or Simulator ----------------------
             feet_pos = env.feet_pos(frame="world")
+            feet_vel = env.feet_vel(frame='world')
             hip_pos = env.hip_positions(frame="world")
             base_lin_vel = env.base_lin_vel(frame="world")
             base_ang_vel = env.base_ang_vel(frame="world")
@@ -196,9 +197,6 @@ def run_simulation(
             # Compute feet jacobians
             feet_jac = env.feet_jacobians(frame='world', return_rot_jac=False)
             feet_jac_dot = env.feet_jacobians_dot(frame='world', return_rot_jac=False)
-
-            # Compute feet velocities
-            feet_vel = LegsAttr(**{leg_name: feet_jac[leg_name] @ env.mjData.qvel for leg_name in legs_order})
 
             # Quadruped PyMPC controller --------------------------------------------------------------
             tau = quadrupedpympc_wrapper.compute_actions(
