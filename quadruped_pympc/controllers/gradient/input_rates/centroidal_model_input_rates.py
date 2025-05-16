@@ -7,8 +7,7 @@ import casadi as cs
 import numpy as np
 from acados_template import AcadosModel
 
-from quadruped_pympc import config
-
+import quadruped_pympc.config as config
 
 # Class that defines the prediction model of the NMPC
 class Centroidal_Model_InputRates:

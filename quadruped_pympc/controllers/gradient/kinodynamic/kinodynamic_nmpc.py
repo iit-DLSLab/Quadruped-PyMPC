@@ -8,22 +8,12 @@ import os
 import casadi as cs
 import numpy as np
 import scipy.linalg
+from liecasadi import SO3
 from acados_template import AcadosOcp, AcadosOcpSolver
 
+import quadruped_pympc.config as config
+
 from .kinodynamic_model import KinoDynamic_Model
-
-import os
-
-dir_path = os.path.dirname(os.path.realpath(__file__))
-
-import sys
-
-sys.path.append(dir_path)
-sys.path.append(dir_path + "/../../")
-
-
-from quadruped_pympc import config
-from liecasadi import SO3
 
 
 # Class for the Acados NMPC, the model is in another file!
@@ -62,7 +52,7 @@ class Acados_NMPC_KinoDynamic:
 
         # Create the acados ocp solver
         self.ocp = self.create_ocp_solver_description(acados_model)
-        self.acados_ocp_solver = AcadosOcpSolver(self.ocp, json_file="nmpc_kynodinamic" + ".json")
+        self.acados_ocp_solver = AcadosOcpSolver(self.ocp, json_file="nmpc_kinodynamic" + ".json")
 
         # Initialize solver
         for stage in range(self.horizon + 1):

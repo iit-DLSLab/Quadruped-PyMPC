@@ -10,10 +10,10 @@ ACADOS_INFTY = 1000
 import copy
 
 import casadi as cs
-import config
 import numpy as np
 import scipy.linalg
 
+import quadruped_pympc.config as config
 
 from .centroidal_model_lyapunov import Centroidal_Model_Lyapunov
 

@@ -282,7 +282,7 @@ class WBInterface:
         else:
             # In the case of the kinodynamic model,
             # we should pass as a reference the X-Y-Z spline of the feet for the horizon,
-            # since in the kynodimic model we are using the feet position as a reference
+            # since in the kinodimic model we are using the feet position as a reference
             desired_foot_position_FL = np.zeros((cfg.mpc_params["horizon"], 3))
             desired_foot_position_FR = np.zeros((cfg.mpc_params["horizon"], 3))
             desired_foot_position_RL = np.zeros((cfg.mpc_params["horizon"], 3))

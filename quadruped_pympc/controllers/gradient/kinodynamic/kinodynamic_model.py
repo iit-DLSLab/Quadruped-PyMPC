@@ -20,7 +20,7 @@ sys.path.append(dir_path + "/../../")
 
 from liecasadi import SO3
 
-from quadruped_pympc import config
+import quadruped_pympc.config as config
 
 use_adam = True
 use_fixed_inertia = True

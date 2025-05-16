@@ -16,7 +16,8 @@ from typing import Tuple
 from acados_template import AcadosOcp, AcadosOcpSolver
 
 ACADOS_INFTY = ACADOS_INFTY = 1000
-from quadruped_pympc import config
+
+import quadruped_pympc.config as config
 
 from .centroidal_model_input_rates import Centroidal_Model_InputRates
 

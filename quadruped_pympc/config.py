@@ -59,7 +59,7 @@ mpc_params = {
     # 'sampling' is a gpu-based mpc that samples the GRF
     # 'collaborative' optimized directly the GRF and has a passive arm model inside
     # 'lyapunov' optimized directly the GRF and has a Lyapunov-based stability constraint
-    # 'kynodynamic' sbrd with joints - experimental
+    # 'kinodynamic' sbrd with joints - experimental
     'type':                                    'nominal',
 
     # print the mpc info

@@ -9,16 +9,7 @@ import casadi as cs
 import numpy as np
 from acados_template import AcadosModel
 
-import os
-
-dir_path = os.path.dirname(os.path.realpath(__file__))
-
-import sys
-
-sys.path.append(dir_path)
-sys.path.append(dir_path + "/../../")
-
-from quadruped_pympc import config
+import quadruped_pympc.config as config
 
 
 # Class that defines the prediction model of the NMPC
