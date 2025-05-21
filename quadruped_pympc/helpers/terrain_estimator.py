@@ -97,12 +97,7 @@ class TerrainEstimator:
             self.terrain_height = self.terrain_height * 0.6 + z_foot_mean_temp * 0.4"""
 
         z_foot_mean_temp = (z_foot_FL + z_foot_FR + z_foot_RL + z_foot_RR) / 4
-        self.terrain_height = self.terrain_height * 0.99 + z_foot_mean_temp * 0.01
+        self.terrain_height = self.terrain_height * 0.9 + z_foot_mean_temp * 0.1
 
-        # print("current_contact: ", current_contact)
-        # print("z_foot_FL: ", z_foot_FL)
-        # print("z_foot_FR: ", z_foot_FR)
-        # print("z_foot_RL: ", z_foot_RL)
-        # print("z_foot_RR: ", z_foot_RR)
 
         return self.terrain_roll, self.terrain_pitch, self.terrain_height

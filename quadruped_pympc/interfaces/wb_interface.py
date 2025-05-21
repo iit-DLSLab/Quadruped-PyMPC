@@ -253,8 +253,14 @@ class WBInterface:
 
         ref_pos = np.array([0, 0, cfg.hip_height])
         ref_pos[2] = cfg.simulation_params["ref_z"] + terrain_height
+        
         # Rotate the reference base linear velocity to the terrain frame
         ref_base_lin_vel = R.from_euler("xyz", [terrain_roll, terrain_pitch, 0]).as_matrix() @ ref_base_lin_vel
+        if(terrain_pitch > 0.0):
+            ref_base_lin_vel[2] = -ref_base_lin_vel[2]
+        if(np.abs(terrain_pitch) > 0.2):
+            ref_base_lin_vel[0] = ref_base_lin_vel[0]/2.
+            ref_base_lin_vel[2] = ref_base_lin_vel[2]*2
 
         # Update state reference ------------------------------------------------------------------------
 
