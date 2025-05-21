@@ -373,7 +373,7 @@ class Acados_NMPC_Lyapunov:
             foot_force_rl = self.centroidal_model.inputs[18:21]  # @self.centroidal_model.param[2]
             foot_force_rr = self.centroidal_model.inputs[21:24]  # @self.centroidal_model.param[3]
             temp = foot_force_fl + foot_force_fr + foot_force_rl + foot_force_rr
-            gravity = np.array([0, 0, -9.81])
+            gravity = np.array([0, 0, -self.centroidal_model.gravity_constant])
             linear_com_acc = (1 / self.centroidal_model.mass) @ temp + gravity
             zmp = base_w[0:2] - linear_com_acc[0:2] * (robotHeight / (-gravity[2]))
             # zmp = base_w[0:2] - base_vel_w[0:2]*(robotHeight/gravity[2])
@@ -540,8 +540,8 @@ class Acados_NMPC_Lyapunov:
         # Calculate the adaptive law
         K_z1 = config.mpc_params["K_z1"]
         K_z2 = config.mpc_params["K_z2"]
-        p_ddot = np.array([0, 0, 0])  # ??
-        gravity = np.array([0, 0, -9.81])
+        p_ddot = np.array([0, 0, 0])  
+        gravity = np.array([0, 0, -self.centroidal_model.gravity_constant])
         mass = self.centroidal_model.param[28]
 
         z1 = self.centroidal_model.states[30:33]
@@ -1587,7 +1587,7 @@ class Acados_NMPC_Lyapunov:
 
         # Now i add the component from the adaptive control law
         p_ddot = np.array([0, 0, 0])
-        gravity = np.array([0, 0, -9.81])
+        gravity = np.array([0, 0, -self.centroidal_model.gravity_constant])
         squared_K_z1 = np.array([K_z1[0] * K_z1[0], K_z1[1] * K_z1[1], K_z1[2] * K_z1[2]])
         F_star = mass * (-(K_z1 + K_z2) * z2 + squared_K_z1 * z1 - gravity + p_ddot)
         F_star -= phi
@@ -1812,7 +1812,7 @@ class Acados_NMPC_Lyapunov:
             number_of_legs_in_stance = np.array(
                 [FL_contact_sequence[0], FR_contact_sequence[0], RL_contact_sequence[0], RR_contact_sequence[0]]
             ).sum()
-            reference_force_stance_legs = (mass * 9.81) / number_of_legs_in_stance
+            reference_force_stance_legs = (mass * self.centroidal_model.gravity_constant) / number_of_legs_in_stance
 
             reference_force_fl_z = reference_force_stance_legs * FL_contact_sequence[0]
             reference_force_fr_z = reference_force_stance_legs * FR_contact_sequence[0]

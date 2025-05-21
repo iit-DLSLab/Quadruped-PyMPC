@@ -127,13 +127,13 @@ def check_zmp_constraint_satisfaction(state, contact_status, forces):
     foot_force_rl = forces[6:9]  # @self.centroidal_model.param[2]
     foot_force_rr = forces[9:12]  # @self.centroidal_model.param[3]
     temp = foot_force_fl + foot_force_fr + foot_force_rl + foot_force_rr
-    gravity = np.array([0, 0, -9.81])
+    gravity_constant = 9.81
+    gravity = np.array([0, 0, -gravity_constant])
     linear_com_acc = (1 / config.mass) * temp + gravity
 
     if config.mpc_params['use_zmp_stability']:
-        gravity_z = 9.81
         robotHeight = base_w[2]
-        zmp = base_w[0:2] - linear_com_acc[0:2] * (robotHeight / gravity_z)
+        zmp = base_w[0:2] - linear_com_acc[0:2] * (robotHeight / gravity_constant)
         zmp = h_R_w @ (zmp - base_w[0:2])
         x = zmp[0]
         y = zmp[1]

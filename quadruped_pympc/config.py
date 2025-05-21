@@ -53,6 +53,10 @@ elif (robot == 'mini_cheetah'):
                         [1.21660000e-04, 4.68645637e-01, -3.12000000e-05],
                         [-1.55444692e-02, -3.12000000e-05, 5.24474661e-01]])
 
+
+gravity_constant = 9.81 # Exposed in case of different gravity conditions
+# ----------------------------------------------------------------------------------------------------------------
+
 mpc_params = {
     # 'nominal' optimized directly the GRF
     # 'input_rates' optimizes the delta GRF
@@ -71,7 +75,7 @@ mpc_params = {
     'dt':                                      0.02,
 
     # GRF limits for each single leg
-    "grf_max":                                 mass * 9.81,
+    "grf_max":                                 mass * gravity_constant,
     "grf_min":                                 0,
     'mu':                                      0.5,
 

@@ -135,6 +135,8 @@ class Centroidal_Model_Nominal:
         self.inertia = cs.SX.sym("inertia", 9, 1)
         self.mass = cs.SX.sym("mass", 1, 1)
 
+        self.gravity_constant = config.gravity_constant
+
         # Not so useful, i can instantiate a casadi function for the fd
         param = cs.vertcat(
             self.stance_param,
@@ -205,7 +207,7 @@ class Centroidal_Model_Nominal:
         temp += foot_force_rl @ stanceRL
         temp += foot_force_rr @ stanceRR
         temp += external_wrench_linear
-        gravity = np.array([0, 0, -9.81])
+        gravity = np.array([0, 0, -self.gravity_constant])
         linear_com_acc = (1 / mass) @ temp + gravity
 
         # Start to write the component of euler_rates_base and angular_acc_base STATES

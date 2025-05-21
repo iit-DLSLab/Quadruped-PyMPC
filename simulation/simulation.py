@@ -60,6 +60,7 @@ def run_simulation(
         state_obs_names=tuple(state_obs_names),  # Desired quantities in the 'state' vec
     )
     pprint(env.get_hyperparameters())
+    env.mjModel.opt.gravity[2] = -qpympc_cfg.gravity_constant
 
     # Some robots require a change in the zero joint-space configuration. If provided apply it
     if qpympc_cfg.qpos0_js is not None:

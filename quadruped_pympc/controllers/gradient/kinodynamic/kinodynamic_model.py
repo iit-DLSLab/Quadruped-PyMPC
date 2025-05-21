@@ -252,6 +252,7 @@ class KinoDynamic_Model:
 
         self.inertia = cs.SX.sym("inertia", 9, 1)
         self.mass = cs.SX.sym("mass", 1, 1)
+        self.gravity_constant = config.gravity_constant
 
     def compute_b_R_w(self, roll: float, pitch: float, yaw: float) -> np.ndarray:
         # Z Y X rotations!
@@ -377,7 +378,7 @@ class KinoDynamic_Model:
         temp += foot_force_rl @ stanceRL
         temp += foot_force_rr @ stanceRR
         temp += external_wrench_linear
-        gravity = np.array([0, 0, -9.81])
+        gravity = np.array([0, 0, -self.gravity_constant])
         mass = self.kindyn.get_total_mass()
         linear_com_acc = (1 / mass) @ temp + gravity
 

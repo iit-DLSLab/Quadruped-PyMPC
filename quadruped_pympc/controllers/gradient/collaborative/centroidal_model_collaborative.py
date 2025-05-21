@@ -32,6 +32,7 @@ class Centroidal_Model_Collaborative:
         # Set mass and inertia from config file
         self.mass = config.mass
         self.inertia = config.inertia
+        self.gravity_constant = config.gravity_constant
 
         # Define state and its casadi variables
         com_position_x = cs.SX.sym("com_position_x")
@@ -278,7 +279,7 @@ class Centroidal_Model_Collaborative:
         temp += foot_force_rl @ stanceRL
         temp += foot_force_rr @ stanceRR
         temp += external_wrench_linear
-        gravity = np.array([0, 0, -9.81])
+        gravity = np.array([0, 0, -self.gravity_constant])
         linear_com_acc = (1 / self.mass) @ temp + gravity
 
         # Start to write the component of euler_rates_base and angular_acc_base STATES

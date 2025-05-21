@@ -98,6 +98,7 @@ class Quadruped_PyMPC_Node(Node):
             sim_dt=cfg.simulation_params['dt'],
             base_vel_command_type="human"
         )
+        self.env.mjModel.opt.gravity[2] = -cfg.gravity_constant
         
         self.feet_traj_geom_ids, self.feet_GRF_geom_ids = None, LegsAttr(FL=-1, FR=-1, RL=-1, RR=-1)
         self.legs_order = ["FL", "FR", "RL", "RR"]

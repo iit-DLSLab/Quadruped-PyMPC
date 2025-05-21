@@ -314,7 +314,7 @@ class Acados_NMPC_GaitAdaptive:
             foot_force_rl = self.centroidal_model.inputs[18:21]  # @self.centroidal_model.param[2]
             foot_force_rr = self.centroidal_model.inputs[21:24]  # @self.centroidal_model.param[3]
             temp = foot_force_fl + foot_force_fr + foot_force_rl + foot_force_rr
-            gravity = np.array([0, 0, -9.81])
+            gravity = np.array([0, 0, -self.centroidal_model.gravity_constant])
             linear_com_acc = (1 / self.centroidal_model.mass) @ temp + gravity
             zmp = base_w[0:2] - linear_com_acc[0:2] * (robotHeight / (-gravity[2]))
             # zmp = base_w[0:2] - base_vel_w[0:2]*(robotHeight/gravity[2])

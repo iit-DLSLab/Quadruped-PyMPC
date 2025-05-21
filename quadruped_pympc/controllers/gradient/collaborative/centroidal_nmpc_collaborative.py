@@ -304,7 +304,7 @@ class Acados_NMPC_Collaborative:
             foot_force_rr = self.centroidal_model.inputs[21:24] @ self.centroidal_model.param[3]
             temp = foot_force_fl + foot_force_fr + foot_force_rl + foot_force_rr
 
-            gravity = np.array([0, 0, -9.81])
+            gravity = np.array([0, 0, -self.centroidal_model.gravity_constant])
             linear_com_acc = (1 / self.centroidal_model.mass) @ temp + gravity
             zmp = base_w[0:2] - linear_com_acc[0:2] * (robotHeight / (-gravity[2]))
 
@@ -1265,7 +1265,7 @@ class Acados_NMPC_Collaborative:
             if number_of_legs_in_stance == 0:
                 reference_force_stance_legs = 0
             else:
-                reference_force_stance_legs = (self.centroidal_model.mass * 9.81) / number_of_legs_in_stance
+                reference_force_stance_legs = (self.centroidal_model.mass * self.centroidal_model.gravity_constant) / number_of_legs_in_stance
 
             reference_force_fl_z = reference_force_stance_legs * FL_contact_sequence[j]
             reference_force_fr_z = reference_force_stance_legs * FR_contact_sequence[j]
@@ -1769,7 +1769,7 @@ class Acados_NMPC_Collaborative:
             if number_of_legs_in_stance == 0:
                 reference_force_stance_legs = 0
             else:
-                reference_force_stance_legs = (self.centroidal_model.mass * 9.81) / number_of_legs_in_stance
+                reference_force_stance_legs = (self.centroidal_model.mass * self.centroidal_model.gravity_constant) / number_of_legs_in_stance
 
             reference_force_fl_z = reference_force_stance_legs * FL_contact_sequence[0]
             reference_force_fr_z = reference_force_stance_legs * FR_contact_sequence[0]

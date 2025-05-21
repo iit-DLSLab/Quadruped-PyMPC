@@ -7,7 +7,7 @@ from gym_quadruped.utils.quadruped_utils import LegsAttr
 from scipy.spatial.transform import Rotation
 
 from quadruped_pympc.helpers.quadruped_utils import GaitType
-
+from quadruped_pympc import config as cfg
 
 # Class for the generation of the reference footholds
 # TODO: @Giulio Should we convert this to a single function instead of a class? Stance time, can be passed as argument
@@ -47,6 +47,8 @@ class FootholdReferenceGenerator:
         self.last_reference_footholds = LegsAttr(
             FL=np.array([0, 0, 0]), FR=np.array([0, 0, 0]), RL=np.array([0, 0, 0]), RR=np.array([0, 0, 0])
         )
+
+        self.gravity_constant = cfg.gravity_constant
 
     def compute_footholds_reference(
         self,
@@ -103,7 +105,7 @@ class FootholdReferenceGenerator:
         vel_offset = np.concatenate((delta_ref_H, np.zeros(1)))
 
         # Compensation for the error in velocity tracking
-        error_compensation = np.sqrt(com_height_nominal / 9.81) * (base_vel_mvg - ref_base_lin_vel_H)
+        error_compensation = np.sqrt(com_height_nominal / self.gravity_constant) * (base_vel_mvg - ref_base_lin_vel_H)
         error_compensation = np.where(error_compensation > 0.05, 0.05, error_compensation)
         error_compensation = np.where(error_compensation < -0.05, -0.05, error_compensation)
         error_compensation = np.concatenate((error_compensation, np.zeros(1)))
