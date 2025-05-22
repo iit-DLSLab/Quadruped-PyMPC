@@ -184,7 +184,7 @@ simulation_params = {
     'swing_position_gain_fb':      500,
     'swing_velocity_gain_fb':      10,
     'impedence_joint_position_gain':  10.0,
-    'impedence_joint_velocity_gain':  1.0,
+    'impedence_joint_velocity_gain':  2.0,
 
     'step_height':                 0.3 * hip_height,  
 
