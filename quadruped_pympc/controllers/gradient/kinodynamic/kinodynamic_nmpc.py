@@ -1,4 +1,5 @@
 # Description: This file contains the class for the NMPC controller
+import pathlib
 
 # Authors: Giulio Turrisi -
 
@@ -52,7 +53,13 @@ class Acados_NMPC_KinoDynamic:
 
         # Create the acados ocp solver
         self.ocp = self.create_ocp_solver_description(acados_model)
-        self.acados_ocp_solver = AcadosOcpSolver(self.ocp, json_file="nmpc_kinodynamic" + ".json")
+
+        code_export_dir = pathlib.Path(__file__).parent / "c_generated_code"
+        self.ocp.code_export_directory = str(code_export_dir)
+
+        self.acados_ocp_solver = AcadosOcpSolver(
+            self.ocp, json_file=self.ocp.code_export_directory + "/centroidal_nmpc" + ".json"
+        )
 
         # Initialize solver
         for stage in range(self.horizon + 1):
@@ -662,10 +669,10 @@ class Acados_NMPC_KinoDynamic:
         RL_actual_foot = state["foot_RL"]
         RR_actual_foot = state["foot_RR"]
 
-        FL_reference_foot = reference["ref_foot_FL"]
-        FR_reference_foot = reference["ref_foot_FR"]
-        RL_reference_foot = reference["ref_foot_RL"]
-        RR_reference_foot = reference["ref_foot_RR"]
+        FL_reference_foot = reference["ref_foot_swing_FL"]
+        FR_reference_foot = reference["ref_foot_swing_FR"]
+        RL_reference_foot = reference["ref_foot_swing_RL"]
+        RR_reference_foot = reference["ref_foot_swing_RR"]
 
         # Take the base position and the yaw rotation matrix. This is needed to
         # express the foothold constraint in the horizontal frame
@@ -1143,10 +1150,10 @@ class Acados_NMPC_KinoDynamic:
         state = copy.deepcopy(state)
 
         reference["ref_position"] = reference["ref_position"] - state["position"]
-        reference["ref_foot_FL"] = reference["ref_foot_FL"] - state["position"]
-        reference["ref_foot_FR"] = reference["ref_foot_FR"] - state["position"]
-        reference["ref_foot_RL"] = reference["ref_foot_RL"] - state["position"]
-        reference["ref_foot_RR"] = reference["ref_foot_RR"] - state["position"]
+        reference["ref_foot_swing_FL"] = reference["ref_foot_swing_FL"] - state["position"]
+        reference["ref_foot_swing_FR"] = reference["ref_foot_swing_FR"] - state["position"]
+        reference["ref_foot_swing_RL"] = reference["ref_foot_swing_RL"] - state["position"]
+        reference["ref_foot_swing_RR"] = reference["ref_foot_swing_RR"] - state["position"]
 
         state["foot_FL"] = state["foot_FL"] - state["position"]
         state["foot_FR"] = state["foot_FR"] - state["position"]
@@ -1201,10 +1208,10 @@ class Acados_NMPC_KinoDynamic:
             yref[3:6] = reference["ref_linear_velocity"]
             yref[6:9] = reference["ref_orientation"]
             yref[9:12] = reference["ref_angular_velocity"]
-            yref[12:15] = reference["ref_foot_FL"][j]
-            yref[15:18] = reference["ref_foot_FR"][j]
-            yref[18:21] = reference["ref_foot_RL"][j]
-            yref[21:24] = reference["ref_foot_RR"][j]
+            yref[12:15] = reference["ref_foot_swing_FL"][j]
+            yref[15:18] = reference["ref_foot_swing_FR"][j]
+            yref[18:21] = reference["ref_foot_swing_RL"][j]
+            yref[21:24] = reference["ref_foot_swing_RR"][j]
 
             # Calculate the reference force z for the leg in stance
             # It's simply mass*acc/number_of_legs_in_stance!!
@@ -1319,16 +1326,16 @@ class Acados_NMPC_KinoDynamic:
         # of a foothold that is not considered at all at touchdown! In any case,
         # the height cames always from the VFA
         if FL_contact_sequence[0] == 0:
-            state["foot_FL"] = reference["ref_foot_FL"][0]
+            state["foot_FL"] = reference["ref_foot_swing_FL"][0]
 
         if FR_contact_sequence[0] == 0:
-            state["foot_FR"] = reference["ref_foot_FR"][0]
+            state["foot_FR"] = reference["ref_foot_swing_FR"][0]
 
         if RL_contact_sequence[0] == 0:
-            state["foot_RL"] = reference["ref_foot_RL"][0]
+            state["foot_RL"] = reference["ref_foot_swing_RL"][0]
 
         if RR_contact_sequence[0] == 0:
-            state["foot_RR"] = reference["ref_foot_RR"][0]
+            state["foot_RR"] = reference["ref_foot_swing_RR"][0]
 
         if self.use_integrators:
             # Compute error for integral action
@@ -1510,13 +1517,13 @@ class Acados_NMPC_KinoDynamic:
         # If in the prediction horizon, the foot is never in stance, we replicate the reference
         # to not confuse the swing controller
         if optimal_footholds_assigned[0] == False:
-            optimal_foothold[0] = reference["ref_foot_FL"][0]
+            optimal_foothold[0] = reference["ref_foot_swing_FL"][0]
         if optimal_footholds_assigned[1] == False:
-            optimal_foothold[1] = reference["ref_foot_FR"][0]
+            optimal_foothold[1] = reference["ref_foot_swing_FR"][0]
         if optimal_footholds_assigned[2] == False:
-            optimal_foothold[2] = reference["ref_foot_RL"][0]
+            optimal_foothold[2] = reference["ref_foot_swing_RL"][0]
         if optimal_footholds_assigned[3] == False:
-            optimal_foothold[3] = reference["ref_foot_RR"][0]
+            optimal_foothold[3] = reference["ref_foot_swing_RR"][0]
 
         optimal_next_state_index = 1
         optimal_next_state = self.acados_ocp_solver.get(optimal_next_state_index, "x")[0:24]
@@ -1528,13 +1535,13 @@ class Acados_NMPC_KinoDynamic:
         if status == 1 or status == 4:
             print("status", status)
             if FL_contact_sequence[0] == 0:
-                optimal_foothold[0] = reference["ref_foot_FL"][0]
+                optimal_foothold[0] = reference["ref_foot_swing_FL"][0]
             if FR_contact_sequence[0] == 0:
-                optimal_foothold[1] = reference["ref_foot_FR"][0]
+                optimal_foothold[1] = reference["ref_foot_swing_FR"][0]
             if RL_contact_sequence[0] == 0:
-                optimal_foothold[2] = reference["ref_foot_RL"][0]
+                optimal_foothold[2] = reference["ref_foot_swing_RL"][0]
             if RR_contact_sequence[0] == 0:
-                optimal_foothold[3] = reference["ref_foot_RR"][0]
+                optimal_foothold[3] = reference["ref_foot_swing_RR"][0]
 
             number_of_legs_in_stance = np.array(
                 [FL_contact_sequence[0], FR_contact_sequence[0], RL_contact_sequence[0], RR_contact_sequence[0]]
