@@ -90,7 +90,7 @@ class SwingTrajectoryController:
         return tau_swing, des_foot_pos, des_foot_vel
 
     def compute_swing_control_joint_space(
-        self, nmpc_joints_pos, nmpc_joints_vel, nmpc_joints_acc, qpos, qvel, legs_mass_matrix, legs_qfrc_bias
+        self, nmpc_joints_pos, nmpc_joints_vel, nmpc_joints_acc, qpos, qvel, legs_mass_matrix, legs_qfrc_bias, legs_qfrc_passive
     ):
         error_position = nmpc_joints_pos - qpos
         error_position = error_position.reshape((3,))
@@ -110,8 +110,9 @@ class SwingTrajectoryController:
                 @ (accelleration + self.position_gain_fb * error_position + self.velocity_gain_fb * error_velocity)
                 + legs_qfrc_bias
             )
-        elif self.use_gravity_compensation_only:
-            tau_swing += legs_qfrc_bias
+        
+        if self.use_friction_compensation:
+            tau_swing -= legs_qfrc_passive
 
         return tau_swing, None, None
 

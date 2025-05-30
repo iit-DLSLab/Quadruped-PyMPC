@@ -9,14 +9,11 @@ import casadi as cs
 import numpy as np
 from acados_template import AcadosModel
 
+import gym_quadruped
 import os
 
 dir_path = os.path.dirname(os.path.realpath(__file__))
-
-import sys
-
-sys.path.append(dir_path)
-sys.path.append(dir_path + "/../../")
+gym_quadruped_path = os.path.dirname(gym_quadruped.__file__)
 
 from liecasadi import SO3
 
@@ -40,18 +37,24 @@ else:
 class KinoDynamic_Model:
     def __init__(self) -> None:
         if config.robot == 'go2':
-            urdf_filename = dir_path + '/../../../gym-quadruped/gym_quadruped/robot_model/go2/go2.urdf'
+            urdf_filename = gym_quadruped_path + '/robot_model/go2/go2.urdf'
+            xml_filename = gym_quadruped_path + '/robot_model/go2/go2.xml'
+        if config.robot == 'go1':
+            urdf_filename = gym_quadruped_path + '/robot_model/go1/go1.urdf'
+            xml_filename = gym_quadruped_path + '/robot_model/go1/go1.xml'
         elif config.robot == 'aliengo':
-            # urdf_filename = dir_path + '/../../../gym-quadruped/gym_quadruped/robot_model/aliengo/aliengo.urdf'
-            urdf_filename = (
-                '/home/iit.local/gturrisi/personal_ws_home/gym-quadruped/gym_quadruped/robot_model/aliengo/aliengo.urdf'
-            )
+            urdf_filename = gym_quadruped_path + '/robot_model/aliengo/aliengo.urdf'
+            xml_filename = gym_quadruped_path + '/robot_model/aliengo/aliengo.xml'
+        elif config.robot == 'b2':
+            urdf_filename = gym_quadruped_path + '/robot_model/b2/b2.urdf'
+            xml_filename = gym_quadruped_path + '/robot_model/b2/b2.xml'
         elif config.robot == 'hyqreal':
-            urdf_filename = dir_path + '/../../../gym-quadruped/gym_quadruped/robot_model/hyqreal/hyqreal.urdf'
+            urdf_filename = gym_quadruped_path + '/robot_model/hyqreal/hyqreal.urdf'
+            xml_filename = gym_quadruped_path + '/robot_model/hyqreal/hyqreal.xml'
         elif config.robot == 'mini_cheetah':
-            urdf_filename = (
-                dir_path + '/../../../gym-quadruped/gym_quadruped/robot_model/mini_cheetah/mini_cheetah.urdf'
-            )
+            urdf_filename = gym_quadruped_path + '/robot_model/mini_cheetah/mini_cheetah.urdf'
+            xml_filename = gym_quadruped_path + '/robot_model/mini_cheetah/mini_cheetah.xml'
+
 
         joint_list = [
             'FL_hip_joint',

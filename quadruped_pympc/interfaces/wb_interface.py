@@ -514,6 +514,7 @@ class WBInterface:
                         qvel[legs_qvel_idx[leg_name]],
                         legs_mass_matrix[leg_name],
                         legs_qfrc_bias[leg_name],
+                        legs_qfrc_passive[leg_name]
                     )
 
         self.last_des_foot_pos = des_foot_pos
