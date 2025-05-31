@@ -7,7 +7,8 @@ from scipy.spatial.transform import Rotation as R
 
 from quadruped_pympc import config as cfg
 from quadruped_pympc.helpers.foothold_reference_generator import FootholdReferenceGenerator
-from quadruped_pympc.helpers.inverse_kinematics.inverse_kinematics_numeric import InverseKinematicsNumeric
+#from quadruped_pympc.helpers.inverse_kinematics.inverse_kinematics_numeric_adam import InverseKinematicsNumeric
+from quadruped_pympc.helpers.inverse_kinematics.inverse_kinematics_numeric_mujoco import InverseKinematicsNumeric
 from quadruped_pympc.helpers.periodic_gait_generator import PeriodicGaitGenerator
 from quadruped_pympc.helpers.swing_trajectory_controller import SwingTrajectoryController
 from quadruped_pympc.helpers.terrain_estimator import TerrainEstimator
@@ -527,7 +528,8 @@ class WBInterface:
             # TODO use predicted rotation too
             # qpos_predicted[0:3] = nmpc_predicted_state[0:3]
             # TODO make the ik explicit and not numerical
-            temp = self.ik.fun_compute_solution(
+            #temp = self.ik.fun_compute_solution(
+            temp = self.ik.compute_solution(
                 qpos_predicted, des_foot_pos.FL, des_foot_pos.FR, des_foot_pos.RL, des_foot_pos.RR
             )
 

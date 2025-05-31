@@ -25,7 +25,7 @@ dir_path = os.path.dirname(os.path.realpath(__file__))
 gym_quadruped_path = os.path.dirname(gym_quadruped.__file__)
 
 
-from quadruped_pympc import config
+from quadruped_pympc import config as cfg
 
 
 # Class for solving a generic inverse kinematics problem
@@ -38,22 +38,22 @@ class InverseKinematicsNumeric:
 
         """
 
-        if config.robot == 'go2':
+        if cfg.robot == 'go2':
             urdf_filename = gym_quadruped_path + '/robot_model/go2/go2.urdf'
             xml_filename = gym_quadruped_path + '/robot_model/go2/go2.xml'
-        if config.robot == 'go1':
+        if cfg.robot == 'go1':
             urdf_filename = gym_quadruped_path + '/robot_model/go1/go1.urdf'
             xml_filename = gym_quadruped_path + '/robot_model/go1/go1.xml'
-        elif config.robot == 'aliengo':
+        elif cfg.robot == 'aliengo':
             urdf_filename = gym_quadruped_path + '/robot_model/aliengo/aliengo.urdf'
             xml_filename = gym_quadruped_path + '/robot_model/aliengo/aliengo.xml'
-        elif config.robot == 'b2':
+        elif cfg.robot == 'b2':
             urdf_filename = gym_quadruped_path + '/robot_model/b2/b2.urdf'
             xml_filename = gym_quadruped_path + '/robot_model/b2/b2.xml'
-        elif config.robot == 'hyqreal':
+        elif cfg.robot == 'hyqreal':
             urdf_filename = gym_quadruped_path + '/robot_model/hyqreal/hyqreal.urdf'
             xml_filename = gym_quadruped_path + '/robot_model/hyqreal/hyqreal.xml'
-        elif config.robot == 'mini_cheetah':
+        elif cfg.robot == 'mini_cheetah':
             urdf_filename = gym_quadruped_path + '/robot_model/mini_cheetah/mini_cheetah.urdf'
             xml_filename = gym_quadruped_path + '/robot_model/mini_cheetah/mini_cheetah.xml'
 
@@ -179,21 +179,16 @@ class InverseKinematicsNumeric:
 
 
 if __name__ == "__main__":
-    if config.robot == 'go2':
-        urdf_filename = dir_path + '/../../gym-quadruped/gym_quadruped/robot_model/go2/go2.urdf'
-        xml_filename = dir_path + '/../../gym-quadruped/gym_quadruped/robot_model/go2/go2.xml'
-    if config.robot == 'go1':
-        urdf_filename = dir_path + '/../../gym-quadruped/gym_quadruped/robot_model/go1/go1.urdf'
-        xml_filename = dir_path + '/../../gym-quadruped/gym_quadruped/robot_model/go1/go1.xml'
-    elif config.robot == 'aliengo':
-        urdf_filename = dir_path + '/../../gym-quadruped/gym_quadruped/robot_model/aliengo/aliengo.urdf'
-        xml_filename = dir_path + '/../../gym-quadruped/gym_quadruped/robot_model/aliengo/aliengo.xml'
-    elif config.robot == 'hyqreal':
-        urdf_filename = dir_path + '/../../../gym-quadruped/gym_quadruped/robot_model/hyqreal/hyqreal.urdf'
-        xml_filename = dir_path + '/../../../gym-quadruped/gym_quadruped/robot_model/hyqreal/hyqreal.xml'
-    elif config.robot == 'mini_cheetah':
-        urdf_filename = dir_path + '/../../../gym-quadruped/gym_quadruped/robot_model/mini_cheetah/mini_cheetah.urdf'
-        xml_filename = dir_path + '/../../../gym-quadruped/gym_quadruped/robot_model/mini_cheetah/mini_cheetah.xml'
+    if cfg.robot == 'go2':
+        xml_filename = gym_quadruped_path + '/robot_model/go2/go2.xml'
+    if cfg.robot == 'go1':
+        xml_filename = gym_quadruped_path + '/robot_model/go1/go1.xml'
+    elif cfg.robot == 'aliengo':
+        xml_filename = gym_quadruped_path + '/robot_model/aliengo/aliengo.xml'
+    elif cfg.robot == 'hyqreal':
+        xml_filename = gym_quadruped_path + '/robot_model/hyqreal/hyqreal.xml'
+    elif cfg.robot == 'mini_cheetah':
+        xml_filename = gym_quadruped_path + '/robot_model/mini_cheetah/mini_cheetah.xml'
 
     ik = InverseKinematicsNumeric()
 
