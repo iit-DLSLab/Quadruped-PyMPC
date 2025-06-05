@@ -66,6 +66,11 @@ class Quadruped_PyMPC_Node(Node):
         self.publisher_trajectory_generator = self.create_publisher(TrajectoryGeneratorMsg,"dls2/trajectory_generator", 1)
         if(USE_SCHEDULER or USE_MUJOCO_SIMULATION):
             self.timer = self.create_timer(1.0/SCHEDULER_FREQ, self.compute_control_callback)
+        
+        # Only for debugging purposes, to see the base and blind state from the internal simulation
+        if(USE_MUJOCO_SIMULATION):
+            self.publisher_base_blind_state_debug = self.create_publisher(BaseStateMsg, "/dls2/base_state_debug", 1)
+            self.publisher_blind_state_debug = self.create_publisher(BlindStateMsg, "/dls2/blind_state_debug", 1)
 
         # Safety check to not do anything until a first base and blind state are received
         self.first_message_base_arrived = False
@@ -119,24 +124,15 @@ class Quadruped_PyMPC_Node(Node):
         from quadruped_pympc.interfaces.wb_interface import WBInterface
 
         self.wb_interface = WBInterface(initial_feet_pos = self.env.feet_pos(frame='world'), legs_order = self.legs_order)
-
         self.srbd_controller_interface = SRBDControllerInterface()
-
-        if(cfg.mpc_params['type'] != 'sampling' and cfg.mpc_params['optimize_step_freq']):
-            self.srbd_batched_controller_interface = SRBDBatchedControllerInterface()
 
         # This variable are shared between the MPC and the whole body controller
         # in the case of the use of thread. In any case, i initialize them here
-        self.nmpc_GRFs = LegsAttr(FL=np.zeros(3), FR=np.zeros(3),
-                                    RL=np.zeros(3), RR=np.zeros(3))
-        self.nmpc_footholds = LegsAttr(FL=np.zeros(3), FR=np.zeros(3),
-                                        RL=np.zeros(3), RR=np.zeros(3))
-        self.nmpc_joints_pos = LegsAttr(FL=np.zeros(3), FR=np.zeros(3),
-                                        RL=np.zeros(3), RR=np.zeros(3))
-        self.nmpc_joints_vel = LegsAttr(FL=np.zeros(3), FR=np.zeros(3),
-                                        RL=np.zeros(3), RR=np.zeros(3))
-        self.nmpc_joints_acc = LegsAttr(FL=np.zeros(3), FR=np.zeros(3),
-                                        RL=np.zeros(3), RR=np.zeros(3))
+        self.nmpc_GRFs = LegsAttr(FL=np.zeros(3), FR=np.zeros(3), RL=np.zeros(3), RR=np.zeros(3))
+        self.nmpc_footholds = LegsAttr(FL=np.zeros(3), FR=np.zeros(3), RL=np.zeros(3), RR=np.zeros(3))
+        self.nmpc_joints_pos = LegsAttr(FL=np.zeros(3), FR=np.zeros(3), RL=np.zeros(3), RR=np.zeros(3))
+        self.nmpc_joints_vel = LegsAttr(FL=np.zeros(3), FR=np.zeros(3), RL=np.zeros(3), RR=np.zeros(3))
+        self.nmpc_joints_acc = LegsAttr(FL=np.zeros(3), FR=np.zeros(3), RL=np.zeros(3), RR=np.zeros(3))
         self.nmpc_predicted_state = np.zeros(12)
         
         self.best_sample_freq = self.wb_interface.pgg.step_freq
@@ -193,7 +189,7 @@ class Quadruped_PyMPC_Node(Node):
         # This thread runs forever!
         last_mpc_thread_time = time.time()
         while True:
-            #if time.time() - last_mpc_thread_time > 1.0 / MPC_FREQ:
+            if time.time() - last_mpc_thread_time > 1.0 / MPC_FREQ:
                 if(self.state_current is not None):
                     self.nmpc_GRFs,  \
                     self.nmpc_footholds, \
@@ -225,7 +221,7 @@ class Quadruped_PyMPC_Node(Node):
         # This process runs forever!
         last_mpc_process_time = time.time()
         while True:
-            #if time.time() - last_mpc_process_time > 1.0 / MPC_FREQ:
+            if time.time() - last_mpc_process_time > 1.0 / MPC_FREQ:
                 if(not input_data_process.empty()):
                     data = input_data_process.get()
                     state_current = data[0]
@@ -253,15 +249,13 @@ class Quadruped_PyMPC_Node(Node):
                     
                     last_mpc_loop_time = time.time() - last_mpc_process_time
                     output_data_process.put([nmpc_GRFs, nmpc_footholds, nmpc_joints_pos, nmpc_joints_vel, nmpc_joints_acc, best_sample_freq, nmpc_predicted_state, last_mpc_loop_time])
-                    last_mpc_process_time = time.time()
                     
-                    #if(time.time() - last_mpc_process_time < 1.0 / MPC_FREQ):
-                    #    time.sleep(1.0 / MPC_FREQ - (last_mpc_process_time - last_mpc_process_time))
-
+                    
                     if(cfg.mpc_params['type'] != 'sampling' and cfg.mpc_params['use_RTI']):
                         # If the controller is gradient and is using RTI, we need to linearize the mpc after its computation
                         # this helps to minize the delay between new state->control in a real case scenario.
                         self.srbd_controller_interface.compute_RTI()
+                    last_mpc_process_time = time.time()
 
 
     def get_base_state_callback(self, msg):
@@ -272,7 +266,6 @@ class Quadruped_PyMPC_Node(Node):
         self.linear_velocity = np.array(msg.linear_velocity)
         # For the angular velocity, mujoco is in the base frame, and DLS2 is in the world frame
         self.angular_velocity = np.array(msg.angular_velocity) 
-
         self.stance_status = np.array(msg.stance_status)
 
         self.first_message_base_arrived = True
@@ -331,7 +324,21 @@ class Quadruped_PyMPC_Node(Node):
             self.env.mjData.qvel[6:] = copy.deepcopy(self.joint_velocities)
             self.env.mjModel.opt.timestep = simulation_dt
             self.env.mjModel.opt.disableflags = 16 # Disable the collision detection
-            mujoco.mj_forward(self.env.mjModel, self.env.mjData)     
+            mujoco.mj_forward(self.env.mjModel, self.env.mjData)   
+
+        # Publish some message for debugging purposes
+        if(USE_MUJOCO_SIMULATION):
+            base_state_msg = BaseStateMsg()
+            base_state_msg.position = self.env.base_pos.flatten().tolist()
+            #base_state_msg.orientation = self.env.base_ori_quat.flatten().tolist()
+            base_state_msg.linear_velocity = self.env.base_lin_vel(frame='world').flatten().tolist()
+            base_state_msg.angular_velocity = self.env.base_ang_vel(frame='world').flatten().tolist()
+            self.publisher_base_blind_state_debug.publish(base_state_msg)
+
+            blind_state_msg = BlindStateMsg()
+            blind_state_msg.joints_position = self.env.mjData.qpos[7:].flatten().tolist()
+            blind_state_msg.joints_velocity = self.env.mjData.qvel[6:].flatten().tolist()
+            self.publisher_blind_state_debug.publish(blind_state_msg)
 
 
 
