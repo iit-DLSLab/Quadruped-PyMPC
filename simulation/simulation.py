@@ -169,7 +169,7 @@ def run_simulation(
             feet_vel = env.feet_vel(frame='world')
             hip_pos = env.hip_positions(frame="world")
             base_lin_vel = env.base_lin_vel(frame="world")
-            base_ang_vel = env.base_ang_vel(frame="world")
+            base_ang_vel = env.base_ang_vel(frame="base")
             base_ori_euler_xyz = env.base_ori_euler_xyz
             base_pos = env.base_pos
             com_pos = env.com
