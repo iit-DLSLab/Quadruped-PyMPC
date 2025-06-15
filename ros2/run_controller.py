@@ -348,7 +348,7 @@ class Quadruped_PyMPC_Node(Node):
         feet_vel = self.env.feet_vel(frame='world')
         hip_pos = self.env.hip_positions(frame='world')
         base_lin_vel = self.env.base_lin_vel(frame='world')
-        base_ang_vel = self.env.base_ang_vel(frame='world')
+        base_ang_vel = self.env.base_ang_vel(frame='base')
         base_ori_euler_xyz = self.env.base_ori_euler_xyz
         base_pos = self.env.base_pos
         com_pos = self.env.com
