@@ -332,7 +332,7 @@ class Quadruped_PyMPC_Node(Node):
             base_state_msg.position = self.env.base_pos.flatten().tolist()
             #base_state_msg.orientation = self.env.base_ori_quat.flatten().tolist()
             base_state_msg.linear_velocity = self.env.base_lin_vel(frame='world').flatten().tolist()
-            base_state_msg.angular_velocity = self.env.base_ang_vel(frame='world').flatten().tolist()
+            base_state_msg.angular_velocity = self.env.base_ang_vel(frame='base').flatten().tolist()
             self.publisher_base_blind_state_debug.publish(base_state_msg)
 
             blind_state_msg = BlindStateMsg()
