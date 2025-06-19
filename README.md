@@ -138,7 +138,7 @@ and to use a nice [state estimator](https://github.com/iit-DLSLab/muse).
 
 If you find the work useful, please consider citing one of our works: 
 
-[Sampling](https://arxiv.org/abs/2403.11383):
+#### [On the Benefits of GPU Sample-Based Stochastic Predictive Controllers for Legged Locomotion](https://arxiv.org/abs/2403.11383):
 ```
 @INPROCEEDINGS{turrisi2024sampling,
   author={Turrisi, Giulio and Modugno, Valerio and Amatucci, Lorenzo and Kanoulas, Dimitrios and Semini, Claudio},
@@ -148,7 +148,7 @@ If you find the work useful, please consider citing one of our works:
   pages={13757-13764},
   doi={10.1109/IROS58592.2024.10801698}}
 ```
-[Lyapunov](https://arxiv.org/abs/2409.01144):
+#### [Adaptive Non-Linear Centroidal MPC With Stability Guarantees for Robust Locomotion of Legged Robots](https://arxiv.org/abs/2409.01144):
 ```
 @ARTICLE{elobaid2025adaptivestablempc,
   author={Elobaid, Mohamed and Turrisi, Giulio and Rapetti, Lorenzo and Romualdi, Giulio and Dafarra, Stefano and Kawakami, Tomohiro and Chaki, Tomohiro and Yoshiike, Takahide and Semini, Claudio and Pucci, Daniele},
