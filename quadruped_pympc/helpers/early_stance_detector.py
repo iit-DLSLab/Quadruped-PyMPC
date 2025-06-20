@@ -28,8 +28,8 @@ class EarlyStanceDetector:
         self.relative_tracking_error_threshold = 0.5
         self.absolute_min_distance_error_threshold = 0.1
 
-        self.gait_cycles_after_step_height_enanchement = -1
-        self.use_height_enhancement = cfg.simulation_params['reflex_height_enhancement']
+        self.gait_cycles_after_reflex_height_enanchement = -1
+        self.use_reflex_next_steps_height_enhancement = cfg.simulation_params['reflex_next_steps_height_enhancement']
         self.max_gait_cycles_height_enhancement = 6
 
 
@@ -76,7 +76,7 @@ class EarlyStanceDetector:
                                 self.hitpoints[leg_name] = feet_pos[leg_name].copy()
                                 self.hitmoments[leg_name] = swing_time[leg_id]
                                 self.early_stance[leg_name] = True  # acos( disp dot local_disp / |disp| |local_disp|) < 60°
-                                self.gait_cycles_after_step_height_enanchement = 0
+                                self.gait_cycles_after_reflex_height_enanchement = 0
                                 break
                             else:
                                 self.early_stance[leg_name] = False
@@ -104,6 +104,7 @@ class EarlyStanceDetector:
                                     self.hitpoints[leg_name] = contact_point.copy()
                                     self.hitmoments[leg_name] = swing_time[leg_id]
                                     self.early_stance[leg_name] = True  # acos( disp dot local_disp / |disp| |local_disp|) < 60°
+                                    self.gait_cycles_after_reflex_height_enanchement = 0
                                     break
                                 else:
                                     self.early_stance[leg_name] = False
@@ -114,18 +115,17 @@ class EarlyStanceDetector:
                         self.hitpoints[leg_name] = None
 
 
-        if(self.use_height_enhancement):
+        if(self.use_reflex_next_steps_height_enhancement):
             for leg_id,leg_name in enumerate(self.legs_order):
-                if current_contact[leg_id] == 1 and previous_contact[leg_id] == 0 and self.gait_cycles_after_step_height_enanchement >= 0:
-                    self.gait_cycles_after_step_height_enanchement += 1
-
+                if current_contact[leg_id] == 1 and previous_contact[leg_id] == 0 and self.gait_cycles_after_reflex_height_enanchement >= 0:
+                    self.gait_cycles_after_reflex_height_enanchement += 1
                     break
             
-            if(self.gait_cycles_after_step_height_enanchement >= 0 and self.gait_cycles_after_step_height_enanchement < self.max_gait_cycles_height_enhancement):
-                stc.swing_generator.step_height_enhancement = True 
+            if(self.gait_cycles_after_reflex_height_enanchement >= 0 and self.gait_cycles_after_reflex_height_enanchement < self.max_gait_cycles_height_enhancement):
+                stc.swing_generator.reflex_next_steps_height_enhancement = True 
             else:
-                stc.swing_generator.step_height_enhancement = False
-                self.gait_cycles_after_step_height_enanchement = -1
+                stc.swing_generator.reflex_next_steps_height_enhancement = False
+                self.gait_cycles_after_reflex_height_enanchement = -1
         
 
     def contact_points(self, leg_name):

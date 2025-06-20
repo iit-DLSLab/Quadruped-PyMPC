@@ -13,7 +13,7 @@ class SwingTrajectoryGenerator:
 
         # Stored swing-trajectory properties
         self.stepHeight = step_height
-        self.step_height_enhancement = False
+        self.reflex_next_steps_height_enhancement = False
 
         if(cfg.simulation_params['visual_foothold_adaptation'] == 'blind'):
             self.z_height_enhancement = True
@@ -44,7 +44,7 @@ class SwingTrajectoryGenerator:
             t = np.array([early_stance_hitmoment, early_stance_hitmoment+updated_swing_period/4, early_stance_hitmoment+updated_swing_period/2, early_stance_hitmoment+updated_swing_period*3/4, self.swing_period])
 
         else:
-            if(self.step_height_enhancement):
+            if(self.reflex_next_steps_height_enhancement):
                 temp_step_height = 0.15
             else:
                 temp_step_height = self.stepHeight

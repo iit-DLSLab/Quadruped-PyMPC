@@ -186,7 +186,7 @@ simulation_params = {
     'impedence_joint_position_gain':  10.0,
     'impedence_joint_velocity_gain':  2.0,
 
-    'step_height':                 0.3 * hip_height,  
+    'step_height':                 0.2 * hip_height,  
 
     # Visual Foothold adapatation
     "visual_foothold_adaptation":  'blind', #'blind', 'height', 'vfa'
@@ -204,7 +204,7 @@ simulation_params = {
 
     # This is used to activate or deactivate the reflexes upon contact detection
     'reflex_trigger_mode':       'tracking', # 'tracking', 'geom_contact', False
-    'reflex_height_enhancement': False,
+    'reflex_next_steps_height_enhancement': True,
     'velocity_modulator': True,
 
     # velocity mode: human will give you the possibility to use the keyboard, the other are
