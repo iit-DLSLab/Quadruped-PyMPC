@@ -126,15 +126,15 @@ class SwingTrajectoryController:
                 self.swing_time[leg_id] = 0
 
     def check_apex_condition(self, current_contact, interval=0.02):
-        optimize_swing = 0
+        apex = 0
         for leg_id in range(4):
             # Swing time check
             if current_contact[leg_id] == 0:
                 if (self.swing_time[leg_id] > (self.swing_period / 2.0) - interval) and (
                     self.swing_time[leg_id] < (self.swing_period / 2.0) + interval
                 ):
-                    optimize_swing = 1
-        return optimize_swing
+                    apex = 1
+        return apex
 
     def check_full_stance_condition(self, current_contact):
         stance = 1
@@ -144,6 +144,13 @@ class SwingTrajectoryController:
                 stance = 0
         return stance
 
+    def check_touch_down_condition(self, current_contact, previous_contact):
+        touch_down = 0
+        for leg_id in range(4):
+            # Swing time check
+            if current_contact[leg_id] == 0 and previous_contact[leg_id] == 1:
+                    touch_down = 1
+        return touch_down
 
 # Example:
 if __name__ == "__main__":
