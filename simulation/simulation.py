@@ -111,7 +111,6 @@ def run_simulation(
         heightmaps = None
 
     # Quadruped PyMPC controller initialization -------------------------------------------------------------
-    # mpc_frequency = qpympc_cfg.simulation_params["mpc_frequency"]
     quadrupedpympc_observables_names = (
         "ref_base_height",
         "ref_base_angles",
@@ -241,8 +240,6 @@ def run_simulation(
             action[env.legs_tau_idx.RL] = tau.RL
             action[env.legs_tau_idx.RR] = tau.RR
 
-            # action_noise = np.random.normal(0, 2, size=env.mjModel.nu)
-            # action += action_noise
 
             # Apply the action to the environment and evolve sim --------------------------------------------------
             state, reward, is_terminated, is_truncated, info = env.step(action=action)
