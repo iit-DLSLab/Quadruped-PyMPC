@@ -6,7 +6,7 @@ from quadruped_pympc.helpers.quadruped_utils import GaitType
 
 # These are used both for a real experiment and a simulation -----------
 # These are the only attributes needed per quadruped, the rest can be computed automatically ----------------------
-robot = 'aliengo'  # 'go1', 'go2', 'b2', 'aliengo', 'hyqreal', 'mini_cheetah'  # TODO: Load from robot_descriptions.py
+robot = 'aliengo'  # 'aliengo', 'go1', 'go2', 'b2', 'hyqreal1', 'hyqreal2', 'mini_cheetah'  # TODO: Load from robot_descriptions.py
 
 from gym_quadruped.robot_cfgs import RobotConfig, get_robot_config
 robot_cfg: RobotConfig = get_robot_config(robot_name=robot)
