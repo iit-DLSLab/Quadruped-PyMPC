@@ -125,14 +125,13 @@ During the installation procedure, use the file **mamba_environment_ros2.yml**. 
   python3 ros2/run_controller.py
   ```
 
-For a real-robot deployment, remember to put inside the script these flags to false
+4. if you want to test the above node with a simulator, for example to test ros2 delay, you can run 
 
   ```
-  USE_MUJOCO_RENDER = False
-  USE_MUJOCO_SIMULATION = False
+  python3 ros2/run_simulator.py
   ```
 
-and to use a nice [state estimator](https://github.com/iit-DLSLab/muse). 
+5. for a real-robot deployment, use a nice [state estimator](https://github.com/iit-DLSLab/muse) 
 
 ## Citing this work
 
