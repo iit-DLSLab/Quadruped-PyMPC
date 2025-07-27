@@ -1,6 +1,7 @@
 import rclpy 
 from rclpy.node import Node 
 from dls2_msgs.msg import BaseStateMsg, BlindStateMsg, ControlSignalMsg, TrajectoryGeneratorMsg
+from sensor_msgs.msg import Joy
 
 import time
 import numpy as np
@@ -62,6 +63,7 @@ class Quadruped_PyMPC_Node(Node):
         # Subscribers and Publishers
         self.subscription_base_state = self.create_subscription(BaseStateMsg,"/dls2/base_state", self.get_base_state_callback, 1)
         self.subscription_blind_state = self.create_subscription(BlindStateMsg,"/dls2/blind_state", self.get_blind_state_callback, 1)
+        self.subscription_joy = self.create_subscription(Joy,"joy", self.get_joy_callback, 1)
         self.publisher_control_signal = self.create_publisher(ControlSignalMsg,"dls2/quadruped_pympc_torques", 1)
         self.publisher_trajectory_generator = self.create_publisher(TrajectoryGeneratorMsg,"dls2/trajectory_generator", 1)
         if(USE_SCHEDULER):
@@ -106,12 +108,6 @@ class Quadruped_PyMPC_Node(Node):
         self.env.reset(random=False)
         self.last_mpc_time = time.time()
 
-
-        
-        self.last_render_time = time.time()
-
-
-        
 
         # Quadruped PyMPC controller initialization -------------------------------------------------------------
         from quadruped_pympc.interfaces.srbd_controller_interface import SRBDControllerInterface
@@ -162,7 +158,6 @@ class Quadruped_PyMPC_Node(Node):
             process_mpc.daemon = True
             process_mpc.start()
             
-
 
         # Interactive Command Line ----------------------------
         from console import Console
@@ -252,6 +247,7 @@ class Quadruped_PyMPC_Node(Node):
                     last_mpc_process_time = time.time()
 
 
+
     def get_base_state_callback(self, msg):
         
         self.position = np.array(msg.position)
@@ -284,6 +280,27 @@ class Quadruped_PyMPC_Node(Node):
 
         if(not USE_SCHEDULER):
             self.compute_control_callback()
+
+
+
+    def get_joy_callback(self, msg):
+        """
+        Callback function to handle joystick input. Joystick used is a 
+        8Bitdi Ultimate 2C Wireless Controller.
+        """
+        self.env._ref_base_lin_vel_H[0] = msg.axes[1]/3.5  # Forward/Backward
+        self.env._ref_base_lin_vel_H[1] = msg.axes[0]/3.5  # Left/Right
+        self.env._ref_base_ang_yaw_dot = msg.axes[3]/2.  # Yaw
+
+
+        #kill the node if the button is pressed
+        if msg.buttons[8] == 1:
+            self.get_logger().info("Joystick button pressed, shutting down the node.") 
+            # This will kill the robot hal
+            os.system("kill -9 $(ps -u | grep -m 1 hal | grep -o \"^[^ ]* *[0-9]*\" | grep -o \"[0-9]*\")")
+            # This will kill the process running this script
+            os.system("pkill -f play_ros2.py") 
+            exit(0)
 
 
 
