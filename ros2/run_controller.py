@@ -54,6 +54,8 @@ SCHEDULER_FREQ = 250 # this is only valid if USE_SCHEDULER is True
 USE_FIXED_LOOP_TIME = False # This is used to fix the clock time of periodic gait gen to 1/SCHEDULER_FREQ
 USE_SATURATED_LOOP_TIME = True # This is used to cap the clock time of periodic gait gen to max 250Hz
 
+USE_SMOOTH_VELOCITY = False
+USE_SMOOTH_HEIGHT = True
 
 # Shell for the controllers ----------------------------------------------
 class Quadruped_PyMPC_Node(Node):
@@ -250,10 +252,21 @@ class Quadruped_PyMPC_Node(Node):
 
     def get_base_state_callback(self, msg):
         
-        self.position = np.array(msg.position)
+        if(USE_SMOOTH_HEIGHT):
+            # Smooth the height of the base
+            self.position[2] = 0.5*self.position[2] + 0.5*np.array(msg.position)[2]
+        else:
+            self.position[2] = np.array(msg.position)[2]
+        self.position[0:2] = np.array(msg.position)[0:2]
+
+
+        if(USE_SMOOTH_VELOCITY):
+            self.linear_velocity = 0.5*self.linear_velocity + 0.5*np.array(msg.linear_velocity)
+        else:
+            self.linear_velocity = np.array(msg.linear_velocity)
+
         # For the quaternion, the order is [w, x, y, z] on mujoco, and [x, y, z, w] on DLS2
         self.orientation = np.roll(np.array(msg.orientation), 1)
-        self.linear_velocity = np.array(msg.linear_velocity)
         # For the angular velocity, mujoco is in the base frame, and DLS2 is in the world frame
         self.angular_velocity = np.array(msg.angular_velocity) 
         self.stance_status = np.array(msg.stance_status)
