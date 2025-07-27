@@ -131,7 +131,13 @@ During the installation procedure, use the file **mamba_environment_ros2.yml**. 
   python3 ros2/run_simulator.py
   ```
 
-5. for a real-robot deployment, use a nice [state estimator](https://github.com/iit-DLSLab/muse) 
+5. joystick
+
+  ```
+  ros2 launch teleop_twist_joy teleop-launch.py joy_config:='xbox' (if want joystick)
+  ```
+
+6. for a real-robot deployment, use a nice [state estimator](https://github.com/iit-DLSLab/muse) 
 
 ## Citing this work
 
