@@ -1,0 +1,33 @@
+name: quadruped_pympc_ros2_env
+channels:
+- conda-forge
+- nvidia
+- robostack-jazzy
+dependencies:
+- pip
+- python
+- casadi
+- numpy
+- matplotlib
+- jaxlib=*=*cuda*
+- jax
+- cuda-nvcc 
+- meshcat-python 
+- scipy==1.15.1  
+- pinocchio
+- adam-robotics[all]
+- ros-jazzy-desktop
+- ros-jazzy-plotjuggler-ros
+- compilers 
+- cmake 
+- pkg-config 
+- make 
+- ninja 
+- colcon-common-extensions 
+- tqdm
+- gymnasium
+- pip:
+  - mujoco
+  - readchar
+  - liecasadi
+
