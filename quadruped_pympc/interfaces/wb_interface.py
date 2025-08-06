@@ -520,6 +520,14 @@ class WBInterface:
 
         self.last_des_foot_pos = des_foot_pos
 
+        # Compensate for friction -------------------------------------------------------------
+        if(self.stc.use_friction_compensation): #TODO fix this flag, is not only related to swing
+            tau.FL -= legs_qfrc_passive.FL
+            tau.FR -= legs_qfrc_passive.FR
+            tau.RL -= legs_qfrc_passive.RL
+            tau.RR -= legs_qfrc_passive.RR
+
+
         # Compute PD targets for the joints ----------------------------------------------------------------
         des_joints_pos = LegsAttr(*[np.zeros((3, 1)) for _ in range(4)])
         des_joints_vel = LegsAttr(*[np.zeros((3, 1)) for _ in range(4)])

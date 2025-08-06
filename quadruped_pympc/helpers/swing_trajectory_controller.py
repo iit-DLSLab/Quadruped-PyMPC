@@ -83,9 +83,7 @@ class SwingTrajectoryController:
         tau_swing = J.T @ (self.position_gain_fb * (err_pos) + self.velocity_gain_fb * (err_vel))
         if self.use_feedback_linearization:
             tau_swing += mass_matrix @ np.linalg.pinv(J) @ (accelleration - J_dot @ q_dot) + h
-        
-        if self.use_friction_compensation:
-            tau_swing -= passive_force
+    
 
         return tau_swing, des_foot_pos, des_foot_vel
 
@@ -111,9 +109,6 @@ class SwingTrajectoryController:
                 + legs_qfrc_bias
             )
         
-        if self.use_friction_compensation:
-            tau_swing -= legs_qfrc_passive
-
         return tau_swing, None, None
 
     def update_swing_time(self, current_contact, legs_order, dt):
