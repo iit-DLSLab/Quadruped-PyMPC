@@ -535,8 +535,6 @@ class WBInterface:
             qpos_predicted = copy.deepcopy(qpos)
             # TODO use predicted rotation too
             # qpos_predicted[0:3] = nmpc_predicted_state[0:3]
-            # TODO make the ik explicit and not numerical
-            #temp = self.ik.fun_compute_solution(
             temp = self.ik.compute_solution(
                 qpos_predicted, des_foot_pos.FL, des_foot_pos.FR, des_foot_pos.RL, des_foot_pos.RR
             )
