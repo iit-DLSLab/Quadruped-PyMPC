@@ -286,106 +286,6 @@ class WBInterface:
                 ref_orientation=np.array([terrain_roll, terrain_pitch, 0.0]),
                 ref_position=ref_pos,
             )
-        else:
-            # In the case of the kinodynamic model,
-            # we should pass as a reference the X-Y-Z spline of the feet for the horizon,
-            # since in the kinodimic model we are using the feet position as a reference
-            desired_foot_position_FL = np.zeros((cfg.mpc_params["horizon"], 3))
-            desired_foot_position_FR = np.zeros((cfg.mpc_params["horizon"], 3))
-            desired_foot_position_RL = np.zeros((cfg.mpc_params["horizon"], 3))
-            desired_foot_position_RR = np.zeros((cfg.mpc_params["horizon"], 3))
-            for leg_id, leg_name in enumerate(legs_order):
-                lifted_off = [False, False, False, False]
-                for n in range(cfg.mpc_params['horizon']):
-                    dt_increment_swing = (n) * cfg.mpc_params['dt']
-
-                    if lifted_off[leg_id] == False and n >= 0:
-                        if contact_sequence[leg_id][n - 1] == 1 and contact_sequence[leg_id][n] == 0:
-                            lifted_off[leg_id] = True
-
-                    if leg_id == 0:
-                        if contact_sequence[leg_id][n] == 1 and lifted_off[leg_id] == False:
-                            desired_foot_position_FL[n] = feet_pos.FL
-                        elif contact_sequence[leg_id][n] == 1 and lifted_off[leg_id] == True:
-                            desired_foot_position_FL[n] = ref_feet_pos.FL
-                        else:
-                            desired_foot_position, desired_foot_velocity, _ = (
-                                self.stc.swing_generator.compute_trajectory_references(
-                                    self.stc.swing_time[leg_id] + dt_increment_swing,
-                                    self.frg.lift_off_positions[leg_name],
-                                    ref_feet_pos.FL,
-                                )
-                            )
-                            desired_foot_position_FL[n] = desired_foot_position
-
-                    elif leg_id == 1:
-                        if contact_sequence[leg_id][n] == 1 and lifted_off[leg_id] == False:
-                            desired_foot_position_FR[n] = feet_pos.FR
-                        elif contact_sequence[leg_id][n] == 1 and lifted_off[leg_id] == True:
-                            desired_foot_position_FR[n] = ref_feet_pos.FR
-                        else:
-                            desired_foot_position, desired_foot_velocity, _ = (
-                                self.stc.swing_generator.compute_trajectory_references(
-                                    self.stc.swing_time[leg_id] + dt_increment_swing,
-                                    self.frg.lift_off_positions[leg_name],
-                                    ref_feet_pos.FR,
-                                )
-                            )
-                            desired_foot_position_FR[n] = desired_foot_position
-
-                    elif leg_id == 2:
-                        if contact_sequence[leg_id][n] == 1 and lifted_off[leg_id] == False:
-                            desired_foot_position_RL[n] = feet_pos.RL
-                        elif contact_sequence[leg_id][n] == 1 and lifted_off[leg_id] == True:
-                            desired_foot_position_RL[n] = ref_feet_pos.RL
-                        else:
-                            desired_foot_position, desired_foot_velocity, _ = (
-                                self.stc.swing_generator.compute_trajectory_references(
-                                    self.stc.swing_time[leg_id] + dt_increment_swing,
-                                    self.frg.lift_off_positions[leg_name],
-                                    ref_feet_pos.RL,
-                                )
-                            )
-                            desired_foot_position_RL[n] = desired_foot_position
-
-                    elif leg_id == 3:
-                        if contact_sequence[leg_id][n] == 1 and lifted_off[leg_id] == False:
-                            desired_foot_position_RR[n] = feet_pos.RR
-                        elif contact_sequence[leg_id][n] == 1 and lifted_off[leg_id] == True:
-                            desired_foot_position_RR[n] = ref_feet_pos.RR
-                        else:
-                            desired_foot_position, desired_foot_velocity, _ = (
-                                self.stc.swing_generator.compute_trajectory_references(
-                                    self.stc.swing_time[leg_id] + dt_increment_swing,
-                                    self.frg.lift_off_positions[leg_name],
-                                    ref_feet_pos.RR,
-                                )
-                            )
-                            desired_foot_position_RR[n] = desired_foot_position
-
-            # TODO make this more general
-            ref_state = {}
-            init_qpos = np.array([0, 0.9, -1.8, 0, 0.9, -1.8, 0, 0.9, -1.8, 0, 0.9, -1.8])
-            ref_state |= dict(
-                ref_foot_FL=ref_feet_pos.FL.reshape((1, 3)),
-                ref_foot_FR=ref_feet_pos.FR.reshape((1, 3)),
-                ref_foot_RL=ref_feet_pos.RL.reshape((1, 3)),
-                ref_foot_RR=ref_feet_pos.RR.reshape((1, 3)),
-                ref_foot_swing_FL=desired_foot_position_FL,
-                ref_foot_swing_FR=desired_foot_position_FR,
-                ref_foot_swing_RL=desired_foot_position_RL,
-                ref_foot_swing_RR=desired_foot_position_RR,
-                ref_foot_constraints_FL=ref_feet_constraints.FL,
-                ref_foot_constraints_FR=ref_feet_constraints.FR,
-                ref_foot_constraints_RL=ref_feet_constraints.RL,
-                ref_foot_constraints_RR=ref_feet_constraints.RR,
-                # Also update the reference base linear velocity and
-                ref_linear_velocity=ref_base_lin_vel,
-                ref_angular_velocity=ref_base_ang_vel,
-                ref_orientation=np.array([terrain_roll, terrain_pitch, 0.0]),
-                ref_position=ref_pos,
-                ref_joints=init_qpos,
-            )
 
         # -------------------------------------------------------------------------------------------------
 
@@ -474,49 +374,33 @@ class WBInterface:
         des_foot_pos = LegsAttr(*[np.zeros((3,)) for _ in range(4)])
         des_foot_vel = LegsAttr(*[np.zeros((3,)) for _ in range(4)])
 
-        if cfg.mpc_params['type'] != 'kinodynamic':
-            # The swing controller is in the end-effector space
-            for leg_id, leg_name in enumerate(self.legs_order):
-                if (
-                    self.current_contact[leg_id] == 0
-                ):  # If in swing phase, compute the swing trajectory tracking control.
-                    tau[leg_name], des_foot_pos[leg_name], des_foot_vel[leg_name] = (
-                        self.stc.compute_swing_control_cartesian_space(
-                            leg_id=leg_id,
-                            q_dot=qvel[legs_qvel_idx[leg_name]],
-                            J=feet_jac[leg_name][:, legs_qvel_idx[leg_name]],
-                            J_dot=feet_jac_dot[leg_name][:, legs_qvel_idx[leg_name]],
-                            lift_off=self.frg.lift_off_positions[leg_name],
-                            touch_down=nmpc_footholds[leg_name],
-                            foot_pos=feet_pos[leg_name],
-                            foot_vel=feet_vel[leg_name],
-                            passive_force=legs_qfrc_passive[leg_name],
-                            h=legs_qfrc_bias[leg_name],
-                            mass_matrix=legs_mass_matrix[leg_name],
-                            early_stance_hitmoments=self.esd.hitmoments[leg_name],
-                            early_stance_hitpoints=self.esd.hitpoints[leg_name],
-                        )
+        # The swing controller is in the end-effector space
+        for leg_id, leg_name in enumerate(self.legs_order):
+            if (
+                self.current_contact[leg_id] == 0
+            ):  # If in swing phase, compute the swing trajectory tracking control.
+                tau[leg_name], des_foot_pos[leg_name], des_foot_vel[leg_name] = (
+                    self.stc.compute_swing_control_cartesian_space(
+                        leg_id=leg_id,
+                        q_dot=qvel[legs_qvel_idx[leg_name]],
+                        J=feet_jac[leg_name][:, legs_qvel_idx[leg_name]],
+                        J_dot=feet_jac_dot[leg_name][:, legs_qvel_idx[leg_name]],
+                        lift_off=self.frg.lift_off_positions[leg_name],
+                        touch_down=nmpc_footholds[leg_name],
+                        foot_pos=feet_pos[leg_name],
+                        foot_vel=feet_vel[leg_name],
+                        passive_force=legs_qfrc_passive[leg_name],
+                        h=legs_qfrc_bias[leg_name],
+                        mass_matrix=legs_mass_matrix[leg_name],
+                        early_stance_hitmoments=self.esd.hitmoments[leg_name],
+                        early_stance_hitpoints=self.esd.hitpoints[leg_name],
                     )
-                else:
-                    des_foot_pos[leg_name] = nmpc_footholds[leg_name]
-                    # des_foot_pos[leg_name] = self.frg.touch_down_positions[leg_name]
-                    des_foot_vel[leg_name] = des_foot_vel[leg_name] * 0.0
-        else:
-            # The swing controller is in the joint space
-            for leg_id, leg_name in enumerate(self.legs_order):
-                if (
-                    self.current_contact[leg_id] == 0
-                ):  # If in swing phase, compute the swing trajectory tracking control.
-                    tau[leg_name], _, _ = self.stc.compute_swing_control_joint_space(
-                        nmpc_joints_pos[leg_name],
-                        nmpc_joints_vel[leg_name],
-                        nmpc_joints_acc[leg_name],
-                        qpos[legs_qpos_idx[leg_name]],
-                        qvel[legs_qvel_idx[leg_name]],
-                        legs_mass_matrix[leg_name],
-                        legs_qfrc_bias[leg_name],
-                        legs_qfrc_passive[leg_name]
-                    )
+                )
+            else:
+                des_foot_pos[leg_name] = nmpc_footholds[leg_name]
+                # des_foot_pos[leg_name] = self.frg.touch_down_positions[leg_name]
+                des_foot_vel[leg_name] = des_foot_vel[leg_name] * 0.0
+
 
         self.last_des_foot_pos = des_foot_pos
 
