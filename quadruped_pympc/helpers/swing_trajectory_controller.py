@@ -1,5 +1,5 @@
 import numpy as np
-
+from quadruped_pympc import config as cfg
 
 class SwingTrajectoryController:
     def __init__(
@@ -140,11 +140,65 @@ class SwingTrajectoryController:
         return stance
 
     def check_touch_down_condition(self, current_contact, previous_contact):
+        """
+        Check if optimization should be triggered based on touchdown events.
+        The optimization is triggered when:
+        1. At least one leg touches down (goes from swing to stance)
+        2. All legs are currently in stance (full stance condition)
+        3. A brief delay after full stance is achieved to ensure stability
+
+        Examples:
+        >>> # Typical usage in gait optimization
+        >>> optimize_flag = controller.check_touch_down_condition(
+        ...     current_contact=[1, 1, 1, 1],  # All legs in stance
+        ...     previous_contact=[0, 1, 1, 1]   # FL just touched down
+        ... )
+        >>> # Returns 1 after stability delay, 0 before
+        """
         touch_down = 0
+        
+        # Check if any leg just touched down (transition from swing to stance)
+        any_touchdown = False
         for leg_id in range(4):
-            # Swing time check
-            if current_contact[leg_id] == 0 and previous_contact[leg_id] == 1:
-                    touch_down = 1
+            if current_contact[leg_id] == 1 and previous_contact[leg_id] == 0:
+                any_touchdown = True
+                break
+        
+        # Check if all legs are currently in stance
+        all_in_stance = all(current_contact[leg_id] == 1 for leg_id in range(4))
+        
+        # Initialize stance timing if not present
+        if not hasattr(self, '_full_stance_start_time'):
+            self._full_stance_start_time = None
+            self._last_check_time = 0
+            self._recent_touchdown = False
+        
+        # Track timing for full stance condition
+        dt = cfg.simulation_params['dt']
+        current_time = self._last_check_time + dt
+        self._last_check_time = current_time
+
+        # Set flag if there was a recent touchdown
+        if any_touchdown:
+            self._recent_touchdown = True
+        
+        if all_in_stance:
+            if self._full_stance_start_time is None:
+                # Just entered full stance
+                self._full_stance_start_time = current_time
+            else:
+                # Check if we've been in full stance long enough (e.g., 50ms for stability)
+                stability_delay = 25 * dt 
+                if (current_time - self._full_stance_start_time) >= stability_delay:
+                    # If there was a recent touchdown and we're in stable full stance
+                    if self._recent_touchdown:
+                        touch_down = 1
+                        self._recent_touchdown = False  # Reset the flag after triggering
+        else:
+            # Reset full stance timing when not all legs are in contact
+            self._full_stance_start_time = None
+            self._recent_touchdown = False  # Reset touchdown flag when leaving full stance
+        
         return touch_down
 
 # Example:
