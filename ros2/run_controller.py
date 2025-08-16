@@ -35,11 +35,15 @@ pid = os.getpid()
 print("PID: ", pid)
 os.system("sudo renice -n -21 -p " + str(pid))
 os.system("sudo echo -20 > /proc/" + str(pid) + "/autogroup")
-affinity_mask = {4, 5} 
-os.sched_setaffinity(pid, affinity_mask)
+
+# to reserve the core 4, 5 for the process, add in etc/default/grub
+#GRUB_CMDLINE_LINUX_DEFAULT="quiet splash isolcpus=4-5" in etc/default/grub
+# and then sudo update-grub
+# and uncomment the line below
+#affinity_mask = {4, 5} 
+#os.sched_setaffinity(pid, affinity_mask)
+
 #for real time, launch it with chrt -r 99 python3 run_controller.py
-# to reserve the core 4, 5 for the process, ass
-#GRUB_CMDLINE_LINUX_DEFAULT="quiet splash isolcpus=4-5" in etc/default/grub, then sudo update-grub
 
 
 USE_DLS_CONVENTION = False
