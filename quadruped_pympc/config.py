@@ -210,6 +210,7 @@ simulation_params = {
 
     # This is used to activate or deactivate the reflexes upon contact detection
     'reflex_trigger_mode':       'tracking', # 'tracking', 'geom_contact', False
+    'reflex_max_step_height':    0.5 * hip_height,  # this is the maximum step height that the robot can do if reflexes are enabled
     'reflex_next_steps_height_enhancement': False,
     'velocity_modulator': True,
 

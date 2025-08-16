@@ -16,26 +16,28 @@ class SwingTrajectoryGenerator:
         self.reflex_next_steps_height_enhancement = False
 
         if(cfg.simulation_params['visual_foothold_adaptation'] == 'blind'):
-            self.z_height_enhancement = True
+            self.blind_locomotion = True
         else:
-            self.z_height_enhancement = False
+            self.blind_locomotion = False
+
+        self.reflex_max_step_height = cfg.simulation_params['reflex_max_step_height']
 
     def createCurve(self, x0, xf, early_stance_hitmoment = -1):
 
         scaling_factor = 1.5
         
         if early_stance_hitmoment != -1:# and early_stance_hitmoment < self.swing_period*0.9:
-            reflex_maximum_height = 0.15 # this should be per robot basis
+            reflex_maximum_height = self.reflex_max_step_height
             
             p1 = x0.copy()
             p1[:2] = x0[:2] - 0.01 * (xf[:2]-x0[:2])
             p1 += np.array([0., 0., self.stepHeight / scaling_factor])
             p2 = 0.5 * (x0 + xf) + np.array([0., 0., reflex_maximum_height])
-            p3 = xf + np.array([0.0, 0.0, reflex_maximum_height / scaling_factor])
+            p3 = 0.2*x0 + 0.8*xf + np.array([0.0, 0.0, reflex_maximum_height / scaling_factor])
 
-            x = np.array([x0[0], p1[0], p2[0], p3[0], xf[0]])
-            y = np.array([x0[1], p1[1], p2[1], p3[1], xf[1]])
-            if(self.z_height_enhancement):
+            x = np.array([x0[0], p1[0], p2[0], p3[0], p3[0]])
+            y = np.array([x0[1], p1[1], p2[1], p3[1], p3[1]])
+            if(self.blind_locomotion):
                 z = np.array([x0[2], p1[2], p2[2], p3[2], xf[2] + reflex_maximum_height / (scaling_factor+0.5)])
             else:
                 z = np.array([x0[2], p1[2], p2[2], p3[2], xf[2]])
@@ -45,7 +47,7 @@ class SwingTrajectoryGenerator:
 
         else:
             if(self.reflex_next_steps_height_enhancement):
-                temp_step_height = 0.15
+                temp_step_height = self.reflex_max_step_height
             else:
                 temp_step_height = self.stepHeight
             p1 = x0 + np.array([0., 0., temp_step_height / scaling_factor])
