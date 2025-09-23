@@ -1,4 +1,4 @@
-name: quadruped_pympc_ros2_env
+name: quadruped_pympc_ros2_humble_env
 channels:
 - conda-forge
 - nvidia
@@ -18,6 +18,8 @@ dependencies:
 - adam-robotics[all]
 - ros-humble-desktop
 - ros-humble-plotjuggler-ros
+- ros-humble-rmw-cyclonedds-cpp
+- ros-humble-rosidl-generator-dds-idl
 - compilers 
 - cmake 
 - pkg-config 

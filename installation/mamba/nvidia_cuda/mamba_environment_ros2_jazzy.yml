@@ -1,4 +1,4 @@
-name: quadruped_pympc_ros2_env
+name: quadruped_pympc_ros2_jazzy_env
 channels:
 - conda-forge
 - nvidia
@@ -18,6 +18,7 @@ dependencies:
 - adam-robotics[all]
 - ros-jazzy-desktop
 - ros-jazzy-plotjuggler-ros
+- ros-jazzy-rmw-cyclonedds-cpp
 - compilers 
 - cmake 
 - pkg-config 

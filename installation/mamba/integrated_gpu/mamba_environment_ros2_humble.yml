@@ -1,6 +1,7 @@
 name: quadruped_pympc_ros2_env
 channels:
 - conda-forge
+- nvidia
 - robostack-staging
 dependencies:
 - pip
@@ -9,13 +10,15 @@ dependencies:
 - numpy
 - matplotlib
 - jaxlib
-- jax
+- jax 
 - meshcat-python 
 - scipy==1.15.1  
 - pinocchio
 - adam-robotics[all]
 - ros-humble-desktop
 - ros-humble-plotjuggler-ros
+- ros-humble-rmw-cyclonedds-cpp
+- ros-humble-rosidl-generator-dds-idl
 - compilers 
 - cmake 
 - pkg-config 
