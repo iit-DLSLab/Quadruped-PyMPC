@@ -155,18 +155,18 @@ class QuadrupedPyMPC_Wrapper:
                 # this helps to minize the delay between new state->control in a real case scenario.
                 self.srbd_controller_interface.compute_RTI()
 
-            # Update the gait
-            if cfg.mpc_params['type'] != 'sampling' and cfg.mpc_params['optimize_step_freq']:
-                self.best_sample_freq = self.srbd_batched_controller_interface.optimize_gait(
-                    state_current,
-                    ref_state,
-                    inertia,
-                    self.wb_interface.pgg.phase_signal,
-                    self.wb_interface.pgg.step_freq,
-                    self.wb_interface.pgg.duty_factor,
-                    self.wb_interface.pgg.gait_type,
-                    optimize_swing,
-                )
+        # Update the gait
+        if cfg.mpc_params['type'] != 'sampling' and cfg.mpc_params['optimize_step_freq']:
+            self.best_sample_freq = self.srbd_batched_controller_interface.optimize_gait(
+                state_current,
+                ref_state,
+                inertia,
+                self.wb_interface.pgg.phase_signal,
+                self.wb_interface.pgg.step_freq,
+                self.wb_interface.pgg.duty_factor,
+                self.wb_interface.pgg.gait_type,
+                optimize_swing,
+            )
 
         # Compute Swing and Stance Torque ---------------------------------------------------------------------------
         tau, des_joints_pos, des_joints_vel = self.wb_interface.compute_stance_and_swing_torque(

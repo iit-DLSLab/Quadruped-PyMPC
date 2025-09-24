@@ -292,7 +292,7 @@ class WBInterface:
         if cfg.mpc_params['optimize_step_freq']:
             # we can always optimize the step freq, or just at the apex of the swing
             # to avoid possible jittering in the solution
-            optimize_swing = self.stc.check_touch_down_condition(self.current_contact, self.previous_contact)
+            optimize_swing = self.stc.check_touch_down_condition(self.current_contact, self.previous_contact, contact_sequence, lookahead=3)
         else:
             optimize_swing = 0
 
