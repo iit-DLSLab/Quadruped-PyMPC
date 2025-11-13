@@ -563,6 +563,7 @@ class Quadruped_PyMPC_Node(Node):
                 self.best_sample_freq = data[5]
                 self.nmpc_predicted_state = data[6]
                 self.last_mpc_loop_time = data[7]
+        
         elif(USE_PROCESS_SHARED_MEMORY_MPC):
             if(not self.input_data_process.full()):
                 self.input_data_process.put_nowait([state_current, ref_state, contact_sequence, inertia, optimize_swing, self.wb_interface.pgg.phase_signal, self.wb_interface.pgg.step_freq])
