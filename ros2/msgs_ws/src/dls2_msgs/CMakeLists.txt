@@ -30,6 +30,7 @@ rosidl_generate_interfaces(${PROJECT_NAME}
   "msg/BaseStateMsg.msg"
   "msg/ControlSignalMsg.msg"
   "msg/TrajectoryGeneratorMsg.msg"
+  "msg/TimeDebugMsg.msg"
 )
 
 ament_package()

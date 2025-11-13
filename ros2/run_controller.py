@@ -1,6 +1,6 @@
 import rclpy 
 from rclpy.node import Node 
-from dls2_msgs.msg import BaseStateMsg, BlindStateMsg, ControlSignalMsg, TrajectoryGeneratorMsg
+from dls2_msgs.msg import BaseStateMsg, BlindStateMsg, ControlSignalMsg, TrajectoryGeneratorMsg, TimeDebugMsg
 from sensor_msgs.msg import Joy
 
 import time
@@ -108,6 +108,7 @@ class Quadruped_PyMPC_Node(Node):
         self.subscription_joy = self.create_subscription(Joy,"joy", self.get_joy_callback, 1)
         self.publisher_control_signal = self.create_publisher(ControlSignalMsg,"dls2/quadruped_pympc_torques", 1)
         self.publisher_trajectory_generator = self.create_publisher(TrajectoryGeneratorMsg,"dls2/trajectory_generator", 1)
+        self.publisher_time_debug = self.create_publisher(TimeDebugMsg,"dls2/time_debug", 1)
         if(USE_SCHEDULER):
             self.timer = self.create_timer(1.0/SCHEDULER_FREQ, self.compute_control_callback)
         
@@ -649,7 +650,6 @@ class Quadruped_PyMPC_Node(Node):
 
         control_signal_msg = ControlSignalMsg()
         control_signal_msg.torques = np.concatenate([self.tau.FL, self.tau.FR, self.tau.RL, self.tau.RR], axis=0).flatten()
-        control_signal_msg.timestamp = self.loop_time #self.loop_time#self.last_mpc_loop_time
         self.publisher_control_signal.publish(control_signal_msg) 
 
         if(USE_DLS_CONVENTION):
@@ -668,8 +668,12 @@ class Quadruped_PyMPC_Node(Node):
         trajectory_generator_msg.stance_legs[3] = bool(contact_sequence[0, 3])
         trajectory_generator_msg.kp = self.impedence_joint_position_gain
         trajectory_generator_msg.kd = self.impedence_joint_velocity_gain
-        trajectory_generator_msg.timestamp = self.last_mpc_loop_time
         self.publisher_trajectory_generator.publish(trajectory_generator_msg)
+
+        time_debug_msg = TimeDebugMsg()
+        time_debug_msg.time_wbc = self.loop_time
+        time_debug_msg.time_mpc = self.last_mpc_loop_time
+        self.publisher_time_debug.publish(time_debug_msg)
 
 
 
