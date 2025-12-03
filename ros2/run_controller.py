@@ -1,6 +1,6 @@
 import rclpy 
 from rclpy.node import Node 
-from dls2_msgs.msg import BaseStateMsg, BlindStateMsg, ControlSignalMsg, TrajectoryGeneratorMsg, TimeDebugMsg
+from dls2_interface.msg import BaseState, BlindState, ControlSignal, TrajectoryGenerator, TimeDebug
 from sensor_msgs.msg import Joy
 
 import time
@@ -18,10 +18,6 @@ import mujoco
 from gym_quadruped.quadruped_env import QuadrupedEnv
 from gym_quadruped.utils.quadruped_utils import LegsAttr
 
-# Helper functions for plotting
-from quadruped_pympc.helpers.quadruped_utils import plot_swing_mujoco
-from gym_quadruped.utils.mujoco.visual import render_vector
-from gym_quadruped.utils.mujoco.visual import render_sphere
 
 # Config imports
 from quadruped_pympc import config as cfg
@@ -37,9 +33,9 @@ os.system("sudo renice -n -21 -p " + str(pid))
 os.system("sudo echo -20 > /proc/" + str(pid) + "/autogroup")
 
 # to reserve the core 4, 5 for the process, add in etc/default/grub
-#GRUB_CMDLINE_LINUX_DEFAULT="quiet splash isolcpus=4-5" in etc/default/grub
+# GRUB_CMDLINE_LINUX_DEFAULT="quiet splash isolcpus=4-5" in etc/default/grub
 # and then sudo update-grub
-# and uncomment the line below
+# and uncomment the lines below
 #affinity_mask = {4, 5} 
 #os.sched_setaffinity(pid, affinity_mask)
 
@@ -103,12 +99,12 @@ class Quadruped_PyMPC_Node(Node):
         super().__init__('Quadruped_PyMPC_Node')
 
         # Subscribers and Publishers
-        self.subscription_base_state = self.create_subscription(BaseStateMsg,"/dls2/base_state", self.get_base_state_callback, 1)
-        self.subscription_blind_state = self.create_subscription(BlindStateMsg,"/dls2/blind_state", self.get_blind_state_callback, 1)
+        self.subscription_base_state = self.create_subscription(BaseState,"/base_state", self.get_base_state_callback, 1)
+        self.subscription_blind_state = self.create_subscription(BlindState,"/blind_state", self.get_blind_state_callback, 1)
         self.subscription_joy = self.create_subscription(Joy,"joy", self.get_joy_callback, 1)
-        self.publisher_control_signal = self.create_publisher(ControlSignalMsg,"dls2/quadruped_pympc_torques", 1)
-        self.publisher_trajectory_generator = self.create_publisher(TrajectoryGeneratorMsg,"dls2/trajectory_generator", 1)
-        self.publisher_time_debug = self.create_publisher(TimeDebugMsg,"dls2/time_debug", 1)
+        self.publisher_control_signal = self.create_publisher(ControlSignal,"/quadruped_pympc_torques", 1)
+        self.publisher_trajectory_generator = self.create_publisher(TrajectoryGenerator,"/trajectory_generator", 1)
+        self.publisher_time_debug = self.create_publisher(TimeDebug,"/time_debug", 1)
         if(USE_SCHEDULER):
             self.timer = self.create_timer(1.0/SCHEDULER_FREQ, self.compute_control_callback)
         
@@ -127,7 +123,6 @@ class Quadruped_PyMPC_Node(Node):
         self.orientation = np.zeros(4)
         self.linear_velocity = np.zeros(3)
         self.angular_velocity = np.zeros(3)
-        self.stance_status = np.zeros(4)
         # Blind State
         self.joint_positions = np.zeros(12)
         self.joint_velocities = np.zeros(12)
@@ -370,22 +365,22 @@ class Quadruped_PyMPC_Node(Node):
         
         if(USE_SMOOTH_HEIGHT):
             # Smooth the height of the base
-            self.position[2] = 0.5*self.position[2] + 0.5*np.array(msg.position)[2]
+            self.position[2] = 0.5*self.position[2] + 0.5*np.array(msg.pose.position)[2]
         else:
-            self.position[2] = np.array(msg.position)[2]
-        self.position[0:2] = np.array(msg.position)[0:2]
+            self.position[2] = np.array(msg.pose.position)[2]
+        self.position[0:2] = np.array(msg.pose.position)[0:2]
 
 
         if(USE_SMOOTH_VELOCITY):
-            self.linear_velocity = 0.5*self.linear_velocity + 0.5*np.array(msg.linear_velocity)
+            self.linear_velocity = 0.5*self.linear_velocity + 0.5*np.array(msg.velocity.linear)
         else:
-            self.linear_velocity = np.array(msg.linear_velocity)
+            self.linear_velocity = np.array(msg.velocity.linear)
 
         # For the quaternion, the order is [w, x, y, z] on mujoco, and [x, y, z, w] on DLS2
-        self.orientation = np.roll(np.array(msg.orientation), 1)
+        self.orientation = np.roll(np.array(msg.pose.orientation), 1)
         # For the angular velocity, mujoco is in the base frame, and DLS2 is in the world frame
-        self.angular_velocity = np.array(msg.angular_velocity) 
-        self.stance_status = np.array(msg.stance_status)
+        self.angular_velocity = np.array(msg.velocity.angular) 
+
 
         self.first_message_base_arrived = True
 
@@ -511,7 +506,6 @@ class Quadruped_PyMPC_Node(Node):
 
         # Get the heightmaps
         heightmaps = None
-
 
         
         # Update the state and reference -------------------------
@@ -649,8 +643,8 @@ class Quadruped_PyMPC_Node(Node):
             self.tau.FL[0] = -self.tau.FL[0]
             self.tau.RL[0] = -self.tau.RL[0]
 
-        control_signal_msg = ControlSignalMsg()
-        control_signal_msg.torques = np.concatenate([self.tau.FL, self.tau.FR, self.tau.RL, self.tau.RR], axis=0).flatten()
+        control_signal_msg = ControlSignal()
+        control_signal_msg.torques = np.concatenate([self.tau.FL, self.tau.FR, self.tau.RL, self.tau.RR], axis=0).flatten().tolist()
         self.publisher_control_signal.publish(control_signal_msg) 
 
         if(USE_DLS_CONVENTION):
@@ -660,18 +654,15 @@ class Quadruped_PyMPC_Node(Node):
             pd_target_joints_vel.FL[0] = -pd_target_joints_vel.FL[0]
             pd_target_joints_vel.RL[0] = -pd_target_joints_vel.RL[0]  
 
-        trajectory_generator_msg = TrajectoryGeneratorMsg()
-        trajectory_generator_msg.joints_position = np.concatenate([pd_target_joints_pos.FL, pd_target_joints_pos.FR, pd_target_joints_pos.RL, pd_target_joints_pos.RR], axis=0).flatten()
-        trajectory_generator_msg.joints_velocity = np.concatenate([pd_target_joints_vel.FL, pd_target_joints_vel.FR, pd_target_joints_vel.RL, pd_target_joints_vel.RR], axis=0).flatten()
-        trajectory_generator_msg.stance_legs[0] = bool(contact_sequence[0, 0])
-        trajectory_generator_msg.stance_legs[1] = bool(contact_sequence[0, 1])
-        trajectory_generator_msg.stance_legs[2] = bool(contact_sequence[0, 2])
-        trajectory_generator_msg.stance_legs[3] = bool(contact_sequence[0, 3])
-        trajectory_generator_msg.kp = self.impedence_joint_position_gain
-        trajectory_generator_msg.kd = self.impedence_joint_velocity_gain
+        trajectory_generator_msg = TrajectoryGenerator()
+        trajectory_generator_msg.timestamp = float(self.get_clock().now().nanoseconds)
+        trajectory_generator_msg.joints_position = np.concatenate([pd_target_joints_pos.FL, pd_target_joints_pos.FR, pd_target_joints_pos.RL, pd_target_joints_pos.RR], axis=0).flatten().tolist()
+        trajectory_generator_msg.joints_velocity = np.concatenate([pd_target_joints_vel.FL, pd_target_joints_vel.FR, pd_target_joints_vel.RL, pd_target_joints_vel.RR], axis=0).flatten().tolist()
+        trajectory_generator_msg.kp = (self.impedence_joint_position_gain).tolist()
+        trajectory_generator_msg.kd = (self.impedence_joint_velocity_gain).tolist()
         self.publisher_trajectory_generator.publish(trajectory_generator_msg)
 
-        time_debug_msg = TimeDebugMsg()
+        time_debug_msg = TimeDebug()
         time_debug_msg.time_wbc = self.loop_time
         time_debug_msg.time_mpc = self.last_mpc_loop_time
         self.publisher_time_debug.publish(time_debug_msg)

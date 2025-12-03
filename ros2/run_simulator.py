@@ -1,31 +1,21 @@
 import rclpy 
 from rclpy.node import Node 
-from dls2_msgs.msg import BaseStateMsg, BlindStateMsg, ControlSignalMsg, TrajectoryGeneratorMsg
+from dls2_interface.msg import BaseState, BlindState, ControlSignal, TrajectoryGenerator, TimeDebug
 
 import time
 import numpy as np
 np.set_printoptions(precision=3, suppress=True)
 
-import threading
-import multiprocessing
-
-
-import copy
+import mujoco
 
 # Gym and Simulation related imports
-import mujoco
 from gym_quadruped.quadruped_env import QuadrupedEnv
 from gym_quadruped.utils.quadruped_utils import LegsAttr
 
-# Helper functions for plotting
-from quadruped_pympc.helpers.quadruped_utils import plot_swing_mujoco
-from gym_quadruped.utils.mujoco.visual import render_vector
-from gym_quadruped.utils.mujoco.visual import render_sphere
 
 # Config imports
 from quadruped_pympc import config as cfg
 
-import sys
 import os 
 dir_path = os.path.dirname(os.path.realpath(__file__))
 
@@ -39,10 +29,10 @@ class Simulator_Node(Node):
         super().__init__('Simulator_Node')
 
         # Subscribers and Publishers
-        self.publisher_base_state = self.create_publisher(BaseStateMsg,"/dls2/base_state", 1)
-        self.publisher_blind_state = self.create_publisher(BlindStateMsg,"/dls2/blind_state", 1)
-        self.subscriber_control_signal = self.create_subscription(ControlSignalMsg,"dls2/quadruped_pympc_torques", self.get_torques_callback, 1)
-        self.subscriber_trajectory_generator = self.create_subscription(TrajectoryGeneratorMsg,"dls2/trajectory_generator", self.get_trajectory_generator_callback, 1)
+        self.publisher_base_state = self.create_publisher(BaseState,"/base_state", 1)
+        self.publisher_blind_state = self.create_publisher(BlindState,"/blind_state", 1)
+        self.subscriber_control_signal = self.create_subscription(ControlSignal,"/quadruped_pympc_torques", self.get_torques_callback, 1)
+        self.subscriber_trajectory_generator = self.create_subscription(TrajectoryGenerator,"/trajectory_generator", self.get_trajectory_generator_callback, 1)
 
         self.timer = self.create_timer(1.0/SCHEDULER_FREQ, self.compute_simulator_step_callback)
 
@@ -65,6 +55,8 @@ class Simulator_Node(Node):
 
         self.last_render_time = time.time()
         self.env.render()  
+        self.env.viewer.user_scn.flags[mujoco.mjtRndFlag.mjRND_SHADOW] = False
+        self.env.viewer.user_scn.flags[mujoco.mjtRndFlag.mjRND_REFLECTION] = False
 
         # Torque vector
         self.desired_tau = LegsAttr(*[np.zeros((int(self.env.mjModel.nu/4), 1)) for _ in range(4)])
@@ -110,16 +102,16 @@ class Simulator_Node(Node):
         base_ang_vel = self.env.base_ang_vel(frame='base')
         base_pos = self.env.base_pos
 
-        base_state_msg = BaseStateMsg()
-        base_state_msg.position = base_pos
-        base_state_msg.orientation = np.roll(self.env.mjData.qpos[3:7],-1)
-        base_state_msg.linear_velocity = base_lin_vel
-        base_state_msg.angular_velocity = base_ang_vel
+        base_state_msg = BaseState()
+        base_state_msg.pose.position = base_pos
+        base_state_msg.pose.orientation = np.roll(self.env.mjData.qpos[3:7],-1)
+        base_state_msg.velocity.linear = base_lin_vel
+        base_state_msg.velocity.angular = base_ang_vel
         self.publisher_base_state.publish(base_state_msg)
 
-        blind_state_msg = BlindStateMsg()
-        blind_state_msg.joints_position = self.env.mjData.qpos[7:]
-        blind_state_msg.joints_velocity = self.env.mjData.qvel[6:]
+        blind_state_msg = BlindState()
+        blind_state_msg.joints_position = self.env.mjData.qpos[7:].tolist()
+        blind_state_msg.joints_velocity = self.env.mjData.qvel[6:].tolist()
         self.publisher_blind_state.publish(blind_state_msg)
 
 

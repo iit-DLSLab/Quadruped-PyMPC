@@ -9,6 +9,8 @@ from pprint import pprint
 
 import numpy as np
 
+import mujoco
+
 # Gym and Simulation related imports
 from gym_quadruped.quadruped_env import QuadrupedEnv
 from gym_quadruped.utils.mujoco.visual import render_sphere, render_vector
@@ -69,6 +71,8 @@ def run_simulation(
     env.reset(random=False)
     if render:
         env.render()  # Pass in the first render call any mujoco.viewer.KeyCallbackType
+        env.viewer.user_scn.flags[mujoco.mjtRndFlag.mjRND_SHADOW] = False
+        env.viewer.user_scn.flags[mujoco.mjtRndFlag.mjRND_REFLECTION] = False
 
     # Initialization of variables used in the main control loop --------------------------------
 

@@ -1,0 +1,24 @@
+module dls2_interface
+{
+  module msg
+  {
+    struct BlindState
+    {
+      // header
+      string frame_id;
+      unsigned long sequence_id;
+      double timestamp;
+      string robot_name;
+
+      // data
+      sequence<string> joints_name;
+      sequence<double> joints_position;
+      sequence<double> joints_velocity;
+      sequence<double> joints_acceleration;
+      sequence<double> joints_effort;
+      sequence<double> joints_temperature;
+      sequence<boolean> feet_contact;
+      sequence<double> current_feet_positions;
+    };
+  };
+};
