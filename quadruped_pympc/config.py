@@ -6,7 +6,7 @@ from quadruped_pympc.helpers.quadruped_utils import GaitType
 
 # These are used both for a real experiment and a simulation -----------
 # These are the only attributes needed per quadruped, the rest can be computed automatically ----------------------
-robot = 'aliengo'  # 'aliengo', 'go1', 'go2', 'b2', 'hyqreal1', 'hyqreal2', 'mini_cheetah'  # TODO: Load from robot_descriptions.py
+robot = 'aliengo'  # 'aliengo', 'go1', 'go2', 'b2', 'hyqreal1', 'hyqreal2', 'mini_cheetah', 'spot'  # TODO: Load from robot_descriptions.py
 
 from gym_quadruped.robot_cfgs import RobotConfig, get_robot_config
 robot_cfg: RobotConfig = get_robot_config(robot_name=robot)
@@ -58,6 +58,12 @@ elif (robot == 'mini_cheetah'):
     inertia = np.array([[1.58460467e-01, 1.21660000e-04, -1.55444692e-02],
                         [1.21660000e-04, 4.68645637e-01, -3.12000000e-05],
                         [-1.55444692e-02, -3.12000000e-05, 5.24474661e-01]])
+
+elif (robot == 'spot'):
+    mass = 50.34
+    inertia = np.array([[0.2310941359705289, -0.0014987128245817424, -0.021400468992761768],
+                        [-0.0014987128245817424, 1.4485084687476608, 0.0004641447134275615],
+                        [-0.021400468992761768, 0.0004641447134275615, 1.503217877350808]])
 
 
 gravity_constant = 9.81 # Exposed in case of different gravity conditions
