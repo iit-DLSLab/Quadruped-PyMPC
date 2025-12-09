@@ -108,4 +108,6 @@ During the installation procedure, use the file **mamba_environment_ros2.yml**. 
   ros2 launch teleop_twist_joy teleop-launch.py joy_config:='xbox'
   ```
 
-6. for a real-robot deployment, use a nice [state estimator](https://github.com/iit-DLSLab/muse) 
+6. general commands from terminal available [here](https://github.com/iit-DLSLab/Quadruped-PyMPC/blob/335779f1eecc315511b8036d84d986a66f2450c5/ros2/console.py#L358)
+
+7. for a real-robot deployment, use a nice [state estimator](https://github.com/iit-DLSLab/muse) 
