@@ -7,6 +7,7 @@ import time
 from os import PathLike
 from pprint import pprint
 
+import copy
 import numpy as np
 
 import mujoco
@@ -175,8 +176,8 @@ def run_simulation(
             base_lin_vel = env.base_lin_vel(frame="world")
             base_ang_vel = env.base_ang_vel(frame="base")
             base_ori_euler_xyz = env.base_ori_euler_xyz
-            base_pos = env.base_pos
-            com_pos = env.com
+            base_pos = copy.deepcopy(env.base_pos)
+            com_pos = copy.deepcopy(env.com)
 
             # Get the reference base velocity in the world frame
             ref_base_lin_vel, ref_base_ang_vel = env.target_base_vel()
