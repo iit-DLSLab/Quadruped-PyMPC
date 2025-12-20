@@ -149,6 +149,17 @@ class WBInterface:
             optimize_swing (bool), boolean to inform that the robot is in the apex, hence we can optimize step freq.
         """
 
+        # Estimate the terrain slope, height, and robot elevation -------------------------------------------------------
+        terrain_roll, terrain_pitch, terrain_height, robot_height = self.terrain_computation.compute_terrain_estimation(
+            base_position=base_pos,
+            yaw=base_ori_euler_xyz[2],
+            feet_pos=self.frg.lift_off_positions,
+            current_contact=self.current_contact,
+        )
+        base_pos[2] = robot_height
+        com_pos[2] = robot_height #TODO, this is an error
+
+
         state_current = dict(
             position=com_pos + self.frg.com_pos_offset_w,  # manual com offset
             # position=base_pos,
@@ -244,17 +255,10 @@ class WBInterface:
         else:
             ref_feet_constraints = LegsAttr(FL=None, FR=None, RL=None, RR=None)
 
-        # Estimate the terrain slope and elevation -------------------------------------------------------
-        terrain_roll, terrain_pitch, terrain_height = self.terrain_computation.compute_terrain_estimation(
-            base_position=base_pos,
-            yaw=base_ori_euler_xyz[2],
-            feet_pos=self.frg.lift_off_positions,
-            current_contact=self.current_contact,
-        )
-
-        ref_pos = np.array([0, 0, cfg.hip_height])
-        ref_pos[2] = cfg.simulation_params["ref_z"] + terrain_height
         
+
+        # Update state reference ------------------------------------------------------------------------
+
         # Rotate the reference base linear velocity to the terrain frame
         ref_base_lin_vel = R.from_euler("xyz", [terrain_roll, terrain_pitch, 0]).as_matrix() @ ref_base_lin_vel
         if(terrain_pitch > 0.0):
@@ -263,11 +267,13 @@ class WBInterface:
             ref_base_lin_vel[0] = ref_base_lin_vel[0]/2.
             ref_base_lin_vel[2] = ref_base_lin_vel[2]*2
 
-        # Update state reference ------------------------------------------------------------------------
-
+        
+        ref_pos = np.array([0, 0, cfg.hip_height])
+        ref_pos[2] = cfg.simulation_params["ref_z"]# + terrain_height
         # Since the MPC close in CoM position, but usually we have desired height for the base,
         # we modify the reference to bring the base at the desired height and not the CoM
         ref_pos[2] -= base_pos[2] - (com_pos[2] + self.frg.com_pos_offset_w[2])
+
 
         if cfg.mpc_params['type'] != 'kinodynamic':
             ref_state = {}
