@@ -41,9 +41,6 @@ os.system("sudo echo -20 > /proc/" + str(pid) + "/autogroup")
 
 #for real time, launch it with chrt -r 99 python3 run_controller.py
 
-
-USE_DLS_CONVENTION = False
-
 USE_THREADED_MPC = False
 USE_PROCESS_QUEUE_MPC = False
 USE_PROCESS_SHARED_MEMORY_MPC = False
@@ -392,13 +389,6 @@ class Quadruped_PyMPC_Node(Node):
         self.joint_velocities = np.array(msg.joints_velocity)
         self.feet_contact = np.array(msg.feet_contact)
 
-        if(USE_DLS_CONVENTION):
-            # Fix convention DLS2
-            self.joint_positions[0] = -self.joint_positions[0]
-            self.joint_positions[6] = -self.joint_positions[6]
-            self.joint_velocities[0] = -self.joint_velocities[0]
-            self.joint_velocities[6] = -self.joint_velocities[6]
-
         self.first_message_joints_arrived = True
         
 
@@ -636,22 +626,10 @@ class Quadruped_PyMPC_Node(Node):
             tau_min, tau_max = self.tau_limits[leg][:, 0], self.tau_limits[leg][:, 1]
             self.tau[leg] = np.clip(self.tau[leg], tau_min, tau_max)
 
-
-        if(USE_DLS_CONVENTION):
-            # Fix convention DLS2
-            self.tau.FL[0] = -self.tau.FL[0]
-            self.tau.RL[0] = -self.tau.RL[0]
-
+        # Publish the control signals
         control_signal_msg = ControlSignal()
         control_signal_msg.torques = np.concatenate([self.tau.FL, self.tau.FR, self.tau.RL, self.tau.RR], axis=0).flatten().tolist()
         self.publisher_control_signal.publish(control_signal_msg) 
-
-        if(USE_DLS_CONVENTION):
-            # Fix convention DLS2 and send PD target
-            pd_target_joints_pos.FL[0] = -pd_target_joints_pos.FL[0]
-            pd_target_joints_pos.RL[0] = -pd_target_joints_pos.RL[0]
-            pd_target_joints_vel.FL[0] = -pd_target_joints_vel.FL[0]
-            pd_target_joints_vel.RL[0] = -pd_target_joints_vel.RL[0]  
 
         trajectory_generator_msg = TrajectoryGenerator()
         trajectory_generator_msg.timestamp = float(self.get_clock().now().nanoseconds)
