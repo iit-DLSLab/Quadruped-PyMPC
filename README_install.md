@@ -2,78 +2,6 @@
 Gradient-based MPC: It uses [CasADI](https://web.casadi.org/) to define the model and [acados](https://github.com/acados/acados) to solve the optimal control problem. Sampling-based MPC: [jax](https://github.com/google/jax) for both. The simulation environment is based on [Mujoco](https://mujoco.org/).
 
 ---
-
-## Docker Installation
-
-> [!WARNING]
-> Currently, the Docker installation only supports **Integrated GPUs** and the **ROS 2 Humble** environment. CUDA integration and support for other environments are under development (WIP).
-
-### 1. Clone the repository
-
-Ensure you download all submodules during cloning:
-
-```bash
-git clone --recursive https://github.com/iit-DLSLab/Quadruped-PyMPC.git
-cd Quadruped-PyMPC
-```
-
-### 2. Build the image
-
-Build the environment using Docker Compose:
-
-```bash
-docker compose build
-```
-
----
-
-## How to Run - Simulation
-
-### 3. Deploy the container
-
-Start the container in detached mode:
-
-```bash
-docker compose up -d
-```
-
-### 4. Access the container
-
-Open two new terminals. In each, navigate to the project folder and shell into the running container:
-
-```bash
-docker compose exec pympc bash
-```
-
-> [!NOTE]
-> * **Byobu/Tmux:** We recommend using  Byobu (already installed) for a better experience.
-> * **Conda:** Every new shell session inside the container automatically activates the required Conda environment.
-
-### 5. Run the simulation
-
-Execute the following scripts in their respective terminals:
-
-* **Terminal 1 (Simulator):**
-```bash
-python ros/run_simulation.py
-
-```
-* **Terminal 2 (Controller):**
-```bash
-python ros/run_controller.py
-
-```
-
-### 6. Clean up
-
-To stop and remove the containers, run this command in your host terminal:
-
-```bash
-docker compose down
-```
-
----
-
 ## Conda installation
 
 1. install [miniforge](https://github.com/conda-forge/miniforge/releases) (x86_64 or arm64 depending on your platform)
@@ -183,4 +111,79 @@ During the installation procedure, use the file **mamba_environment_ros2.yml**. 
 
 6. general commands from terminal available [here](https://github.com/iit-DLSLab/Quadruped-PyMPC/blob/335779f1eecc315511b8036d84d986a66f2450c5/ros2/console.py#L358)
 
-7. for a real-robot deployment, use a nice [state estimator](https://github.com/iit-DLSLab/muse) 
+7. for a real-robot deployment, use a nice [state estimator](https://github.com/iit-DLSLab/muse)
+
+---
+
+
+## Docker Installation
+
+> [!WARNING]
+> Currently, the Docker installation only supports **Integrated GPUs** and the **ROS 2 Humble** environment. CUDA integration and support for other environments are under development (WIP).
+
+### 1. Clone the repository
+
+Ensure you download all submodules during cloning:
+
+```bash
+git clone --recursive https://github.com/iit-DLSLab/Quadruped-PyMPC.git
+cd Quadruped-PyMPC
+```
+
+### 2. Build the image
+
+Build the environment using Docker Compose:
+
+```bash
+docker compose build
+```
+
+---
+
+## How to Run - Simulation
+
+### 3. Deploy the container
+
+Start the container in detached mode:
+
+```bash
+docker compose up -d
+```
+
+### 4. Access the container
+
+Open two new terminals. In each, navigate to the project folder and shell into the running container:
+
+```bash
+docker compose exec pympc bash
+```
+
+> [!NOTE]
+> * **Byobu/Tmux:** We recommend using  Byobu (already installed) for a better experience.
+> * **Conda:** Every new shell session inside the container automatically activates the required Conda environment.
+
+### 5. Run the simulation
+
+Execute the following scripts in their respective terminals:
+
+* **Terminal 1 (Simulator):**
+```bash
+python ros/run_simulation.py
+
+```
+* **Terminal 2 (Controller):**
+```bash
+python ros/run_controller.py
+
+```
+
+### 6. Clean up
+
+To stop and remove the containers, run this command in your host terminal:
+
+```bash
+docker compose down
+```
+
+---
+
