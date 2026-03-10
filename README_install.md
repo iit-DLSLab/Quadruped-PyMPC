@@ -121,18 +121,14 @@ During the installation procedure, use the file **mamba_environment_ros2.yml**. 
 > [!WARNING]
 > Currently, the Docker installation only supports **Integrated GPUs** and the **ROS 2 Humble** environment. CUDA integration and support for other environments are under development (WIP).
 
-### 1. Clone the repository
-
-Ensure you download all submodules during cloning:
+1. Clone the repository - Ensure you download all submodules during cloning:
 
 ```bash
 git clone --recursive https://github.com/iit-DLSLab/Quadruped-PyMPC.git
 cd Quadruped-PyMPC
 ```
 
-### 2. Build the image
-
-Build the environment using Docker Compose:
+2. Build the image - Build the environment using Docker Compose:
 
 ```bash
 docker compose build
@@ -140,19 +136,15 @@ docker compose build
 
 ---
 
-## How to Run - Simulation
+### How to Run - Simulation
 
-### 3. Deploy the container
-
-Start the container in detached mode:
+1. Deploy the container - Start the container in detached mode:
 
 ```bash
 docker compose up -d
 ```
 
-### 4. Access the container
-
-Open two new terminals. In each, navigate to the project folder and shell into the running container:
+2. Access the container - Navigate to the project folder and shell into the running container:
 
 ```bash
 docker compose exec pympc bash
@@ -162,9 +154,39 @@ docker compose exec pympc bash
 > * **Byobu/Tmux:** We recommend using  Byobu (already installed) for a better experience.
 > * **Conda:** Every new shell session inside the container automatically activates the required Conda environment.
 
-### 5. Run the simulation
+3. Run the simulation - Execute the following scripts in their respective terminals:
 
-Execute the following scripts in their respective terminals:
+```bash
+python3 simulation/simulation.py
+
+```
+
+4. Clean up - To stop and remove the containers, run this command in your host terminal:
+
+```bash
+docker compose down
+```
+
+---
+
+### How to run - ROS2
+1. Deploy the container - Start the container in detached mode:
+
+```bash
+docker compose up -d
+```
+
+2. Access the container - Open two new terminals. In each, navigate to the project folder and shell into the running container:
+
+```bash
+docker compose exec pympc bash
+```
+
+> [!NOTE]
+> * **Byobu/Tmux:** We recommend using  Byobu (already installed) for a better experience.
+> * **Conda:** Every new shell session inside the container automatically activates the required Conda environment.
+
+3. Run the simulation - Execute the following scripts in their respective terminals:
 
 * **Terminal 1 (Simulator):**
 ```bash
@@ -177,13 +199,8 @@ python ros/run_controller.py
 
 ```
 
-### 6. Clean up
-
-To stop and remove the containers, run this command in your host terminal:
+4. Clean up - To stop and remove the containers, run this command in your host terminal:
 
 ```bash
 docker compose down
 ```
-
----
-
