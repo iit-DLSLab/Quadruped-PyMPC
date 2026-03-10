@@ -194,7 +194,7 @@ python ros/run_controller.py
 
 * **Terminal 2 (Simulator):**
 ```bash
-python ros/run_simulation.py
+python ros/run_simulator.py
 
 ```
 
