@@ -176,30 +176,29 @@ docker compose down
 docker compose up -d
 ```
 
-2. Access the container - Open two new terminals. In each, navigate to the project folder and shell into the running container:
+2. Access the container - Navigate to the project folder and shell into the running container:
 
 ```bash
 docker compose exec pympc bash
 ```
 
-> [!NOTE]
-> * **Byobu/Tmux:** We recommend using  Byobu (already installed) for a better experience.
-> * **Conda:** Every new shell session inside the container automatically activates the required Conda environment.
+3. Run the controller - Execute the following scripts in their respective terminals:
 
-3. Run the simulation - Execute the following scripts in their respective terminals:
-
-* **Terminal 1 (Simulator):**
-```bash
-python ros/run_simulation.py
-
-```
-* **Terminal 2 (Controller):**
+* **Terminal 1 (Controller):**
 ```bash
 python ros/run_controller.py
 
 ```
 
-4. Clean up - To stop and remove the containers, run this command in your host terminal:
+4.  Access the container - open a second terminal. This if you want to test the above node with a simulator, for example, to test ros2 delay, you can run 
+
+* **Terminal 2 (Simulator):**
+```bash
+python ros/run_simulation.py
+
+```
+
+5. Clean up - To stop and remove the containers, run this command in your host terminal:
 
 ```bash
 docker compose down
