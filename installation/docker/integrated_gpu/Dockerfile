@@ -1,4 +1,4 @@
-FROM nvidia/cuda:12.4.0-devel-ubuntu22.04
+FROM ubuntu:22.04
 
 # -----------------------------
 # Basic configigurations
@@ -21,7 +21,11 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
       cmake \
       pkg-config \
       python3-pip \
-      # common runtime libs for headless rendering
+      python3-tk \
+      gedit \
+      libgl1-mesa-glx \
+      libgl1-mesa-dri \
+      mesa-utils \
       libglib2.0-0 \
       libxext6 \
       libsm6 \
@@ -53,8 +57,6 @@ ARG CONDA_ENV_NAME=quadruped_pympc_ros2_env
 
 RUN test -f "$CONDA_ENV_DIR/$CONDA_ENV_FILE" \
     || (echo "ERROR: Env file not found: /workspace/$CONDA_ENV_DIR/$CONDA_ENV_FILE" \
-        && echo "Directory listing:" \
-        && ls -la "/workspace/$CONDA_ENV_DIR" \
         && exit 1) \
     && conda env create -f "$CONDA_ENV_DIR/$CONDA_ENV_FILE" \
     && conda clean -afy
@@ -84,7 +86,7 @@ RUN conda run -n "$CONDA_ENV_NAME" bash -lc "\
     "
 
 # -----------------------------
-# Install Quadruped-PyMPC 
+# Install Quadruped-PyMPC
 # -----------------------------
 RUN conda run -n "$CONDA_ENV_NAME" bash -lc "\
       set -euo pipefail && \
@@ -105,15 +107,19 @@ RUN conda run -n "$CONDA_ENV_NAME" bash -lc "\
         -DPython_ROOT_DIR=\$CONDA_PREFIX \
     "
 
+# -----------------------------
 # Conda environment ready in every new terminal
-RUN cat >> /root/.bashrc <<'EOF'
+# -----------------------------
+RUN cat >> /root/.bashrc <<EOF
 source /opt/conda/etc/profile.d/conda.sh
-conda activate quadruped_pympc_ros2_env
+conda activate $CONDA_ENV_NAME
 if [ -f /workspace/ros2/msgs_ws/install/setup.bash ]; then
   source /workspace/ros2/msgs_ws/install/setup.bash
 fi
+export PS1="\[\e]0;\u@\h: \w\a\]\[\033[01;37m\]\u\[\033[00m\]@\[\033[01;32m\]\h\[\033[00m\]:\[\033[01;34m\]\w\[\033[00m\] "
 EOF
 
-
+# -----------------------------
 # Interactive shell
+# -----------------------------
 CMD ["bash"]
