@@ -25,9 +25,14 @@ Features sampling-based mpc:
 - implements different strategies: [random sampling](https://arxiv.org/pdf/2212.00541.pdf), [mppi](https://sites.gatech.edu/acds/mppi/), or [cemppi](https://arxiv.org/pdf/2203.16633.pdf) 
 - different control parametrizations: zero-order, linear splines or cubic splines (see [mujoco-mpc](https://arxiv.org/pdf/2212.00541.pdf))
 
+Real-world deployment via:
+- [muse](https://github.com/iit-DLSLab/muse/tree/unitree_sdk) for State Estimator
+- [unitree_ros2_dls](https://github.com/iit-DLSLab/unitree_ros2_dls) for Unitree HAL
+
 ## Installation and Run
 
 See [here](https://github.com/iit-DLSLab/Quadruped-PyMPC/blob/main/README_install.md).
+
 
 ## Citing this work
 
