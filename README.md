@@ -26,8 +26,8 @@ Features sampling-based mpc:
 - different control parametrizations: zero-order, linear splines or cubic splines (see [mujoco-mpc](https://arxiv.org/pdf/2212.00541.pdf))
 
 Real-world deployment via:
-- [muse](https://github.com/iit-DLSLab/muse/tree/unitree_sdk) for State Estimation
-- [unitree_ros2_dls](https://github.com/iit-DLSLab/unitree_ros2_dls) for Unitree HAL
+- [muse](https://github.com/iit-DLSLab/muse/tree/unitree_sdk) for state estimation
+- [unitree_ros2_dls](https://github.com/iit-DLSLab/unitree_ros2_dls) for unitree robot communication
 
 ## Installation and Run
 
