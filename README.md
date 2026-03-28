@@ -27,7 +27,7 @@ Features sampling-based mpc:
 
 Real-world deployment via:
 - [muse](https://github.com/iit-DLSLab/muse/tree/unitree_sdk) for state estimation
-- [unitree_ros2_dls](https://github.com/iit-DLSLab/unitree_ros2_dls) for unitree robot communication
+- [unitree-ros2-dls](https://github.com/iit-DLSLab/unitree-ros2-dls) for unitree robot communication
 
 ## Installation and Run
 
