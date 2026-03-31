@@ -31,7 +31,7 @@ class Simulator_Node(Node):
         # Subscribers and Publishers
         self.publisher_base_state = self.create_publisher(BaseState,"/base_state", 1)
         self.publisher_blind_state = self.create_publisher(BlindState,"/blind_state", 1)
-        self.subscriber_control_signal = self.create_subscription(ControlSignal,"/quadruped_pympc_torques", self.get_torques_callback, 1)
+        self.subscriber_control_signal = self.create_subscription(ControlSignal,"/control_signal", self.get_torques_callback, 1)
         self.subscriber_trajectory_generator = self.create_subscription(TrajectoryGenerator,"/trajectory_generator", self.get_trajectory_generator_callback, 1)
 
         self.timer = self.create_timer(1.0/SCHEDULER_FREQ, self.compute_simulator_step_callback)
