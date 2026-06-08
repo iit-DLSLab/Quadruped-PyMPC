@@ -52,7 +52,7 @@ COPY . /workspace
 # Conda env (ROS2 Humble)
 # -----------------------------
 ARG CONDA_ENV_DIR=installation/mamba/integrated_gpu
-ARG CONDA_ENV_FILE=mamba_environment_ros2_humble.yml
+ARG CONDA_ENV_FILE=mamba_environment.yml
 ARG CONDA_ENV_NAME=quadruped_pympc_ros2_env
 
 RUN test -f "$CONDA_ENV_DIR/$CONDA_ENV_FILE" \

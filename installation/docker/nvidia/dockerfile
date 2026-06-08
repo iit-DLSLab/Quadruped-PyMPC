@@ -31,7 +31,7 @@ RUN apt-get update && \
 RUN git clone https://github.com/iit-DLSLab/Quadruped-PyMPC.git
 RUN cd Quadruped-PyMPC && git submodule update --init --recursive
 # Create a conda environment with the specified name
-RUN cd Quadruped-PyMPC/installation/mamba/integrated_gpu/ && conda env create -f mamba_environment_ros2.yml
+RUN cd Quadruped-PyMPC/installation/mamba/integrated_gpu/ && conda env create -f mamba_environment.yml
 
 SHELL ["conda", "run", "-n", "quadruped_pympc_ros2_env", "/bin/bash", "-c"]
 
