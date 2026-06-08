@@ -76,12 +76,11 @@ ctrl -> set zero all velocities
 ```
 
 ### How to run - ROS2
-During the installation procedure, use the file **mamba_environment_ros2.yml**. Then:
 
 1. activate the conda environment
    
    ```
-   conda activate quadruped_pympc_ros2_env
+   conda activate quadruped_pympc_env
    ```
 
 2. go in the folder [ros2/msgs_ws](https://github.com/iit-DLSLab/Quadruped-PyMPC/tree/main/ros2/msgs_ws) and compile the messages
