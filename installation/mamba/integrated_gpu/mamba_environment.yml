@@ -1,27 +1,34 @@
-name: quadruped_pympc_env
+name: quadruped_pympc_ros2_env
 channels:
 - conda-forge
-- robostack-staging
+- nvidia
+- robostack-lyrical
 dependencies:
 - pip
-- python==3.11
+- python
 - casadi
 - numpy
 - matplotlib
 - jaxlib
 - jax
 - meshcat-python 
-- scipy==1.15.1 
+- scipy==1.15.1  
 - pinocchio
 - adam-robotics[all]
+- ros-lyrical-desktop
+- ros-lyrical-plotjuggler-ros
+- ros-lyrical-rmw-cyclonedds-cpp
 - compilers 
 - cmake 
 - pkg-config 
 - make 
+- ninja 
+- colcon-common-extensions 
 - tqdm
 - gymnasium
 - pip:
   - mujoco
   - readchar
   - liecasadi
+  - gym-quadruped
 

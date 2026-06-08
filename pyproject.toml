@@ -33,28 +33,63 @@ classifiers=[
     "Programming Language :: Python :: 3.10",
 ]
 
-dependencies = [
-    "liecasadi",
-    "readchar",
-    "numpy",
-    "matplotlib",
-    "scipy",
-    #"pin",
-    "cmake",
-    "mujoco>=3.3.1",
-    "gym_quadruped @ git+https://github.com/iit-DLSLab/gym-quadruped.git",
-]
-
-[project.optional-dependencies]
-# pip install -e .[jax]   /  pip install quadruped_pympc[jax]
-sampling = [  # Example on how we can setup optional dependencies depending on the controller people want to use.
-    "jax",
-    "jaxlib"
-]
 
 # ____________________________________________________________________________________________________________________
 [tool.hatch.metadata]
 allow-direct-references = true  # Allow direct references to packages in the same repository
+
+
+# ____________________________________________________________________________________________________________________
+[tool.pixi.workspace]
+channels = ["conda-forge", "nvidia", "https://prefix.dev/robostack-lyrical"]
+platforms = ["linux-64"]
+requires-pixi = ">=0.63.0"
+
+[tool.pixi.dependencies]
+pip = "*"
+python = "*"
+casadi = "*"
+numpy = "*"
+matplotlib = "*"
+jax = "*"
+"meshcat-python" = "*"
+scipy = "*"
+pinocchio = "*"
+"ros-lyrical-desktop" = "*"
+"ros-lyrical-plotjuggler-ros" = "*"
+"ros-lyrical-rmw-cyclonedds-cpp" = "*"
+compilers = "*"
+cmake = "*"
+"pkg-config" = "*"
+make = "*"
+ninja = "*"
+"colcon-common-extensions" = "*"
+tqdm = "*"
+gymnasium = "*"
+
+[tool.pixi.pypi-dependencies]
+quadruped_pympc = { path = ".", editable = true }
+"adam-robotics" = { version = "*", extras = ["all"] }
+mujoco = "*"
+readchar = "*"
+liecasadi = "*"
+gym-quadruped = "*"
+
+[tool.pixi.feature.no-cuda.dependencies]
+jaxlib = "*"
+
+[tool.pixi.feature.cuda.system-requirements]
+cuda = "12"
+
+[tool.pixi.feature.cuda.dependencies]
+jaxlib = { version = "*", build = "*cuda*" }
+"cuda-nvcc" = "*"
+
+
+[tool.pixi.environments]
+default = ["no-cuda"]
+no-cuda = ["no-cuda"]
+cuda = ["cuda"]
 
 
 #____________________________________________________________________________________________________________________
