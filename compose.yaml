@@ -1,0 +1,27 @@
+services:
+  pympc:
+    image: quadruped-pympc:humble
+    container_name: quadruped-pympc
+
+    build:
+      context: .
+      dockerfile: installation/docker/integrated_gpu/Dockerfile
+
+    stdin_open: true
+    tty: true
+    network_mode: host
+
+    environment:
+      DISPLAY: ${DISPLAY}
+      QT_X11_NO_MITSHM: "1"
+      LIBGL_ALWAYS_SOFTWARE: "1"
+
+      # ROS2 runtime
+      ROS_LOCALHOST_ONLY: "0"
+      ROS_DOMAIN_ID: "0"
+      RMW_IMPLEMENTATION: "rmw_cyclonedds_cpp"
+
+    volumes:
+      # X11
+      - /tmp/.X11-unix:/tmp/.X11-unix:rw
+      - ${HOME}/.Xauthority:/root/.Xauthority:ro
