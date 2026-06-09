@@ -60,11 +60,6 @@ class Simulator_Node(Node):
 
         self.timer = self.create_timer(1.0/SCHEDULER_FREQ, self.compute_simulator_step_callback)
 
-        # Timing stuff
-        self.loop_time = 0.002
-        self.last_start_time = None
-        self.last_mpc_loop_time = 0.0
-
 
         # Mujoco env
         self.env = QuadrupedEnv(
