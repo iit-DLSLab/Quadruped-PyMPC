@@ -83,26 +83,19 @@ ctrl -> set zero all velocities
    conda activate quadruped_pympc_env
    ```
 
-2. go in the folder [ros2/msgs_ws](https://github.com/iit-DLSLab/Quadruped-PyMPC/tree/main/ros2/msgs_ws) and compile the messages
-  
-    ```
-    colcon build
-    source install/setup.bash
-    ```
-
-3. you can run now the script
+2. you can run now the script
 
     ```
     python3 ros2/run_controller.py
     ```
 
-4. if you want to test the above node with a simulator, for example to test ros2 delay, you can run 
+3. if you want to test the above node with a simulator, for example to test ros2 delay, you can run 
 
     ```
     python3 ros2/run_simulator.py
     ```
 
-5. joystick
+4. joystick
 
     ```
     ros2 launch teleop_twist_joy teleop-launch.py joy_config:='xbox'

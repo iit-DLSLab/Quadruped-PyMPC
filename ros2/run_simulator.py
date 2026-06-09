@@ -1,3 +1,29 @@
+import os
+import sys
+import shlex
+import subprocess
+from pathlib import Path
+
+dir_path = Path(__file__).resolve().parent
+sys.path.append(str(dir_path / ".."))
+
+ros_ws = dir_path / "msgs_ws"
+setup_bash = ros_ws / "install" / "setup.bash"
+
+if not setup_bash.exists():
+    print("Building the msgs first...")
+    subprocess.run(["colcon", "build"], cwd=ros_ws, check=True)
+
+if os.environ.get("QUADRUPED_PYMPC_ROS2_SOURCED") != "1":
+    print("Sourcing ROS2 workspace and restarting script...")
+    cmd = (
+        f"source {shlex.quote(str(setup_bash))} && "
+        "export QUADRUPED_PYMPC_ROS2_SOURCED=1 && "
+        f"exec {shlex.quote(sys.executable)} "
+        + " ".join(shlex.quote(arg) for arg in [str(Path(__file__).resolve()), *sys.argv[1:]])
+    )
+    os.execv("/bin/bash", ["bash", "-c", cmd])
+
 import rclpy 
 from rclpy.node import Node 
 from dls2_interface.msg import BaseState, BlindState, ControlSignal, TrajectoryGenerator, TimeDebug
@@ -16,8 +42,6 @@ from gym_quadruped.utils.quadruped_utils import LegsAttr
 # Config imports
 from quadruped_pympc import config as cfg
 
-import os 
-dir_path = os.path.dirname(os.path.realpath(__file__))
 
 USE_SCHEDULER = True # Use the scheduler to compute the control signal
 SCHEDULER_FREQ = 500 # Frequency of the scheduler
