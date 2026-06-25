@@ -168,6 +168,15 @@ class Quadruped_PyMPC_Node(Node):
         self.last_mpc_time = time.time()
 
 
+        self.stand_up_and_down_actions = LegsAttr(*[np.zeros((1, int(self.env.mjModel.nu/4))) for _ in range(4)])
+        keyframe_id = mujoco.mj_name2id(self.env.mjModel, mujoco.mjtObj.mjOBJ_KEY, "down")
+        goDown_qpos = self.env.mjModel.key_qpos[keyframe_id]
+        self.stand_up_and_down_actions.FL = goDown_qpos[7:10]
+        self.stand_up_and_down_actions.FR = goDown_qpos[10:13]
+        self.stand_up_and_down_actions.RL = goDown_qpos[13:16]
+        self.stand_up_and_down_actions.RR = goDown_qpos[16:19]
+
+
         # Quadruped PyMPC controller initialization -------------------------------------------------------------
         from quadruped_pympc.interfaces.srbd_controller_interface import SRBDControllerInterface
         from quadruped_pympc.interfaces.srbd_batched_controller_interface import SRBDBatchedControllerInterface
@@ -650,7 +659,17 @@ class Quadruped_PyMPC_Node(Node):
             tau_min, tau_max = self.tau_limits[leg][:, 0], self.tau_limits[leg][:, 1]
             self.tau[leg] = np.clip(self.tau[leg], tau_min, tau_max)
 
-        # Publish the control signals
+        
+        if(self.console.isDown):
+            pd_target_joints_pos = self.stand_up_and_down_actions
+            pd_target_joints_vel.FL = pd_target_joints_vel.FL*0.0
+            pd_target_joints_vel.FR = pd_target_joints_vel.FR*0.0
+            pd_target_joints_vel.RL = pd_target_joints_vel.RL*0.0
+            pd_target_joints_vel.RR = pd_target_joints_vel.RR*0.0
+
+
+
+
         control_signal_msg = ControlSignal()
         control_signal_msg.torques = np.concatenate([self.tau.FL, self.tau.FR, self.tau.RL, self.tau.RR], axis=0).flatten().tolist()
         self.publisher_control_signal.publish(control_signal_msg) 
