@@ -29,8 +29,18 @@ class Console():
 
         # Autocomplete setup
         self.commands = [
-            "stw", "ooo", "narrowStance", "wideStance", "setGaitTimer", 
-            "setup", "goUp", "goDown", "help", "ictp"
+            "help",
+            "stw",
+            "ooo",
+            "ictp",
+            "narrowStance",
+            "wideStance",
+            "goUp",
+            "goDown",
+            "setGaitTimer",
+            "setupGaitTimer",
+            "setupLegsGains",
+            "setupGeneral"
         ]
         readline.set_completer(self.complete)
         readline.parse_and_bind("tab: complete")
