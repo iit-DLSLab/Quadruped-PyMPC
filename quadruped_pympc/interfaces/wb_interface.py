@@ -156,8 +156,8 @@ class WBInterface:
             feet_pos=self.frg.lift_off_positions,
             current_contact=self.current_contact,
         )
-        base_pos[2] = robot_height
-        com_pos[2] = robot_height #TODO, this is an error
+        #base_pos[2] = robot_height
+        #com_pos[2] = robot_height #TODO, this is an error
 
 
         state_current = dict(
@@ -269,7 +269,7 @@ class WBInterface:
 
         
         ref_pos = np.array([0, 0, cfg.hip_height])
-        ref_pos[2] = cfg.simulation_params["ref_z"]# + terrain_height
+        ref_pos[2] = cfg.simulation_params["ref_z"] + terrain_height
         # Since the MPC close in CoM position, but usually we have desired height for the base,
         # we modify the reference to bring the base at the desired height and not the CoM
         ref_pos[2] -= base_pos[2] - (com_pos[2] + self.frg.com_pos_offset_w[2])

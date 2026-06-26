@@ -474,8 +474,8 @@ class Quadruped_PyMPC_Node(Node):
 
         
         # Update the mujoco model
-        #self.env.mjData.qpos[0:3] = copy.deepcopy(self.position) # s.e. height
-        self.env.mjData.qpos[0:3] = np.zeros(3) # proprioceptive height
+        self.env.mjData.qpos[0:3] = copy.deepcopy(self.position) # s.e. height
+        #self.env.mjData.qpos[0:3] = np.zeros(3) # proprioceptive height
         self.env.mjData.qpos[3:7] = copy.deepcopy(self.orientation)
         self.env.mjData.qvel[0:3] = copy.deepcopy(self.linear_velocity)
         self.env.mjData.qvel[3:6] = copy.deepcopy(self.angular_velocity)
