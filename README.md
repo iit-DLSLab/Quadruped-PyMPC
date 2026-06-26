@@ -33,6 +33,10 @@ Real-world deployment via:
 
 See [here](https://github.com/iit-DLSLab/Quadruped-PyMPC/blob/main/README_install.md).
 
+## How to contribute
+
+PRs are very welcome (search for **TODO** in the issue, or add what you like)!
+
 
 ## Citing this work
 
