@@ -112,7 +112,7 @@ ctrl -> set zero all velocities
 
 1. install [pixi](https://pixi.prefix.dev/latest/installation/) 
 
-2. repone the shell, and run
+2. reopen the shell, and run
 ```
 pixi install
 ```
