@@ -112,14 +112,27 @@ ctrl -> set zero all velocities
 
 1. install [pixi](https://pixi.prefix.dev/latest/installation/) 
 
-2. reopen the shell, and run
+2. reopen the shell, go in the root folder of this project and press
 ```
 pixi install
 ```
 
-3. Follow from step 5. above
+3. activate pixi (you need to always stays in the root folde of the project)
+```
+pixi run
+```
 
-4. Add this in your .bashrc
+4. go inside the folder acados and compile it pressing:
+    
+    ```
+    mkdir build
+    cd build
+    cmake -DACADOS_WITH_SYSTEM_BLASFEO:BOOL=ON -DCMAKE_POLICY_VERSION_MINIMUM=3.5 ..
+    make install -j4
+    pip install -e ./../interfaces/acados_template
+    ```
+
+5. Add this in your .bashrc
 
 ```
 # ALIASES FOR QUADRUPED-PYMPC
@@ -129,3 +142,13 @@ function quadruped_pympc_pixi() {
     export ACADOS_SOURCE_DIR="/path_to_acados"
 }
 ```
+
+6. From now on, just activate your pixi env from the root folder of this project pressing
+```
+quadruped_pympc_pixi
+```
+
+
+### How to run - Simulation/ROS2
+
+Similat to the conda cosa, but activating activate pixi instead
