@@ -10158,7 +10158,7 @@ packages:
 - pypi: ./
   name: quadruped-pympc
   version: 0.1.2
-  sha256: 763a339e34f65a2c4494dde823510d7c7d41b79fb3e8b767d0062cb4cdd5b02b
+  sha256: d1ee8ff018d32ee28c3ef65bc959c8368919104793be4ff20f8b5d807bbe74e2
   requires_dist:
   - gym-quadruped==1.1.5
 - conda: https://conda.anaconda.org/conda-forge/linux-64/rav1e-0.8.1-h1fbca29_0.conda

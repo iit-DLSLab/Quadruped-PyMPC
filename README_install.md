@@ -118,3 +118,14 @@ pixi install
 ```
 
 3. Follow from step 5. above
+
+4. Add this in your .bashrc
+
+```
+# ALIASES FOR QUADRUPED-PYMPC
+function quadruped_pympc_pixi() {
+    eval "$(pixi shell-hook)" || return
+    export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:"/path_to_acados/lib"
+    export ACADOS_SOURCE_DIR="/path_to_acados"
+}
+```
