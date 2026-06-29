@@ -31,5 +31,5 @@ dependencies:
   - mujoco
   - readchar
   - liecasadi
-  - gym-quadruped
+  - gym-quadruped>=1.1.5
 
