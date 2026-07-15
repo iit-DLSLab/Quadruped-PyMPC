@@ -104,6 +104,8 @@ if(USE_PROCESS_SHARED_MEMORY_MPC):
     
 
 MPC_FREQ = 100 
+RENDER_MUJOCO_VIEWER = False
+RENDER_FREQ = 30
 
 USE_SCHEDULER = False # This enable a call to the run function every tot seconds, instead of as fast as possible
 SCHEDULER_FREQ = 250 # this is only valid if USE_SCHEDULER is True
@@ -166,6 +168,12 @@ class Quadruped_PyMPC_Node(Node):
         self.legs_order = ["FL", "FR", "RL", "RR"]
         self.env.reset(random=False)
         self.last_mpc_time = time.time()
+        self.last_render_time = time.time()
+
+        if RENDER_MUJOCO_VIEWER:
+            self.env.render()
+            self.env.viewer.user_scn.flags[mujoco.mjtRndFlag.mjRND_SHADOW] = False
+            self.env.viewer.user_scn.flags[mujoco.mjtRndFlag.mjRND_REFLECTION] = False
 
 
         self.stand_up_and_down_actions = LegsAttr(*[np.zeros((1, int(self.env.mjModel.nu/4))) for _ in range(4)])
@@ -484,6 +492,11 @@ class Quadruped_PyMPC_Node(Node):
         self.env.mjModel.opt.timestep = simulation_dt
         self.env.mjModel.opt.disableflags = 16 # Disable the collision detection
         mujoco.mj_forward(self.env.mjModel, self.env.mjData)   
+
+        # Visualize the current mjData state at a limited rate.
+        if RENDER_MUJOCO_VIEWER and (time.time() - self.last_render_time > 1.0 / RENDER_FREQ):
+            self.env.render()
+            self.last_render_time = time.time()
 
 
         # And get the state of the robot
