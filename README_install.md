@@ -45,6 +45,7 @@ conda activate quadruped_pympc_env
 5. go inside the folder acados and compile it pressing:
     
     ```
+    cd quadruped_pympc/acados/
     mkdir build
     cd build
     cmake -DACADOS_WITH_SYSTEM_BLASFEO:BOOL=ON -DCMAKE_POLICY_VERSION_MINIMUM=3.5 ..
