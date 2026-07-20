@@ -2,22 +2,43 @@
 Gradient-based MPC: It uses [CasADI](https://web.casadi.org/) to define the model and [acados](https://github.com/acados/acados) to solve the optimal control problem. Sampling-based MPC: [jax](https://github.com/google/jax) for both. The simulation environment is based on [Mujoco](https://mujoco.org/).
 
 ---
-## Conda installation
+
+### Pixi installation
+
+1. install [pixi](https://pixi.sh/latest/)
+
+2. create the environment:
+
+```bash
+pixi install
+pixi shell
+```
+
+3. go to Common Step section
+
+
+### Conda installation
 
 1. install [miniforge](https://github.com/conda-forge/miniforge/releases) (x86_64 or arm64 depending on your platform)
 
 2. create an environment using the file in the folder [installation](https://github.com/iit-DLSLab/Quadruped-PyMPC/tree/main/installation) choosing between **nvidia and integrated gpu**:
 
-    `conda env create -f mamba_environment.yml`
+
+```bash
+conda env create -f mamba_environment.yml
+conda activate quadruped_pympc_env
+```
 
 
-3. clone the other submodules:
+3. go to Common Step section
+
+
+### Common step
+
+4. clone the other submodules:
 
     `git submodule update --init --recursive`
     
-4. activate the conda environment
-
-    `conda activate quadruped_pympc_env`
 
 5. go inside the folder acados and compile it pressing:
     
@@ -52,13 +73,11 @@ The first time you run the simulation with acados, in the terminal you will be a
     pip install -e .
     ```
 
+
 ### How to run - Simulation
 
-1. activate the conda environment
+1. activate your pixi or conda environment
    
-   ```
-   conda activate quadruped_pympc_env
-   ```
 
 2. go in the main Quadruped-PyMPC [folder](https://github.com/iit-DLSLab/Quadruped-PyMPC) and press
    
@@ -77,11 +96,8 @@ ctrl -> set zero all velocities
 
 ### How to run - ROS2
 
-1. activate the conda environment
+1. activate your pixi or conda environment
    
-   ```
-   conda activate quadruped_pympc_env
-   ```
 
 2. you can run now the script
 
@@ -104,51 +120,3 @@ ctrl -> set zero all velocities
 6. general commands from terminal available [here](https://github.com/iit-DLSLab/Quadruped-PyMPC/blob/335779f1eecc315511b8036d84d986a66f2450c5/ros2/console.py#L358)
 
 7. for a real-robot deployment, use a nice [state estimator](https://github.com/iit-DLSLab/muse)
-
----
-
-
-## Pixi Installation
-
-1. install [pixi](https://pixi.prefix.dev/latest/installation/) 
-
-2. reopen the shell, go in the root folder of this project and press
-```
-pixi install
-```
-
-3. activate pixi (you need to always stays in the root folde of the project)
-```
-pixi run
-```
-
-4. go inside the folder acados and compile it pressing:
-    
-    ```
-    mkdir build
-    cd build
-    cmake -DACADOS_WITH_SYSTEM_BLASFEO:BOOL=ON -DCMAKE_POLICY_VERSION_MINIMUM=3.5 ..
-    make install -j4
-    pip install -e ./../interfaces/acados_template
-    ```
-
-5. Add this in your .bashrc
-
-```
-# ALIASES FOR QUADRUPED-PYMPC
-function quadruped_pympc_pixi() {
-    eval "$(pixi shell-hook)" || return
-    export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:"/path_to_acados/lib"
-    export ACADOS_SOURCE_DIR="/path_to_acados"
-}
-```
-
-6. From now on, just activate your pixi env from the root folder of this project pressing
-```
-quadruped_pympc_pixi
-```
-
-
-### How to run - Simulation/ROS2
-
-Similat to the conda cosa, but activating activate pixi instead
