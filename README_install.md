@@ -16,7 +16,7 @@ pixi install
 pixi shell
 ```
 
-3. go to Common Step section
+3. go to Common Steps section
 
 
 ### Conda installation
@@ -32,10 +32,10 @@ conda activate quadruped_pympc_env
 ```
 
 
-3. go to Common Step section
+3. go to Common Steps section
 
 
-### Common step
+### Common steps between Pixi and Conda
 
 4. clone the other submodules:
 
