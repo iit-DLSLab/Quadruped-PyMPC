@@ -8,7 +8,7 @@ version = "1.0.0"
 
 [tool.pixi.workspace]
 name = "quadruped_pympc_env"
-channels = ["conda-forge", "nvidia", "https://prefix.dev/robostack-lyrical"]
+channels = ["conda-forge", "nvidia"]
 platforms = ["linux-64"]
 requires-pixi = ">=0.63.0"
 
@@ -22,9 +22,6 @@ jax = "*"
 meshcat-python = "*"
 scipy = "*"
 pinocchio = "*"
-ros-lyrical-desktop = "*"
-ros-lyrical-plotjuggler-ros = "*"
-ros-lyrical-rmw-cyclonedds-cpp = "*"
 compilers = "*"
 cmake = "*"
 pkg-config = "*"
@@ -52,7 +49,26 @@ cuda = "12"
 jaxlib = { version = "*", build = "*cuda*" }
 cuda-nvcc = "*"
 
+[tool.pixi.feature.lyrical]
+channels = ["https://prefix.dev/robostack-lyrical"]
+
+[tool.pixi.feature.lyrical.dependencies]
+ros-lyrical-desktop = "*"
+ros-lyrical-plotjuggler-ros = "*"
+ros-lyrical-rmw-cyclonedds-cpp = "*"
+
+[tool.pixi.feature.humble]
+channels = ["robostack-staging"]
+
+[tool.pixi.feature.humble.dependencies]
+ros-humble-desktop = "*"
+ros-humble-rmw-cyclonedds-cpp = "*"
+ros-humble-rosidl-generator-dds-idl = "*"
+ros-humble-plotjuggler-ros = "*"
+
 [tool.pixi.environments]
-default = ["no-cuda"]
-no-cuda = ["no-cuda"]
-cuda = ["cuda"]
+default = ["no-cuda", "humble"]
+lyrical-no-cuda = ["no-cuda", "lyrical"]
+lyrical-cuda = ["cuda", "lyrical"]
+humble-no-cuda = ["no-cuda", "humble"]
+humble-cuda = ["cuda", "humble"]

@@ -9,11 +9,13 @@ You can install this repo with Pixi (preferred) or Conda.
 
 1. install [pixi](https://pixi.sh/latest/)
 
-2. create the environment:
+2. create the environment, choosing the ROS 2 distro (**lyrical** or **humble**) and whether you want the **cuda** build:
 
 ```bash
-pixi install
-pixi shell
+pixi shell -e humble-no-cuda     # humble, no cuda (or just pixi shell)
+pixi shell -e humble-cuda        # humble, cuda
+pixi shell -e lyrical-no-cuda    # lyrical, no cuda 
+pixi shell -e lyrical-cuda       # lyrical, cuda
 ```
 
 3. go to Common Steps section
@@ -21,13 +23,16 @@ pixi shell
 
 ### Conda installation
 
-1. install [miniforge](https://github.com/conda-forge/miniforge/releases) (x86_64 or arm64 depending on your platform)
+1. install [miniforge/conda](https://github.com/conda-forge/miniforge/releases) (x86_64 or arm64 depending on your platform)
 
-2. create an environment using the file in the folder [installation](https://github.com/iit-DLSLab/Quadruped-PyMPC/tree/main/installation) choosing between **nvidia and integrated gpu**:
+2. create an environment using the file in the folder [installation](./installation) choosing between **nvidia, integrated gpu and ros2 version**:
 
 
 ```bash
-conda env create -f mamba_environment.yml
+conda env create -f mamba_environment_humble.yml
+conda activate quadruped_pympc_env
+
+conda env create -f mamba_environment_lyrical.yml
 conda activate quadruped_pympc_env
 ```
 
