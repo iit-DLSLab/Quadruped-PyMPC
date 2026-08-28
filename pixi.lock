@@ -14225,7 +14225,7 @@ packages:
 - pypi: ./
   name: quadruped-pympc
   version: 1.0.0
-  sha256: 54e74a6e4dfbfbeacc968c427e01308d3f668377eff221b52e0039f1e8755126
+  sha256: 8dee906553d515aba499c2df2d2edc11f4cb12a2a327a77e8caaa02179d41913
 - conda: https://conda.anaconda.org/conda-forge/linux-64/rav1e-0.8.1-h1fbca29_0.conda
   sha256: cf550bbc8e5ebedb6dba9ccaead3e07bd1cb86b183644a4c853e06e4b3ad5ac7
   md5: d83958768626b3c8471ce032e28afcd3

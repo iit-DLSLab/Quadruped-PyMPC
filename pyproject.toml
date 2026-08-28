@@ -49,6 +49,9 @@ cuda = "12"
 jaxlib = { version = "*", build = "*cuda*" }
 cuda-nvcc = "*"
 
+[tool.pixi.feature.common.activation.env]
+ROS_LOCALHOST_ONLY = "1"
+
 [tool.pixi.feature.lyrical]
 channels = ["https://prefix.dev/robostack-lyrical"]
 
@@ -67,8 +70,8 @@ ros-humble-rosidl-generator-dds-idl = "*"
 ros-humble-plotjuggler-ros = "*"
 
 [tool.pixi.environments]
-default = ["no-cuda", "humble"]
-lyrical-no-cuda = ["no-cuda", "lyrical"]
-lyrical-cuda = ["cuda", "lyrical"]
-humble-no-cuda = ["no-cuda", "humble"]
-humble-cuda = ["cuda", "humble"]
+default = ["common", "no-cuda", "humble"]
+lyrical-no-cuda = ["common", "no-cuda", "lyrical"]
+lyrical-cuda = ["common", "cuda", "lyrical"]
+humble-no-cuda = ["common", "no-cuda", "humble"]
+humble-cuda = ["common", "cuda", "humble"]
