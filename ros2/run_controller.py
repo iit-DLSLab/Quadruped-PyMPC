@@ -37,7 +37,7 @@ if os.environ.get("QUADRUPED_PYMPC_ROS2_SOURCED") != "1":
 
 import rclpy 
 from rclpy.node import Node 
-from dls2_interface.msg import BaseState, BlindState, ControlSignal, TrajectoryGenerator, TimeDebug
+from dls2_interface.msg import BaseState, BlindState, ControlSignal, TimeDebug
 from sensor_msgs.msg import Joy
 
 import time
@@ -136,7 +136,6 @@ class Quadruped_PyMPC_Node(Node):
         self.subscription_blind_state = self.create_subscription(BlindState,"/blind_state", self.get_blind_state_callback, 1)
         self.subscription_joy = self.create_subscription(Joy,"joy", self.get_joy_callback, 1)
         self.publisher_control_signal = self.create_publisher(ControlSignal,"/control_signal", 1)
-        self.publisher_trajectory_generator = self.create_publisher(TrajectoryGenerator,"/trajectory_generator", 1)
         self.publisher_time_debug = self.create_publisher(TimeDebug,"/time_debug", 1)
         if(USE_SCHEDULER):
             self.timer = self.create_timer(1.0/SCHEDULER_FREQ, self.compute_control_callback)
@@ -691,19 +690,14 @@ class Quadruped_PyMPC_Node(Node):
             pd_target_joints_vel.RR = pd_target_joints_vel.RR*0.0
 
 
-
-
         control_signal_msg = ControlSignal()
-        control_signal_msg.torques = np.concatenate([self.tau.FL, self.tau.FR, self.tau.RL, self.tau.RR], axis=0).flatten().tolist()
-        self.publisher_control_signal.publish(control_signal_msg) 
-
-        trajectory_generator_msg = TrajectoryGenerator()
-        trajectory_generator_msg.timestamp = float(self.get_clock().now().nanoseconds)
-        trajectory_generator_msg.joints_position = np.concatenate([pd_target_joints_pos.FL, pd_target_joints_pos.FR, pd_target_joints_pos.RL, pd_target_joints_pos.RR], axis=0).flatten().tolist()
-        trajectory_generator_msg.joints_velocity = np.concatenate([pd_target_joints_vel.FL, pd_target_joints_vel.FR, pd_target_joints_vel.RL, pd_target_joints_vel.RR], axis=0).flatten().tolist()
-        trajectory_generator_msg.kp = (self.impedence_joint_position_gain).tolist()
-        trajectory_generator_msg.kd = (self.impedence_joint_velocity_gain).tolist()
-        self.publisher_trajectory_generator.publish(trajectory_generator_msg)
+        control_signal_msg.timestamp = float(self.get_clock().now().nanoseconds)
+        control_signal_msg.joints_torques = np.concatenate([self.tau.FL, self.tau.FR, self.tau.RL, self.tau.RR], axis=0).flatten().tolist()
+        control_signal_msg.joints_position = np.concatenate([pd_target_joints_pos.FL, pd_target_joints_pos.FR, pd_target_joints_pos.RL, pd_target_joints_pos.RR], axis=0).flatten().tolist()
+        control_signal_msg.joints_velocity = np.concatenate([pd_target_joints_vel.FL, pd_target_joints_vel.FR, pd_target_joints_vel.RL, pd_target_joints_vel.RR], axis=0).flatten().tolist()
+        control_signal_msg.kp = (self.impedence_joint_position_gain).tolist()
+        control_signal_msg.kd = (self.impedence_joint_velocity_gain).tolist()
+        self.publisher_control_signal.publish(control_signal_msg)
 
         time_debug_msg = TimeDebug()
         time_debug_msg.time_wbc = self.loop_time
