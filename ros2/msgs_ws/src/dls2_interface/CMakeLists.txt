@@ -17,7 +17,6 @@ rosidl_generate_interfaces(${PROJECT_NAME}
   "msg/BaseState.msg"
   "msg/Imu.msg"
   "msg/FeetContactState.msg"
-  "msg/TrajectoryGenerator.msg"
   "msg/TimeDebug.msg"
   "msg/ControlSignal.msg"
 )
