@@ -133,9 +133,9 @@ class Quadruped_PyMPC_Node(Node):
 
         # Subscribers and Publishers
         self.subscription_base_state = self.create_subscription(BaseState,"/base_state", self.get_base_state_callback, 1)
-        self.subscription_blind_state = self.create_subscription(BlindState,"/blind_state", self.get_blind_state_callback, 1)
-        self.subscription_joy = self.create_subscription(Joy,"joy", self.get_joy_callback, 1)
-        self.publisher_control_signal = self.create_publisher(ControlSignal,"/control_signal", 1)
+        self.subscription_blind_state = self.create_subscription(BlindState,"/blind_state_legged", self.get_blind_state_callback, 1)
+        self.subscription_joy = self.create_subscription(Joy,"/joy", self.get_joy_callback, 1)
+        self.publisher_control_signal = self.create_publisher(ControlSignal,"/control_signal_legged", 1)
         self.publisher_time_debug = self.create_publisher(TimeDebug,"/time_debug", 1)
         if(USE_SCHEDULER):
             self.timer = self.create_timer(1.0/SCHEDULER_FREQ, self.compute_control_callback)
