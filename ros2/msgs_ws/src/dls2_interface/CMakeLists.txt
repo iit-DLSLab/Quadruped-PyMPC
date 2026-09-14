@@ -15,6 +15,7 @@ rosidl_generate_interfaces(${PROJECT_NAME}
   "msg/Screw.msg"
   "msg/BlindState.msg"
   "msg/BaseState.msg"
+  "msg/BaseStateDebug.msg"
   "msg/Imu.msg"
   "msg/FeetContactState.msg"
   "msg/TimeDebug.msg"
