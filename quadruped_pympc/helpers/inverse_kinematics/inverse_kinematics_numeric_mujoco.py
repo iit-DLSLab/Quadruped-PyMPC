@@ -123,79 +123,63 @@ class InverseKinematicsNumeric:
 
 
 if __name__ == "__main__":
-    if cfg.robot == 'go2':
-        xml_filename = gym_quadruped_path + '/robot_model/go2/go2.xml'
-    if cfg.robot == 'go1':
-        xml_filename = gym_quadruped_path + '/robot_model/go1/go1.xml'
-    elif cfg.robot == 'aliengo':
-        xml_filename = gym_quadruped_path + '/robot_model/aliengo/aliengo.xml'
-    elif cfg.robot == 'hyqreal':
-        xml_filename = gym_quadruped_path + '/robot_model/hyqreal/hyqreal.xml'
-    elif cfg.robot == 'mini_cheetah':
-        xml_filename = gym_quadruped_path + '/robot_model/mini_cheetah/mini_cheetah.xml'
+    from pathlib import Path
 
+    import gym_quadruped
+    from quadruped_pympc import config as cfg
+
+    # All distances are in meters and all foot targets are in world coordinates.
+    # Start from the nominal pose, keep the base fixed, and move the feet slightly.
+    legs = ("FL", "FR", "RL", "RR")
+    # Draw independent offsets for each foot once per run, then keep targets fixed.
+    # Use default_rng(42) instead to reproduce the same example on every launch.
+    rng = np.random.default_rng()
+    # Displacements around home: x and y +/-10 cm, z +1 to +10 cm.
+    offsets = rng.uniform(low=[-0.10, -0.10, 0.01], high=[0.10, 0.10, 0.10], size=(4, 3))
+    colors = ([1, 0.2, 0.2, 0.7], [0.2, 1, 0.2, 0.7],
+              [0.2, 0.4, 1, 0.7], [1, 0.8, 0.1, 0.7])
+    model_path = Path(gym_quadruped.__file__).parent / "robot_model" / cfg.robot_cfg.mjcf_filename
+    model = mujoco.MjModel.from_xml_path(str(model_path))
+    data = mujoco.MjData(model)
+    mujoco.mj_resetDataKeyframe(model, data, 0)
+    data.qpos[2] = 0.6  # Suspend the robot so every foot is clearly visible.
+    data.qvel[:] = 0.0
+    mujoco.mj_forward(model, data)
+    initial_q = data.qpos.copy()  # xyz, quaternion wxyz, then the 12 joint angles.
+    foot_ids = [model.geom(cfg.robot_feet_geom_names[leg]).id for leg in legs]
+    initial_feet = data.geom_xpos[foot_ids].copy()
+    # Copy target positions: they must not change when forward kinematics updates data.
+    targets = initial_feet + offsets
+    # This solver uses MuJoCo foot Jacobians and damped least-squares updates.
     ik = InverseKinematicsNumeric()
+    started = time.perf_counter()
+    solution = ik.compute_solution(initial_q.copy(), *targets)
+    elapsed = time.perf_counter() - started
+    # The numeric solver returns only joint angles; preserve the original base pose.
+    data.qpos[7:] = solution
 
-    # Check consistency in mujoco
-    m = mujoco.MjModel.from_xml_path(xml_filename)
-    d = mujoco.MjData(m)
+    # Recompute forward kinematics at the IK solution to measure its accuracy.
+    # Do not step the dynamics: this demo displays configurations, not torque control.
+    mujoco.mj_forward(model, data)
+    final_feet = data.geom_xpos[foot_ids].copy()
+    print(f"IK solve time: {elapsed * 1000:.2f} ms")
+    for leg, target, before, after in zip(legs, targets, initial_feet, final_feet):
+        print(f"{leg}: target {target}, error {np.linalg.norm(target - before) * 1000:.2f}"
+              f" -> {np.linalg.norm(target - after) * 1000:.2f} mm")
+    print("Target colors: FL red, FR green, RL blue, RR yellow. Close the window to stop.")
 
-    random_q_joint = np.random.rand(12)
-    d.qpos[7:] = random_q_joint
-
-    # random quaternion
-    rand_quat = np.random.rand(4)
-    rand_quat = rand_quat / np.linalg.norm(rand_quat)
-    d.qpos[3:7] = rand_quat
-
-    mujoco.mj_fwdPosition(m, d)
-
-    FL_id = mujoco.mj_name2id(m, mujoco.mjtObj.mjOBJ_GEOM, "FL")
-    FR_id = mujoco.mj_name2id(m, mujoco.mjtObj.mjOBJ_GEOM, "FR")
-    RL_id = mujoco.mj_name2id(m, mujoco.mjtObj.mjOBJ_GEOM, "RL")
-    RR_id = mujoco.mj_name2id(m, mujoco.mjtObj.mjOBJ_GEOM, "RR")
-    FL_foot_target_position = d.geom_xpos[FL_id]
-    FR_foot_target_position = d.geom_xpos[FR_id]
-    RL_foot_target_position = d.geom_xpos[RL_id]
-    RR_foot_target_position = d.geom_xpos[RR_id]
-
-    print("FL foot target position: ", FL_foot_target_position)
-    print("FR foot target position: ", FR_foot_target_position)
-    print("RL foot target position: ", RL_foot_target_position)
-    print("RR foot target position: ", RR_foot_target_position)
-
-    initial_q = copy.deepcopy(d.qpos)
-    initial_q[7:] = np.random.rand(12)
-
-    ik.env.mjData.qpos = initial_q
-    mujoco.mj_fwdPosition(ik.env.mjModel, ik.env.mjData)
-    feet = ik.env.feet_pos(frame="world")
-
-    #print("joints start position: ", initial_q)
-    print("FL foot start position", feet.FL)
-    print("FR foot start position", feet.FR)
-    print("RL foot start position", feet.RL)
-    print("RR foot start position", feet.RR)
-
-    initial_time = time.time()
-    solution = ik.compute_solution(
-        initial_q, FL_foot_target_position, FR_foot_target_position, RL_foot_target_position, RR_foot_target_position
-    )
-    print("time: ", time.time() - initial_time)
-
-
-    print("\n")
-    print("MUJOCO IK SOLUTION")
-    ik.env.mjData.qpos[7:] = solution
-    mujoco.mj_fwdPosition(ik.env.mjModel, ik.env.mjData)
-    feet = ik.env.feet_pos(frame="world")
-
-    #print("joints solution: ", ik.env.mjData.qpos)
-    print("FL foot solution position", feet.FL)
-    print("FR foot solution position", feet.FR)
-    print("RL foot solution position", feet.RL)
-    print("RR foot solution position", feet.RR)
-
-    with mujoco.viewer.launch_passive(m, d) as viewer:
-        while True:
+    with mujoco.viewer.launch_passive(model, data) as viewer:
+        viewer.cam.lookat[:] = initial_q[:3]
+        viewer.cam.distance = 1.6
+        viewer.cam.azimuth, viewer.cam.elevation = 135, -20
+        with viewer.lock():
+            # Visual-only spheres: these are the DESIRED positions, not geom_xpos
+            # at the solution. They stay fixed even when there is an IK residual.
+            viewer.user_scn.ngeom = 0
+            for i, (target, color) in enumerate(zip(targets, colors)):
+                mujoco.mjv_initGeom(viewer.user_scn.geoms[i], mujoco.mjtGeom.mjGEOM_SPHERE,
+                                   [0.025] * 3, target, np.eye(3).ravel(), color)
+                viewer.user_scn.ngeom += 1
+        while viewer.is_running():
             viewer.sync()
+            time.sleep(1.0 / 60.0)

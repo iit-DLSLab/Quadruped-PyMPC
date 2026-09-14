@@ -176,58 +176,90 @@ class InverseKinematicsQP:
 
 
 if __name__ == "__main__":
-    robot = robex.load("go1")
+    from pathlib import Path
+
+    import gym_quadruped
+    from quadruped_pympc import config as cfg
+
+    # All distances are in meters and all foot targets are in world coordinates.
+    # Start from the nominal pose, keep the base fixed, and move the feet slightly.
+    legs = ("FL", "FR", "RL", "RR")
+    # Draw independent offsets for each foot once per run, then keep targets fixed.
+    # Use default_rng(42) instead to reproduce the same example on every launch.
+    rng = np.random.default_rng()
+    # Displacements around home: x and y +/-10 cm, z +1 to +10 cm.
+    offsets = rng.uniform(low=[-0.10, -0.10, 0.01], high=[0.10, 0.10, 0.10], size=(4, 3))
+    colors = ([1, 0.2, 0.2, 0.7], [0.2, 1, 0.2, 0.7],
+              [0.2, 0.4, 1, 0.7], [1, 0.8, 0.1, 0.7])
+    model_path = Path(gym_quadruped.__file__).parent / "robot_model" / cfg.robot_cfg.mjcf_filename
+    model = mujoco.MjModel.from_xml_path(str(model_path))
+    data = mujoco.MjData(model)
+    mujoco.mj_resetDataKeyframe(model, data, 0)
+    data.qpos[2] = 0.6  # Suspend the robot so every foot is clearly visible.
+    data.qvel[:] = 0.0
+    mujoco.mj_forward(model, data)
+    initial_q = data.qpos.copy()  # xyz, quaternion wxyz, then the 12 joint angles.
+    foot_ids = [model.geom(cfg.robot_feet_geom_names[leg]).id for leg in legs]
+    initial_feet = data.geom_xpos[foot_ids].copy()
+    # Copy target positions: they must not change when forward kinematics updates data.
+    targets = initial_feet + offsets
+    # Despite its historical name, this solver minimizes a nonlinear foot-position
+    # error with IPOPT, constraining the base pose and optimizing the joint angles.
+    pin_model = pin.buildModelFromMJCF(str(model_path))
+    for leg, foot_id in zip(legs, foot_ids):
+        # Pinocchio imports body frames, but not MuJoCo foot geometry centers.
+        # Attach a frame at each desired contact point, expressed in its parent body.
+        body_name = model.body(model.geom_bodyid[foot_id]).name
+        parent_id = pin_model.getFrameId(body_name)
+        parent = pin_model.frames[parent_id]
+        placement = parent.placement * pin.SE3(np.eye(3), model.geom_pos[foot_id])
+        pin_model.addFrame(pin.Frame(f"{leg}_foot_fixed", parent.parentJoint,
+                                     parent_id, placement, pin.FrameType.OP_FRAME))
+    robot = pin.RobotWrapper(pin_model)
     ik = InverseKinematicsQP(robot, use_viewer=False)
 
-    FL_foot_target_position = np.array([0.1, 0, -0.02])
-    FR_foot_target_position = np.array([-0.08, 0, 0])
-    RL_foot_target_position = np.array([-0.12, 0, 0.06])
-    RR_foot_target_position = np.array([0, 0.2, 0])
+    # Pinocchio uses quaternion xyzw; MuJoCo uses wxyz. Joint order may also differ,
+    # so transfer joint values by name instead of relying on hard-coded leg slices.
+    q_pin = pin.neutral(pin_model)
+    q_pin[:3] = initial_q[:3]
+    q_pin[3:7] = initial_q[[4, 5, 6, 3]]
+    joint_mapping = []
+    for names in cfg.robot_leg_joints.values():
+        for name in names:
+            mj_index = model.joint(name).qposadr[0]
+            pin_index = pin_model.joints[pin_model.getJointId(name)].idx_q
+            joint_mapping.append((mj_index, pin_index))
+            q_pin[pin_index] = initial_q[mj_index]
+    started = time.perf_counter()
+    solution = ik.compute_solution(q_pin, *targets)
+    elapsed = time.perf_counter() - started
+    if solution is None:
+        raise RuntimeError("IK did not converge; no solution to display.")
+    for mj_index, pin_index in joint_mapping:
+        data.qpos[mj_index] = solution[pin_index]
 
-    initial_time = time.time()
-    solution = ik.compute_solution(
-        robot.q0, FL_foot_target_position, FR_foot_target_position, RL_foot_target_position, RR_foot_target_position
-    )
-    print("time: ", time.time() - initial_time)
+    # Recompute forward kinematics at the IK solution to measure its accuracy.
+    # Do not step the dynamics: this demo displays configurations, not torque control.
+    mujoco.mj_forward(model, data)
+    final_feet = data.geom_xpos[foot_ids].copy()
+    print(f"IK solve time: {elapsed * 1000:.2f} ms")
+    for leg, target, before, after in zip(legs, targets, initial_feet, final_feet):
+        print(f"{leg}: target {target}, error {np.linalg.norm(target - before) * 1000:.2f}"
+              f" -> {np.linalg.norm(target - after) * 1000:.2f} mm")
+    print("Target colors: FL red, FR green, RL blue, RR yellow. Close the window to stop.")
 
-    # Check consistency in mujoco
-    m = mujoco.MjModel.from_xml_path("./../simulation/robot_model/unitree_go1/scene.xml")
-    d = mujoco.MjData(m)
-    d.qpos[2] = robot.q0[2]
-    d.qpos[7:] = robot.q0[7:]
-
-    FL_id = mujoco.mj_name2id(m, mujoco.mjtObj.mjOBJ_GEOM, 'FL')
-    FR_id = mujoco.mj_name2id(m, mujoco.mjtObj.mjOBJ_GEOM, 'FR')
-    RL_id = mujoco.mj_name2id(m, mujoco.mjtObj.mjOBJ_GEOM, 'RL')
-    RR_id = mujoco.mj_name2id(m, mujoco.mjtObj.mjOBJ_GEOM, 'RR')
-
-    joint_FL = solution[7:10]
-    joint_FR = solution[10:13]
-    joint_RL = solution[13:16]
-    joint_RR = solution[16:19]
-
-    d.qpos[7:] = np.concatenate((joint_FR, joint_FL, joint_RR, joint_RL))
-    mujoco.mj_step(m, d)
-    print("\n")
-    print("MUJOCO SOLUTION")
-    foot_position_FL = d.geom_xpos[FL_id]
-    foot_position_FR = d.geom_xpos[FR_id]
-    foot_position_RL = d.geom_xpos[RL_id]
-    foot_position_RR = d.geom_xpos[RR_id]
-    print("joints: ", np.concatenate((joint_FL, joint_FR, joint_RL, joint_RR)))
-    print("FL foot position: ", foot_position_FL)
-    print("FR foot position: ", foot_position_FR)
-    print("RL foot position:  ", foot_position_RL)
-    print("RR foot position: ", foot_position_RR)
-
-    print("\n")
-    print("PINOCCHIO SOLUTION")
-    print("joints: ", solution[7:])
-    print("FL foot position", ik.FL_foot_position(solution))
-    print("FR foot position", ik.FR_foot_position(solution))
-    print("RL foot position", ik.RL_foot_position(solution))
-    print("RR foot position", ik.RR_foot_position(solution))
-
-    with mujoco.viewer.launch_passive(m, d) as viewer:
-        while True:
+    with mujoco.viewer.launch_passive(model, data) as viewer:
+        viewer.cam.lookat[:] = initial_q[:3]
+        viewer.cam.distance = 1.6
+        viewer.cam.azimuth, viewer.cam.elevation = 135, -20
+        with viewer.lock():
+            # Visual-only spheres: these are the DESIRED positions, not geom_xpos
+            # at the solution. They stay fixed even when there is an IK residual.
+            viewer.user_scn.ngeom = 0
+            for i, (target, color) in enumerate(zip(targets, colors)):
+                mujoco.mjv_initGeom(viewer.user_scn.geoms[i], mujoco.mjtGeom.mjGEOM_SPHERE,
+                                   [0.025] * 3, target, np.eye(3).ravel(), color)
+                viewer.user_scn.ngeom += 1
+        while viewer.is_running():
             viewer.sync()
+            time.sleep(1.0 / 60.0)
