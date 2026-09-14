@@ -194,3 +194,66 @@ class PeriodicGaitGenerator:
             self.set_full_stance()
         elif self.gait_type == GaitType.FULL_STANCE.value:
             self.restore_previous_gait()
+
+
+if __name__ == "__main__":
+    import matplotlib.pyplot as plt
+    from matplotlib.patches import Patch
+
+    from quadruped_pympc import config
+
+    # Sample a four-second window at 1 ms resolution to locate gait transitions.
+    duration = 4.0  # seconds
+    dt = 0.001
+    # Use the gait selected for simulation and its corresponding parameters.
+    # step_freq is in Hz; duty_factor is the fraction of each cycle in stance.
+    gait = config.simulation_params['gait']
+    gait_params = config.simulation_params['gait_params'][gait]
+    horizon = int(round(duration / dt))
+    generator = PeriodicGaitGenerator(
+        duty_factor=gait_params['duty_factor'],
+        step_freq=gait_params['step_freq'],
+        gait_type=gait_params['type'],
+        horizon=horizon,
+    )
+    # Predict contacts with one uniform sampling interval over the whole horizon.
+    # Rows follow FL, FR, RL, RR; each sample is 1 for stance and 0 for swing.
+    # Trim to horizon because the full-stance case returns twice as many samples.
+    contacts = generator.compute_contact_sequence([dt], [horizon])[:, :horizon]
+    # Each contact sample fills [time_edges[i], time_edges[i + 1]), so we need
+    # one more edge than samples to cover the window up to exactly four seconds.
+    time_edges = np.linspace(0.0, duration, horizon + 1)
+
+    fig, ax = plt.subplots(figsize=(12, 4))
+    for leg_index in range(4):
+        # Draw a white swing row, then fill each consecutive stance interval.
+        ax.broken_barh([(0.0, duration)], (leg_index - 0.3, 0.6), facecolors="white", edgecolors="black")
+        # Padding with zeros closes stance intervals touching either window edge.
+        # A +1 transition starts stance; a -1 transition ends it (exclusive index).
+        transitions = np.diff(np.r_[0, contacts[leg_index], 0])
+        starts = np.flatnonzero(transitions == 1)
+        ends = np.flatnonzero(transitions == -1)
+        # broken_barh expects (start time, duration) pairs, one per rectangle.
+        intervals = [(time_edges[start], time_edges[end] - time_edges[start]) for start, end in zip(starts, ends)]
+        ax.broken_barh(intervals, (leg_index - 0.3, 0.6), facecolors="tab:blue", edgecolors="black")
+
+    # Front-left, front-right, rear-left, rear-right, displayed from top to bottom.
+    ax.set_yticks(range(4), labels=("FL", "FR", "RL", "RR"))
+    ax.set_ylim(3.6, -0.6)
+    ax.set_xlim(0.0, duration)
+    ax.set_xlabel("Time [s]")
+    ax.set_ylabel("Foot")
+    ax.set_title(f"{gait} — {generator.step_freq:g} Hz, duty factor {generator.duty_factor:g}")
+    # Keep the time grid behind the bars and explain the two contact states.
+    ax.set_axisbelow(True)
+    ax.grid(axis="x", alpha=0.3)
+    ax.legend(
+        handles=[
+            Patch(facecolor="tab:blue", edgecolor="black", label="Stance"),
+            Patch(facecolor="white", edgecolor="black", label="Swing"),
+        ],
+        loc="upper right",
+    )
+    # Fit labels inside the figure and open the interactive plot window.
+    fig.tight_layout()
+    plt.show()

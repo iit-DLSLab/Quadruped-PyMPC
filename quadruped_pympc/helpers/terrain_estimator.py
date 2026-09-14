@@ -111,3 +111,85 @@ class TerrainEstimator:
 
 
         return self.terrain_roll, self.terrain_pitch, self.terrain_height, self.robot_height
+
+
+if __name__ == "__main__":
+    # Illustrate the estimator with noisy feet on a piecewise planar terrain.
+    import matplotlib.pyplot as plt
+
+    estimator = TerrainEstimator()
+    estimator.roll_activated = True  # Disabled by default; enable it for the demo.
+    rng = np.random.default_rng(7)
+
+    # Time is illustrative: the estimator filters once per call, without a dt.
+    # At 100 Hz, the angle filter (0.99 old + 0.01 new) takes about 1 s to respond.
+    time = np.arange(1600) * 0.01
+    phase = np.where(time < 2.0, 0, np.where(time < 9.0, 1, 2))
+    true_roll = np.deg2rad(np.array([0.0, 8.0, -5.0])[phase])
+    true_pitch = np.deg2rad(np.array([0.0, -12.0, 7.0])[phase])
+    true_height = np.array([0.0, 0.08, 0.03])[phase]
+    clearance = 0.35  # Vertical base-to-terrain distance, not normal distance.
+
+    names = ("FL", "FR", "RL", "RR")
+    feet_xy = np.array([[0.30, 0.18], [0.30, -0.18], [-0.30, 0.18], [-0.30, -0.18]])
+    yaw = np.deg2rad(30.0)
+    rotation = np.array([[np.cos(yaw), -np.sin(yaw)], [np.sin(yaw), np.cos(yaw)]])
+    origin = np.array([0.5, -0.2])
+    world_xy = feet_xy @ rotation.T + origin
+    contact = np.ones(4)
+    estimates = np.empty((len(time), 4))
+
+    # The heading frame has the base yaw, but no roll/pitch. Match the estimator's
+    # slope conventions: z = h - tan(pitch)*x_heading + tan(roll)*y_heading.
+    # These are directional slope angles, not a full Euler-angle decomposition.
+    # All feet stay on the plane: current_contact is currently unused by the
+    # estimator, so lifting a foot would also contaminate angles and mean height.
+    for i in range(len(time)):
+        feet_z = (
+            true_height[i]
+            - np.tan(true_pitch[i]) * feet_xy[:, 0]
+            + np.tan(true_roll[i]) * feet_xy[:, 1]
+        )
+        measured_feet = np.column_stack((world_xy, feet_z + rng.normal(0.0, 0.002, 4)))
+        feet = dict(zip(names, measured_feet))
+        base = np.r_[origin, true_height[i] + clearance]
+        estimates[i] = estimator.compute_terrain_estimation(base, yaw, feet, contact)
+
+    fig = plt.figure(figsize=(13, 9), layout="constrained")
+    ax_3d = fig.add_subplot(2, 2, 1, projection="3d")
+    x, y = np.meshgrid(np.linspace(-0.4, 0.4, 15), np.linspace(-0.28, 0.28, 15))
+    grid_world = np.stack((x, y), axis=-1) @ rotation.T + origin
+    z = true_height[-1] - np.tan(true_pitch[-1]) * x + np.tan(true_roll[-1]) * y
+    ax_3d.plot_surface(grid_world[..., 0], grid_world[..., 1], z, alpha=0.35, color="tab:green")
+    ax_3d.scatter(*measured_feet.T, color="tab:blue", label="Measured feet")
+    for name, position in feet.items():
+        ax_3d.text(*position, name)
+    ax_3d.scatter(*base, color="tab:red", label="Base")
+    ax_3d.set(xlabel="World x [m]", ylabel="World y [m]", zlabel="World z [m]",
+              title="Final terrain and feet (yaw = 30 deg)")
+    ax_3d.legend()
+
+    ax_roll = fig.add_subplot(2, 2, 2)
+    ax_pitch = fig.add_subplot(2, 2, 3, sharex=ax_roll)
+    for ax, reference, column, name in (
+        (ax_roll, true_roll, 0, "Roll"),
+        (ax_pitch, true_pitch, 1, "Pitch"),
+    ):
+        ax.plot(time, np.rad2deg(reference), "k--", label="True slope")
+        ax.plot(time, np.rad2deg(estimates[:, column]), label="Filtered estimate")
+        ax.set(title=f"{name}: filter convergence", xlabel="Time [s]", ylabel="Angle [deg]")
+        ax.grid(alpha=0.3)
+        ax.legend()
+
+    ax_height = fig.add_subplot(2, 2, 4, sharex=ax_roll)
+    ax_height.plot(time, true_height, "--", color="tab:green", label="True terrain height")
+    ax_height.plot(time, estimates[:, 2], color="tab:green", label="Estimated terrain height")
+    ax_height.axhline(clearance, linestyle="--", color="tab:purple", label="True base clearance")
+    ax_height.plot(time, estimates[:, 3], color="tab:purple", label="Estimated base clearance")
+    ax_height.set(title="Heights: faster filter response", xlabel="Time [s]", ylabel="Height [m]")
+    ax_height.grid(alpha=0.3)
+    ax_height.legend()
+    fig.suptitle("TerrainEstimator demo — 100 Hz, foot-height noise: 2 mm")
+
+    plt.show()
+    plt.close(fig)

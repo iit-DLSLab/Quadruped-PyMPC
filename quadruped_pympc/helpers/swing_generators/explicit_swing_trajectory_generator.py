@@ -71,7 +71,9 @@ class SwingTrajectoryGenerator:
             cp3 = np.array([[touch_down[0], touch_down[1], touch_down[2]]])
             cp4 = np.array([[touch_down[0], touch_down[1], touch_down[2]]])
 
-        return swing_time % self.half_swing_period, cp1, cp2, cp3, cp4
+        # Keep the endpoint of each half instead of wrapping it back to zero.
+        local_time = swing_time if swing_time <= self.half_swing_period else swing_time - self.half_swing_period
+        return local_time, cp1, cp2, cp3, cp4
 
     def compute_trajectory_references(
         self, swing_time: float, lift_off: np.ndarray, touch_down: np.ndarray, early_stance_hitmoment = -1, early_stance_hitpoint = None
@@ -106,6 +108,10 @@ class SwingTrajectoryGenerator:
             cp3 - 2 * cp2 + cp1
         ) + 6 * (self.bezier_time_factor * bezier_swing_time) * (cp4 - 2 * cp3 + cp2)
 
+        # Convert derivatives with respect to normalized Bézier time to seconds.
+        desired_foot_velocity *= self.bezier_time_factor
+        desired_foot_acceleration *= self.bezier_time_factor**2
+
         return (
             desired_foot_position.reshape((3,)),
             desired_foot_velocity.reshape((3,)),
@@ -113,33 +119,50 @@ class SwingTrajectoryGenerator:
         )
 
 
-# Example:
 if __name__ == "__main__":
+    # Example swing: distances are in metres and times are in seconds.
+    # Change these parameters to inspect a different step or landing position.
     step_height = 0.08
     swing_period = 0.9
+    simulation_dt = 0.002
+    lift_off = np.array([0.0, 0.0, 0.0])
+    touch_down = np.array([0.1, -0.2, 0.0])
     trajectory_generator = SwingTrajectoryGenerator(step_height=step_height, swing_period=swing_period)
 
-    lift_off = np.array([0, 0, 0])
-    touch_down = np.array([0.1, 0, 0.0])
-
-    # Generate trajectory points
-    simulation_dt = 0.002
-    time_points = []
-    position_points = []
-    velocity_points = []
-    acceleration_points = []
-    i = 0
-    for foot_swing_time in np.arange(0.000001, swing_period, 0.002):
-        desired_foot_position, desired_foot_velocity, desired_foot_acceleration = (
-            trajectory_generator.compute_trajectory_references(swing_time=i, lift_off=lift_off, touch_down=touch_down)
+    # Include both lift-off (t = 0) and touchdown (t = swing_period).
+    # Use the same timestamps for evaluation and plotting to avoid a sample delay.
+    num_intervals = int(np.ceil(swing_period / simulation_dt))
+    time_points = np.linspace(0.0, swing_period, num_intervals + 1)
+    references = np.array([
+        trajectory_generator.compute_trajectory_references(
+            swing_time=foot_swing_time, lift_off=lift_off, touch_down=touch_down
         )
-        i += simulation_dt
+        for foot_swing_time in time_points
+    ])
+    # Shape: (time samples, reference kind [position, velocity, acceleration], xyz).
+    position_points = references[:, 0, :]
 
-        time_points.append(i)
-        position_points.append(desired_foot_position.squeeze())
-        velocity_points.append(desired_foot_velocity.squeeze())
-        acceleration_points.append(desired_foot_acceleration.squeeze())
+    # Keep the spatial curve and all time references in one window.
+    fig = plt.figure(figsize=(13, 8), constrained_layout=True)
+    grid = fig.add_gridspec(3, 2)
+    ax_3d = fig.add_subplot(grid[:, 0], projection="3d")
+    ax_3d.plot(*position_points.T, label="Swing trajectory")
+    ax_3d.scatter(*lift_off, color="tab:green", label="Lift-off")
+    ax_3d.scatter(*touch_down, color="tab:red", label="Touchdown")
+    ax_3d.set(xlabel="x [m]", ylabel="y [m]", zlabel="z [m]", title="Foot trajectory")
+    ax_3d.legend()
 
-    # Plot the generated trajectory
-    trajectory_generator.plot_trajectory_3d(np.array(position_points))
-    trajectory_generator.plot_trajectory_references(time_points, position_points, velocity_points, acceleration_points)
+    # Plot Cartesian components with consistent colours across the three panels.
+    time_axes = []
+    for reference_index, ylabel in enumerate(("Position [m]", "Velocity [m/s]", "Acceleration [m/s²]")):
+        ax = fig.add_subplot(grid[reference_index, 1], sharex=time_axes[0] if time_axes else None)
+        for component, label in enumerate(("x", "y", "z")):
+            ax.plot(time_points, references[:, reference_index, component], label=label)
+        ax.set_ylabel(ylabel)
+        ax.set_xlim(0.0, swing_period)
+        ax.grid(alpha=0.3)
+        ax.legend(loc="best")
+        time_axes.append(ax)
+    time_axes[-1].set_xlabel("Time [s]")
+    fig.suptitle(f"Bézier swing — duration {swing_period:g} s, step height {step_height:g} m")
+    plt.show()

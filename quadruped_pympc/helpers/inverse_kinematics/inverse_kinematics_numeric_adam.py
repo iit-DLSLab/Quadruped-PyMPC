@@ -1,13 +1,9 @@
 import numpy as np
 
 np.set_printoptions(precision=3, suppress=True)
-from numpy.linalg import norm, solve
 import time
 
 import casadi as cs
-
-# import example_robot_data as robex
-import copy
 
 # Mujoco magic
 import mujoco
@@ -18,44 +14,16 @@ from adam import Representations
 from adam.casadi import KinDynComputations
 from liecasadi import SO3
 
-import gym_quadruped
-import os
-
-dir_path = os.path.dirname(os.path.realpath(__file__))
-gym_quadruped_path = os.path.dirname(gym_quadruped.__file__)
-
-
-from quadruped_pympc import config as cfg
-
-
 # Class for solving a generic inverse kinematics problem
 class InverseKinematicsNumeric:
-    def __init__(self) -> None:
+    def __init__(self, mujoco_model: mujoco.MjModel) -> None:
         """
         This method initializes the inverse kinematics solver class.
 
         Args:
-
+            mujoco_model: MuJoCo model with FL_foot, FR_foot,
+                RL_foot and RR_foot body frames.
         """
-
-        if cfg.robot == 'go2':
-            urdf_filename = gym_quadruped_path + '/robot_model/go2/go2.urdf'
-            xml_filename = gym_quadruped_path + '/robot_model/go2/go2.xml'
-        if cfg.robot == 'go1':
-            urdf_filename = gym_quadruped_path + '/robot_model/go1/go1.urdf'
-            xml_filename = gym_quadruped_path + '/robot_model/go1/go1.xml'
-        elif cfg.robot == 'aliengo':
-            urdf_filename = gym_quadruped_path + '/robot_model/aliengo/aliengo.urdf'
-            xml_filename = gym_quadruped_path + '/robot_model/aliengo/aliengo.xml'
-        elif cfg.robot == 'b2':
-            urdf_filename = gym_quadruped_path + '/robot_model/b2/b2.urdf'
-            xml_filename = gym_quadruped_path + '/robot_model/b2/b2.xml'
-        elif cfg.robot == 'hyqreal':
-            urdf_filename = gym_quadruped_path + '/robot_model/hyqreal/hyqreal.urdf'
-            xml_filename = gym_quadruped_path + '/robot_model/hyqreal/hyqreal.xml'
-        elif cfg.robot == 'mini_cheetah':
-            urdf_filename = gym_quadruped_path + '/robot_model/mini_cheetah/mini_cheetah.urdf'
-            xml_filename = gym_quadruped_path + '/robot_model/mini_cheetah/mini_cheetah.xml'
 
         joint_list = [
             'FL_hip_joint',
@@ -72,7 +40,7 @@ class InverseKinematicsNumeric:
             'RR_calf_joint',
         ]
 
-        self.kindyn = KinDynComputations(urdfstring=urdf_filename, joints_name_list=joint_list)
+        self.kindyn = KinDynComputations.from_mujoco_model(mujoco_model, joints_name_list=joint_list)
         self.kindyn.set_frame_velocity_representation(representation=Representations.MIXED_REPRESENTATION)
 
         self.forward_kinematics_FL_fun = self.kindyn.forward_kinematics_fun("FL_foot")
@@ -179,92 +147,69 @@ class InverseKinematicsNumeric:
 
 
 if __name__ == "__main__":
-    if cfg.robot == 'go2':
-        xml_filename = gym_quadruped_path + '/robot_model/go2/go2.xml'
-    if cfg.robot == 'go1':
-        xml_filename = gym_quadruped_path + '/robot_model/go1/go1.xml'
-    elif cfg.robot == 'aliengo':
-        xml_filename = gym_quadruped_path + '/robot_model/aliengo/aliengo.xml'
-    elif cfg.robot == 'hyqreal':
-        xml_filename = gym_quadruped_path + '/robot_model/hyqreal/hyqreal.xml'
-    elif cfg.robot == 'mini_cheetah':
-        xml_filename = gym_quadruped_path + '/robot_model/mini_cheetah/mini_cheetah.xml'
+    from pathlib import Path
 
-    ik = InverseKinematicsNumeric()
+    import gym_quadruped
+    from quadruped_pympc import config as cfg
 
-    # Check consistency in mujoco
-    m = mujoco.MjModel.from_xml_path(xml_filename)
-    d = mujoco.MjData(m)
+    # All distances are in meters and all foot targets are in world coordinates.
+    # Start from the nominal pose, keep the base fixed, and move the feet slightly.
+    legs = ("FL", "FR", "RL", "RR")
+    # Draw independent offsets for each foot once per run, then keep targets fixed.
+    # Use default_rng(42) instead to reproduce the same example on every launch.
+    rng = np.random.default_rng()
+    # Displacements around home: x and y +/-10 cm, z +1 to +10 cm.
+    offsets = rng.uniform(low=[-0.10, -0.10, 0.01], high=[0.10, 0.10, 0.10], size=(4, 3))
+    colors = ([1, 0.2, 0.2, 0.7], [0.2, 1, 0.2, 0.7],
+              [0.2, 0.4, 1, 0.7], [1, 0.8, 0.1, 0.7])
+    model_path = Path(gym_quadruped.__file__).parent / "robot_model" / cfg.robot_cfg.mjcf_filename
+    # ADAM needs named foot body frames. Add massless fixed frames exactly at
+    # the foot geometry centers, so ADAM and MuJoCo refer to the same points.
+    spec = mujoco.MjSpec.from_file(str(model_path))
+    for leg in legs:
+        geom = spec.geom(cfg.robot_feet_geom_names[leg])
+        geom.parent.add_body(name=f"{leg}_foot", pos=geom.pos)
+    model = spec.compile()
+    data = mujoco.MjData(model)
+    mujoco.mj_resetDataKeyframe(model, data, 0)
+    data.qpos[2] = 0.6  # Suspend the robot so every foot is clearly visible.
+    data.qvel[:] = 0.0
+    mujoco.mj_forward(model, data)
+    initial_q = data.qpos.copy()  # xyz, quaternion wxyz, then the 12 joint angles.
+    foot_ids = [model.geom(cfg.robot_feet_geom_names[leg]).id for leg in legs]
+    initial_feet = data.geom_xpos[foot_ids].copy()
+    # Copy target positions: they must not change when forward kinematics updates data.
+    targets = initial_feet + offsets
+    # Build the symbolic FK/Jacobians from the same model shown in the viewer.
+    # The CasADi function performs a fixed number of damped least-squares updates.
+    ik = InverseKinematicsNumeric(mujoco_model=model)
+    started = time.perf_counter()
+    solution = ik.fun_compute_solution(initial_q, *targets)
+    elapsed = time.perf_counter() - started
+    data.qpos[7:] = np.asarray(solution).reshape(12)
 
-    random_q_joint = np.random.rand(12)
-    d.qpos[7:] = random_q_joint
+    # Recompute forward kinematics at the IK solution to measure its accuracy.
+    # Do not step the dynamics: this demo displays configurations, not torque control.
+    mujoco.mj_forward(model, data)
+    final_feet = data.geom_xpos[foot_ids].copy()
+    print(f"IK solve time: {elapsed * 1000:.2f} ms")
+    for leg, target, before, after in zip(legs, targets, initial_feet, final_feet):
+        print(f"{leg}: target {target}, error {np.linalg.norm(target - before) * 1000:.2f}"
+              f" -> {np.linalg.norm(target - after) * 1000:.2f} mm")
+    print("Target colors: FL red, FR green, RL blue, RR yellow. Close the window to stop.")
 
-    # random quaternion
-    rand_quat = np.random.rand(4)
-    rand_quat = rand_quat / np.linalg.norm(rand_quat)
-    d.qpos[3:7] = rand_quat
-
-    mujoco.mj_step(m, d)
-
-    FL_id = mujoco.mj_name2id(m, mujoco.mjtObj.mjOBJ_GEOM, "FL")
-    FR_id = mujoco.mj_name2id(m, mujoco.mjtObj.mjOBJ_GEOM, "FR")
-    RL_id = mujoco.mj_name2id(m, mujoco.mjtObj.mjOBJ_GEOM, "RL")
-    RR_id = mujoco.mj_name2id(m, mujoco.mjtObj.mjOBJ_GEOM, "RR")
-    FL_foot_target_position = d.geom_xpos[FL_id]
-    FR_foot_target_position = d.geom_xpos[FR_id]
-    RL_foot_target_position = d.geom_xpos[RL_id]
-    RR_foot_target_position = d.geom_xpos[RR_id]
-
-    print("FL foot target position: ", FL_foot_target_position)
-    print("FR foot target position: ", FR_foot_target_position)
-    print("RL foot target position: ", RL_foot_target_position)
-    print("RR foot target position: ", RR_foot_target_position)
-
-    initial_q = copy.deepcopy(d.qpos)
-    initial_q[7:] = np.random.rand(12)
-    quaternion = d.qpos[3:7]
-    quaternion = np.array([quaternion[1], quaternion[2], quaternion[3], quaternion[0]])
-    R = SO3.from_quat(quaternion).as_matrix()
-    H = cs.DM.eye(4)
-    H[0:3, 0:3] = R
-    H[0:3, 3] = d.qpos[0:3]
-    print("FL foot start position", ik.forward_kinematics_FL_fun(H, initial_q[7:])[0:3, 3])
-    print("FR foot start position", ik.forward_kinematics_FR_fun(H, initial_q[7:])[0:3, 3])
-    print("RL foot start position", ik.forward_kinematics_RL_fun(H, initial_q[7:])[0:3, 3])
-    print("RR foot start position", ik.forward_kinematics_RR_fun(H, initial_q[7:])[0:3, 3])
-
-    initial_time = time.time()
-    solution = ik.fun_compute_solution(
-        initial_q, FL_foot_target_position, FR_foot_target_position, RL_foot_target_position, RR_foot_target_position
-    )
-    print("time: ", time.time() - initial_time)
-
-    print("\n")
-    print("MUJOCO SOLUTION")
-    foot_position_FL = d.geom_xpos[FL_id]
-    foot_position_FR = d.geom_xpos[FR_id]
-    foot_position_RL = d.geom_xpos[RL_id]
-    foot_position_RR = d.geom_xpos[RR_id]
-    print("joints: ", d.qpos[7:])
-    print("FL foot position: ", foot_position_FL)
-    print("FR foot position: ", foot_position_FR)
-    print("RL foot position:  ", foot_position_RL)
-    print("RR foot position: ", foot_position_RR)
-
-    print("\n")
-    print("ADAM SOLUTION")
-    print("joints: ", solution)
-    quaternion = d.qpos[3:7]
-    quaternion = np.array([quaternion[1], quaternion[2], quaternion[3], quaternion[0]])
-    R = SO3.from_quat(quaternion).as_matrix()
-    H = cs.SX.eye(4)
-    H[0:3, 0:3] = R
-    H[0:3, 3] = d.qpos[0:3]
-    print("FL foot position", ik.forward_kinematics_FL_fun(H, solution)[0:3, 3])
-    print("FR foot position", ik.forward_kinematics_FR_fun(H, solution)[0:3, 3])
-    print("RL foot position", ik.forward_kinematics_RL_fun(H, solution)[0:3, 3])
-    print("RR foot position", ik.forward_kinematics_RR_fun(H, solution)[0:3, 3])
-
-    with mujoco.viewer.launch_passive(m, d) as viewer:
-        while True:
+    with mujoco.viewer.launch_passive(model, data) as viewer:
+        viewer.cam.lookat[:] = initial_q[:3]
+        viewer.cam.distance = 1.6
+        viewer.cam.azimuth, viewer.cam.elevation = 135, -20
+        with viewer.lock():
+            # Visual-only spheres: these are the DESIRED positions, not geom_xpos
+            # at the solution. They stay fixed even when there is an IK residual.
+            viewer.user_scn.ngeom = 0
+            for i, (target, color) in enumerate(zip(targets, colors)):
+                mujoco.mjv_initGeom(viewer.user_scn.geoms[i], mujoco.mjtGeom.mjGEOM_SPHERE,
+                                   [0.025] * 3, target, np.eye(3).ravel(), color)
+                viewer.user_scn.ngeom += 1
+        while viewer.is_running():
             viewer.sync()
+            time.sleep(1.0 / 60.0)

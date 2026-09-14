@@ -160,250 +160,136 @@ class SwingTrajectoryController:
         else:
             return 0
 
-# Example:
+
+
 if __name__ == "__main__":
     import time
+    from pathlib import Path
 
-    import numpy as np
+    import gym_quadruped
+    import mujoco
+    import mujoco.viewer
+    from gym_quadruped.robot_cfgs import get_robot_config
 
-    # Gym and Simulation related imports
-    from gym_quadruped.quadruped_env import QuadrupedEnv
-    from gym_quadruped.utils.mujoco.visual import render_sphere, render_vector
-    from gym_quadruped.utils.quadruped_utils import LegsAttr
+    # Package import also supports launching this file directly after installation.
+    from quadruped_pympc.helpers.swing_trajectory_controller import SwingTrajectoryController
 
-    # Config imports
-    from quadruped_pympc import config as cfg
+    # Change these settings to explore the two generators and the swing geometry.
+    robot, leg = "go2", "FL"
+    generator = "explicit"  # "explicit" (Bezier) or "scipy" (cubic spline)
+    # Duration [s], vertical control-point height [m], forward displacement [m].
+    swing_period, step_height, step_length = 1.0, 0.08, 0.08
+    dt = 0.002
+    # Integrate dynamics at 500 Hz, but refresh the viewer approximately at 60 Hz.
+    steps_per_frame = round(1.0 / (60 * dt))
 
-    # Helper functions for plotting
-    from quadruped_pympc.helpers.quadruped_utils import plot_swing_mujoco
+    # Remove the floating joint: the base is physically fixed in the air,
+    # while the leg joints remain dynamic and are driven by controller torques.
+    robot_cfg = get_robot_config(robot)
+    model_path = Path(gym_quadruped.__file__).parent / "robot_model" / robot_cfg.mjcf_filename
+    spec = mujoco.MjSpec.from_file(str(model_path))
+    # The original pose contains base xyz, a quaternion, then the joint angles.
+    home = np.array(list(spec.keys)[0].qpos)
+    free_joint = next(j for j in spec.joints if j.type == mujoco.mjtJoint.mjJNT_FREE)
+    free_joint.parent.pos = [0.0, 0.0, 0.8]
+    free_joint.parent.quat = home[3:7]
+    spec.delete(free_joint)
+    # Floating-base keyframes are no longer compatible with the fixed model.
+    for key in list(spec.keys):
+        spec.delete(key)
+    spec.worldbody.add_geom(type=mujoco.mjtGeom.mjGEOM_PLANE, size=[2, 2, 0.1],
+                            rgba=[0.3, 0.3, 0.3, 1])
+    model = spec.compile()
+    model.opt.timestep = dt
+    data = mujoco.MjData(model)
+    # With the free joint removed, qpos and qvel contain only the 12 leg joints.
+    data.qpos[:] = home[7:]
+    # Refresh foot positions and dynamics after assigning the initial pose.
+    mujoco.mj_forward(model, data)
+    home_joints = data.qpos.copy()
 
-    np.set_printoptions(precision=3, suppress=True)
-
-    robot_name = cfg.robot
-    hip_height = cfg.hip_height
-    robot_leg_joints = cfg.robot_leg_joints
-    robot_feet_geom_names = cfg.robot_feet_geom_names
-    scene_name = cfg.simulation_params["scene"]
-    simulation_dt = cfg.simulation_params["dt"]
-
-    state_observables_names = (
-        'base_pos',
-        'base_lin_vel',
-        'base_ori_euler_xyz',
-        'base_ori_quat_wxyz',
-        'base_ang_vel',
-        'qpos_js',
-        'qvel_js',
-        'tau_ctrl_setpoint',
-        'feet_pos_base',
-        'feet_vel_base',
-        'contact_state',
-        'contact_forces_base',
+    # Select the three velocity coordinates belonging to the controlled leg.
+    # These indices select its Jacobian columns and its inertia matrix block.
+    joint_ids = [model.joint(name).id for name in robot_cfg.leg_joints[leg]]
+    dofs = model.jnt_dofadr[joint_ids]
+    foot_id = model.geom(robot_cfg.feet_geom_names[leg]).id
+    foot_origin = data.geom_xpos[foot_id].copy()
+    # This reference frame is only translated: its axes remain world-aligned.
+    # Therefore velocities and Jacobians need no rotation or translation correction.
+    lift_off, touch_down = np.zeros(3), np.array([step_length, 0.0, 0.0])
+    # Translate into coordinates relative to the initial foot: the explicit
+    # generator uses step_height as an absolute z control-point coordinate.
+    controller = SwingTrajectoryController(
+        step_height, swing_period, np.full(3, 400.0), np.full(3, 40.0), generator
     )
+    # Sample the same generator used by the controller to display its spatial curve.
+    # Position, velocity and acceleration references are recomputed during control.
+    curve = np.array([
+        controller.swing_generator.compute_trajectory_references(t, lift_off, touch_down)[0].reshape(3)
+        + foot_origin for t in np.linspace(0.0, swing_period, 80)
+    ])
+    jacobian = np.zeros((3, model.nv))
+    mass = np.zeros((model.nv, model.nv))
+    mujoco.mj_jacGeom(model, data, jacobian, None, foot_id)
+    # Initialize with the actual Jacobian to avoid a spurious derivative at startup.
+    previous_jacobian = jacobian[:, dofs].copy()
+    # Map motor torques by joint ID instead of assuming a particular leg order.
+    # The Go2 model uses direct joint torque motors with unit transmission ratios.
+    actuator_dofs = model.jnt_dofadr[model.actuator_trnid[:, 0]]
 
-    # Create the quadruped robot environment -----------------------------------------------------------
-    env = QuadrupedEnv(
-        robot=robot_name,
-        hip_height=hip_height,
-        legs_joint_names=robot_leg_joints,  # Joint names of the legs DoF
-        feet_geom_name=robot_feet_geom_names,  # Geom/Frame id of feet
-        scene=scene_name,
-        sim_dt=simulation_dt,
-        ref_base_lin_vel=0.0,  # pass a float for a fixed value
-        ground_friction_coeff=1.5,  # pass a float for a fixed value
-        base_vel_command_type="human",  # "forward", "random", "forward+rotate", "human"
-        state_obs_names=state_observables_names,  # Desired quantities in the 'state' vec
-    )
-    env.reset(random=False)
-    env.render()  # Pass in the first render call any mujoco.viewer.KeyCallbackType
+    print("Close the window to stop. Green: swing curve; red: desired foot.")
+    with mujoco.viewer.launch_passive(model, data) as viewer:
+        viewer.cam.lookat[:] = [0.0, 0.0, 0.5]
+        viewer.cam.distance = 1.8
+        viewer.cam.azimuth, viewer.cam.elevation = 135, -20
+        while viewer.is_running():
+            frame_start = time.perf_counter()
+            for _ in range(steps_per_frame):
+                mujoco.mj_forward(model, data)
+                # Alternate forward and backward swings with matching endpoints.
+                cycle = int(data.time / swing_period)
+                # Slot 0 is the demo's single swing clock; dofs selects the actual leg.
+                controller.swing_time[0] = data.time % swing_period
+                start, end = (lift_off, touch_down) if cycle % 2 == 0 else (touch_down, lift_off)
+                # Foot velocity is J*q_dot. Its acceleration is J*q_ddot + J_dot*q_dot.
+                # Estimate J_dot by finite differences between consecutive physics steps.
+                mujoco.mj_jacGeom(model, data, jacobian, None, foot_id)
+                J = jacobian[:, dofs].copy()
+                J_dot = (J - previous_jacobian) / dt
+                previous_jacobian = J.copy()
+                # Expand MuJoCo's inertia storage into a dense joint-space matrix.
+                # qfrc_bias contains gravity, Coriolis and centrifugal terms.
+                mujoco.mj_fullM(model, data, mass)
+                # The controller combines the generator's feedforward acceleration
+                # with position/velocity feedback, then computes the three joint torques.
+                # No early contact is expected because the robot is suspended.
+                swing_torque, desired_position, _ = controller.compute_swing_control_cartesian_space(
+                    leg_id=0, q_dot=data.qvel[dofs], J=J, J_dot=J_dot,
+                    lift_off=start, touch_down=end,
+                    foot_pos=data.geom_xpos[foot_id] - foot_origin,
+                    foot_vel=jacobian @ data.qvel, passive_force=data.qfrc_passive[dofs],
+                    h=data.qfrc_bias[dofs], mass_matrix=mass[np.ix_(dofs, dofs)],
+                    early_stance_hitmoments=-1, early_stance_hitpoints=None,
+                )
+                # Hold the other legs at home with joint PD and gravity compensation.
+                torque = 40.0 * (home_joints - data.qpos) - 4.0 * data.qvel + data.qfrc_bias
+                # Replace only the selected leg's holding torques with swing control.
+                torque[dofs] = swing_torque
+                data.ctrl[:] = torque[actuator_dofs]
+                # Integrate the commanded dynamics for dt seconds.
+                mujoco.mj_step(model, data)
 
-    feet_traj_geom_ids, feet_GRF_geom_ids = None, LegsAttr(FL=-1, FR=-1, RL=-1, RR=-1)
-    legs_order = ["FL", "FR", "RL", "RR"]
-    heightmaps = None
-
-    # Jacobian matrices
-    jac_feet_prev = LegsAttr(*[np.zeros((3, env.mjModel.nv)) for _ in range(4)])
-    jac_feet_dot = LegsAttr(*[np.zeros((3, env.mjModel.nv)) for _ in range(4)])
-    # Torque vector
-    tau = LegsAttr(*[np.zeros((env.mjModel.nv, 1)) for _ in range(4)])
-
-    # Quadruped PyMPC controller initialization -------------------------------------------------------------
-    from quadruped_pympc.interfaces.wb_interface import WBInterface
-
-    wb_interface = WBInterface(initial_feet_pos=env.feet_pos(frame='world'), legs_order=legs_order)
-
-    nmpc_GRFs = LegsAttr(FL=np.zeros(3), FR=np.zeros(3), RL=np.zeros(3), RR=np.zeros(3))
-    nmpc_footholds = LegsAttr(FL=np.zeros(3), FR=np.zeros(3), RL=np.zeros(3), RR=np.zeros(3))
-    best_sample_freq = wb_interface.pgg.step_freq
-
-    import copy
-
-    initial_pos = copy.deepcopy(np.array([0, 0, 0.6]))
-    initial_angle = copy.deepcopy(env.mjData.qpos[3:7])
-
-    while True:
-        env.mjData.qpos[0:3] = initial_pos
-        env.mjData.qpos[3:7] = initial_angle
-        env.mjData.qvel[0:3] = 0
-        env.mjData.qvel[3:7] = 0
-
-        # Update value from SE or Simulator ----------------------
-        feet_pos = env.feet_pos(frame="world")
-        hip_pos = env.hip_positions(frame="world")
-        base_lin_vel = env.base_lin_vel(frame="world")
-        base_ang_vel = env.base_ang_vel(frame="world")
-        base_ori_euler_xyz = env.base_ori_euler_xyz
-        base_pos = env.base_pos
-
-        # Get the reference base velocity in the world frame
-        ref_base_lin_vel, ref_base_ang_vel = env.target_base_vel()
-
-        # Get the inertia matrix
-        if cfg.simulation_params['use_inertia_recomputation']:
-            inertia = env.get_base_inertia().flatten()  # Reflected inertia of base at qpos, in world frame
-        else:
-            inertia = cfg.inertia.flatten()
-
-        # Get the qpos and qvel
-        qpos, qvel = env.mjData.qpos, env.mjData.qvel
-        joints_pos = LegsAttr(FL=qpos[7:10], FR=qpos[10:13], RL=qpos[13:16], RR=qpos[16:19])
-
-        # Get Centrifugal, Coriolis, Gravity for the swing controller
-        legs_mass_matrix = env.legs_mass_matrix
-        legs_qfrc_bias = env.legs_qfrc_bias
-
-        # Compute feet jacobian
-        feet_jac = env.feet_jacobians(frame='world', return_rot_jac=False)
-
-        # Compute jacobian derivatives of the contact points
-        jac_feet_dot = (feet_jac - jac_feet_prev) / simulation_dt  # Finite difference approximation
-        jac_feet_prev = feet_jac  # Update previous Jacobians
-
-        # Compute feet velocities
-        feet_vel = LegsAttr(**{leg_name: feet_jac[leg_name] @ env.mjData.qvel for leg_name in legs_order})
-
-        # Idx of the leg
-        legs_qvel_idx = env.legs_qvel_idx
-        legs_qpos_idx = env.legs_qpos_idx
-
-        # Update the state and reference -------------------------
-        (
-            state_current,
-            ref_state,
-            contact_sequence,
-            ref_feet_pos,
-            ref_feet_constraints,
-            contact_sequence_dts,
-            contact_sequence_lenghts,
-            step_height,
-            optimize_swing,
-        ) = wb_interface.update_state_and_reference(
-            base_pos,
-            base_lin_vel,
-            base_ori_euler_xyz,
-            base_ang_vel,
-            feet_pos,
-            hip_pos,
-            joints_pos,
-            heightmaps,
-            legs_order,
-            simulation_dt,
-            ref_base_lin_vel,
-            ref_base_ang_vel,
-        )
-
-        ref_feet_pos.FL[2] = 0.3
-        ref_feet_pos.FR[2] = 0.3
-        ref_feet_pos.RL[2] = 0.3
-        ref_feet_pos.RR[2] = 0.3
-        wb_interface.frg.lift_off_positions.FL[2] = 0.3
-        wb_interface.frg.lift_off_positions.FR[2] = 0.3
-        wb_interface.frg.lift_off_positions.RL[2] = 0.3
-        wb_interface.frg.lift_off_positions.RR[2] = 0.3
-        nmpc_footholds = LegsAttr(
-            FL=ref_feet_pos['FL'], FR=ref_feet_pos['FR'], RL=ref_feet_pos['RL'], RR=ref_feet_pos['RR']
-        )
-
-        # Compute Swing and Stance Torque ---------------------------------------------------------------------------
-        nmpc_joints_pos = None
-        nmpc_joints_vel = None
-        nmpc_joints_acc = None
-        tau = wb_interface.compute_stance_and_swing_torque(
-            simulation_dt,
-            qpos,
-            qvel,
-            feet_jac,
-            jac_feet_dot,
-            feet_pos,
-            feet_vel,
-            legs_qfrc_bias,
-            legs_mass_matrix,
-            nmpc_GRFs,
-            nmpc_footholds,
-            legs_qpos_idx,
-            legs_qvel_idx,
-            tau,
-            optimize_swing,
-            best_sample_freq,
-            nmpc_joints_pos,
-            nmpc_joints_vel,
-            nmpc_joints_acc,
-        )
-
-        action = np.zeros(env.mjModel.nu)
-        action[env.legs_tau_idx.FL] = tau.FL
-        action[env.legs_tau_idx.FR] = tau.FR
-        action[env.legs_tau_idx.RL] = tau.RL
-        action[env.legs_tau_idx.RR] = tau.RR
-        state, reward, is_terminated, is_truncated, info = env.step(action=action)
-
-        _, _, feet_GRF = env.feet_contact_state(ground_reaction_forces=True)
-
-        # Plot the swing trajectory
-        feet_traj_geom_ids = plot_swing_mujoco(
-            viewer=env.viewer,
-            swing_traj_controller=wb_interface.stc,
-            swing_period=wb_interface.stc.swing_period,
-            swing_time=LegsAttr(
-                FL=wb_interface.stc.swing_time[0],
-                FR=wb_interface.stc.swing_time[1],
-                RL=wb_interface.stc.swing_time[2],
-                RR=wb_interface.stc.swing_time[3],
-            ),
-            lift_off_positions=wb_interface.frg.lift_off_positions,
-            nmpc_footholds=nmpc_footholds,
-            ref_feet_pos=ref_feet_pos,
-            geom_ids=feet_traj_geom_ids,
-        )
-
-        # Update and Plot the heightmap
-        if cfg.simulation_params['visual_foothold_adaptation'] != 'blind':
-            # if(stc.check_apex_condition(current_contact, interval=0.01)):
-            for leg_id, leg_name in enumerate(legs_order):
-                data = heightmaps[
-                    leg_name
-                ].data  # .update_height_map(ref_feet_pos[leg_name], yaw=env.base_ori_euler_xyz[2])
-                if data is not None:
-                    for i in range(data.shape[0]):
-                        for j in range(data.shape[1]):
-                            heightmaps[leg_name].geom_ids[i, j] = render_sphere(
-                                viewer=env.viewer,
-                                position=([data[i][j][0][0], data[i][j][0][1], data[i][j][0][2]]),
-                                diameter=0.01,
-                                color=[0, 1, 0, 0.5],
-                                geom_id=heightmaps[leg_name].geom_ids[i, j],
-                            )
-
-        # Plot the GRF
-        for leg_id, leg_name in enumerate(legs_order):
-            feet_GRF_geom_ids[leg_name] = render_vector(
-                env.viewer,
-                vector=feet_GRF[leg_name],
-                pos=feet_pos[leg_name],
-                scale=np.linalg.norm(feet_GRF[leg_name]) * 0.005,
-                color=np.array([0, 1, 0, 0.5]),
-                geom_id=feet_GRF_geom_ids[leg_name],
-            )
-
-        env.render()
-        last_render_time = time.time()
+            # Visualize the generator curve and its current reference in world coordinates.
+            with viewer.lock():
+                # These spheres are visual overlays and do not create contacts or forces.
+                viewer.user_scn.ngeom = 0
+                points = [*curve, desired_position.reshape(3) + foot_origin]
+                for i, point in enumerate(points):
+                    radius = 0.003 if i < len(curve) else 0.012
+                    color = [0, 1, 0, 0.6] if i < len(curve) else [1, 0, 0, 1]
+                    mujoco.mjv_initGeom(viewer.user_scn.geoms[i], mujoco.mjtGeom.mjGEOM_SPHERE,
+                                       [radius] * 3, point, np.eye(3).ravel(), color)
+                    viewer.user_scn.ngeom += 1
+            viewer.sync()
+            # Pace the demo in real time; the physics time step remains fixed at dt.
+            time.sleep(max(0.0, steps_per_frame * dt - (time.perf_counter() - frame_start)))
