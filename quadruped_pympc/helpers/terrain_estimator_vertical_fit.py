@@ -51,45 +51,35 @@ class TerrainEstimatorVerticalFit:
         # A plane has three unknown coefficients. Fewer than three stance
         # points cannot determine it uniquely, so keep the previous estimate.
         if len(stance) >= 3:
-            # Centre x/y at the base for conditioning and a direct height
-            # intercept. Translation leaves the vertical residuals unchanged.
-            A = np.column_stack((stance[:, :2] - base_position[:2], np.ones(len(stance))))
-            # Solve A @ [a, b, d] = -z (paper Eqs. 24-25). lstsq gives the
-            # pseudoinverse solution without explicitly building an inverse;
-            # its residuals measure vertical, rather than normal, distances.
-            coefficients, _, rank, _ = np.linalg.lstsq(A, -stance[:, 2], rcond=None)
-            # Even with enough contacts, collinear x/y positions leave the
-            # plane underdetermined. Update only when all three coefficients
-            # are observable; otherwise retain the previous filtered outputs.
-            if rank == 3:
-                a, b, d = coefficients  # a*x + b*y + z + d = 0
-                # Fixing the z coefficient to +1 chooses an upward normal.
-                normal_world = np.array([a, b, 1.0])
-                normal_world /= np.linalg.norm(normal_world)
-                # Express the normal in a frame aligned with the base yaw,
-                # but horizontal in roll/pitch. This makes the returned tilt
-                # relative to the robot heading rather than the world axes.
-                c, s = np.cos(yaw), np.sin(yaw)
-                R_W2H = np.array([[c, s, 0.0], [-s, c, 0.0], [0.0, 0.0, 1.0]])
-                nx, ny, nz = R_W2H @ normal_world
-                # For ZYX angles, n = [sin(pitch)*cos(roll), -sin(roll),
-                # cos(pitch)*cos(roll)]. This equivalent form of Eq. (26)
-                # also handles flat terrain and zero pitch without 0/0.
-                pitch = np.arctan2(nx, nz)
-                roll = np.arctan2(-ny, np.hypot(nx, nz))
-                # First-order low-pass filters, applied once per valid fit.
-                # Their time constants therefore depend on the call rate.
-                if self.roll_activated:
-                    self.terrain_roll = float(0.99 * self.terrain_roll + 0.01 * roll)
-                if self.pitch_activated:
-                    self.terrain_pitch = float(0.99 * self.terrain_pitch + 0.01 * pitch)
-                # The fit uses x/y relative to the base, so at the base's
-                # horizontal location the plane equation reduces to z = -d.
-                # Subtracting this world height from base z gives vertical
-                # clearance, not the perpendicular distance to the plane.
-                terrain_height = -d
-                self.terrain_height = float(0.2 * self.terrain_height + 0.8 * terrain_height)
-                self.robot_height = float(0.2 * self.robot_height + 0.8 * (base_position[2] - terrain_height))
+            
+
+            # INSERT THE CODE HERE
+            self.terrain_pitch = 0.0 # comment this line
+            self.terrain_roll = 0.0 # comment this line
+
+
+
+
+
+
+
+            #----------------------
+
+
+        # Update the reference height given the foot in contact
+        z_foot_FL = feet_pos["FL"][2]
+        z_foot_FR = feet_pos["FR"][2]
+        z_foot_RL = feet_pos["RL"][2]
+        z_foot_RR = feet_pos["RR"][2]
+        z_foot_mean_temp = (z_foot_FL + z_foot_FR + z_foot_RL + z_foot_RR) / 4
+        self.terrain_height = self.terrain_height * 0.2 + (z_foot_mean_temp) * 0.8
+
+        feet_to_base_FL = base_position[2] - feet_pos["FL"][2]
+        feet_to_base_FR = base_position[2] - feet_pos["FR"][2]
+        feet_to_base_RL = base_position[2] - feet_pos["RL"][2]
+        feet_to_base_RR = base_position[2] - feet_pos["RR"][2] 
+        feet_to_base_mean = (feet_to_base_FL + feet_to_base_FR + feet_to_base_RL + feet_to_base_RR) / 4
+        self.robot_height = self.robot_height * 0.2 + (feet_to_base_mean) * 0.8
 
         return self.terrain_roll, self.terrain_pitch, self.terrain_height, self.robot_height
 

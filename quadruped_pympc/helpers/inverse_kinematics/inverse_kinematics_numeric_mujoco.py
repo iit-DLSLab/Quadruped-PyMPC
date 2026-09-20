@@ -81,43 +81,33 @@ class InverseKinematicsNumeric:
         mujoco.mj_fwdPosition(self.env.mjModel, self.env.mjData)
 
         for j in range(IT_MAX):
-            feet_pos = self.env.feet_pos(frame='world')
 
+            # Feet actual position
+            feet_pos = self.env.feet_pos(frame='world')
             FL_foot_actual_pos = feet_pos.FL
             FR_foot_actual_pos = feet_pos.FR
             RL_foot_actual_pos = feet_pos.RL
             RR_foot_actual_pos = feet_pos.RR
 
-            err_FL = FL_foot_target_position - FL_foot_actual_pos
-            err_FR = FR_foot_target_position - FR_foot_actual_pos
-            err_RL = RL_foot_target_position - RL_foot_actual_pos
-            err_RR = RR_foot_target_position - RR_foot_actual_pos
 
-
-            # Compute feet jacobian
+            # Feet actual jacobian
             feet_jac = self.env.feet_jacobians(frame='world', return_rot_jac=False)
         
-            J_FL = feet_jac.FL[:, 6:]
-            J_FR = feet_jac.FR[:, 6:]
-            J_RL = feet_jac.RL[:, 6:]
-            J_RR = feet_jac.RR[:, 6:]
+            
+            # INSERT THE CODE HERE
+            q_joint = q[7:].copy() # comment this line
 
-            total_jac = np.vstack((J_FL, J_FR, J_RL, J_RR))
-            total_err = 100*np.hstack((err_FL, err_FR, err_RL, err_RR))
 
-            # Solve the IK problem
-            #dq = total_jac.T @ np.linalg.solve(total_jac @ total_jac.T + damp_matrix, total_err)
-            damped_pinv = np.linalg.inv(total_jac.T @ total_jac + damp_matrix) @ total_jac.T
-            dq = damped_pinv @ total_err
 
-            # Integrate joint velocities to obtain joint positions.
-            q_joint = self.env.mjData.qpos.copy()[7:]
-            q_joint += dq * DT
+
+
+
+
+            #----------------------
+
+
             self.env.mjData.qpos[7:] = q_joint
-
             mujoco.mj_fwdPosition(self.env.mjModel, self.env.mjData)
-            #mujoco.mj_kinematics(self.env.mjModel, self.env.mjData)
-            #mujoco.mj_step(self.env.mjModel, self.env.mjData)
 
         return q_joint
 
