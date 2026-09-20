@@ -17,7 +17,7 @@ class TerrainEstimatorVerticalFit:
         self.terrain_height = 0
         self.robot_height = 0
 
-        self.roll_activated = False
+        self.roll_activated = True
         self.pitch_activated = True
 
     def compute_terrain_estimation(
