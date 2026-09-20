@@ -13,7 +13,7 @@ import time
 import gym_quadruped
 
 # Mujoco magic
-import mujoco
+import mujoco as update_kinematic_parameters
 import mujoco.viewer
 
 # Adam and Liecasadi magic
@@ -31,10 +31,10 @@ from gym_quadruped.quadruped_env import QuadrupedEnv
 
 from quadruped_pympc import config as cfg
 
-IT_MAX = 5
+IT_MAX = 1
 DT = 1e-2
-damp = 1e-3
-damp_matrix = damp * np.eye(12)
+lamba = 1e-3
+damp_matrix = lamba * np.eye(12)
 
 
 # Class for solving a generic inverse kinematics problem
@@ -94,7 +94,7 @@ class InverseKinematicsNumeric:
             feet_jac = self.env.feet_jacobians(frame='world', return_rot_jac=False)
         
             
-            # INSERT THE CODE HERE
+            # INSERT THE CODE HERE FOR EXERCISE 1.1
             q_joint = q[7:].copy() # comment this line
 
 
@@ -107,7 +107,7 @@ class InverseKinematicsNumeric:
 
 
             self.env.mjData.qpos[7:] = q_joint
-            mujoco.mj_fwdPosition(self.env.mjModel, self.env.mjData)
+            update_kinematic_parameters.mj_fwdPosition(self.env.mjModel, self.env.mjData)
 
         return q_joint
 
@@ -126,6 +126,13 @@ if __name__ == "__main__":
     rng = np.random.default_rng()
     # Displacements around home: x and y +/-10 cm, z +1 to +10 cm.
     offsets = rng.uniform(low=[-0.10, -0.10, 0.01], high=[0.10, 0.10, 0.10], size=(4, 3))
+    
+
+    # UNCOMMENT THIS FOR EXERCISE 1.4 -------------------
+    #offsets = offsets*0.0
+    #offsets[:, 2] -= 0.1  # Lift all feet at least 10 cm above the ground.
+    # ----------------------------------------------------
+    
     colors = ([1, 0.2, 0.2, 0.7], [0.2, 1, 0.2, 0.7],
               [0.2, 0.4, 1, 0.7], [1, 0.8, 0.1, 0.7])
     model_path = Path(gym_quadruped.__file__).parent / "robot_model" / cfg.robot_cfg.mjcf_filename
@@ -154,8 +161,8 @@ if __name__ == "__main__":
     final_feet = data.geom_xpos[foot_ids].copy()
     print(f"IK solve time: {elapsed * 1000:.2f} ms")
     for leg, target, before, after in zip(legs, targets, initial_feet, final_feet):
-        print(f"{leg}: target {target}, error {np.linalg.norm(target - before) * 1000:.2f}"
-              f" -> {np.linalg.norm(target - after) * 1000:.2f} mm")
+        print(f"{leg}: target {target}, error {np.linalg.norm(target - before) :.2f}"
+              f" -> {np.linalg.norm(target - after) :.2f} m")
     print("Target colors: FL red, FR green, RL blue, RR yellow. Close the window to stop.")
 
     with mujoco.viewer.launch_passive(model, data) as viewer:
