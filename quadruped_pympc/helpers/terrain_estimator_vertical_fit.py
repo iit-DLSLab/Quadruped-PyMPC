@@ -53,7 +53,7 @@ class TerrainEstimatorVerticalFit:
         if len(stance) >= 3:
             
 
-            # INSERT THE CODE HERE
+            # INSERT THE CODE HERE FOR EXERCISE 2.2-2.3
             self.terrain_pitch = 0.0 # comment this line
             self.terrain_roll = 0.0 # comment this line
 
@@ -61,6 +61,8 @@ class TerrainEstimatorVerticalFit:
 
 
 
+
+            # INSERT THE CODE HERE FOR EXERCISE 2.4 FILTERING
 
 
             #----------------------

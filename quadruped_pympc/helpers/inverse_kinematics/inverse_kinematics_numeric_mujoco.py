@@ -94,7 +94,7 @@ class InverseKinematicsNumeric:
             feet_jac = self.env.feet_jacobians(frame='world', return_rot_jac=False)
         
             
-            # INSERT THE CODE HERE FOR EXERCISE 1.1
+            # INSERT THE CODE HERE FOR EXERCISE 1.1-1.2
             q_joint = q[7:].copy() # comment this line
 
 
