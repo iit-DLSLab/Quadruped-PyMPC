@@ -24,9 +24,9 @@ class PeriodicGaitGenerator:
         if self.gait_type == GaitType.TROT.value:
             self.phase_offset = [0.5, 1.0, 1.0, 0.5]
         elif self.gait_type == GaitType.PACE.value:
-            self.phase_offset = [0.8, 0.3, 0.8, 0.3]
+            raise RuntimeError("not implemented yet")
         elif self.gait_type == GaitType.BOUNDING.value:
-            self.phase_offset = [0.5, 0.5, 0.0, 0.0]
+            raise RuntimeError("not implemented yet")
         elif self.gait_type == GaitType.CIRCULARCRAWL.value:
             self.phase_offset = [0.0, 0.25, 0.75, 0.5]
         elif self.gait_type == GaitType.BFDIAGONALCRAWL.value:
