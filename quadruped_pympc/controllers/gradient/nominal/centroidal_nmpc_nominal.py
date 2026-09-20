@@ -501,6 +501,7 @@ class Acados_NMPC_Nominal:
     def set_weight(self, nx, nu):
         # Define the weight matrices for the cost function
 
+        # EXERCISE 3.1-3.2
         Q_position = np.array([0, 0, 1500])  # x, y, z
         Q_velocity = np.array([200, 200, 200])  # x_vel, y_vel, z_vel
         Q_base_angle = np.array([500, 500, 0])  # roll, pitch, yaw
