@@ -16,8 +16,12 @@ class SwingTrajectoryController:
             from .swing_generators.scipy_swing_trajectory_generator import SwingTrajectoryGenerator
             self.swing_generator = SwingTrajectoryGenerator(swing_period=swing_period, step_height=step_height)
         
-        else:
+        elif self.generator == "explicit":
             from .swing_generators.explicit_swing_trajectory_generator import SwingTrajectoryGenerator
+            self.swing_generator = SwingTrajectoryGenerator(swing_period=swing_period, step_height=step_height)
+        
+        else:
+            from .swing_generators.cubic_swing_trajectory_generator import SwingTrajectoryGenerator
             self.swing_generator = SwingTrajectoryGenerator(swing_period=swing_period, step_height=step_height)
 
         self.position_gain_fb = position_gain_fb
@@ -35,8 +39,12 @@ class SwingTrajectoryController:
             from .swing_generators.scipy_swing_trajectory_generator import SwingTrajectoryGenerator
             self.swing_generator = SwingTrajectoryGenerator(swing_period=swing_period, step_height=step_height)
         
-        else:
+        elif self.generator == "explicit":
             from .swing_generators.explicit_swing_trajectory_generator import SwingTrajectoryGenerator
+            self.swing_generator = SwingTrajectoryGenerator(swing_period=swing_period, step_height=step_height)
+        
+        else:
+            from .swing_generators.cubic_swing_trajectory_generator import SwingTrajectoryGenerator
             self.swing_generator = SwingTrajectoryGenerator(swing_period=swing_period, step_height=step_height)
         
         self.swing_period = swing_period
@@ -63,6 +71,10 @@ class SwingTrajectoryController:
 
         Returns:
         -------
+            tau_swing:
+            des_foot_pos:
+            des_foot_vel:
+        -------
 
         """
         # Compute trajectory references
@@ -76,42 +88,18 @@ class SwingTrajectoryController:
         err_vel = des_foot_vel - foot_vel
         err_vel = err_vel.reshape((3,))
 
-        accelleration = des_foot_acc + self.position_gain_fb * (err_pos) + self.velocity_gain_fb * (err_vel)
+        gravity_and_coriolis = h
 
-        accelleration = accelleration.reshape((3,))
+        # Exercise 1.5 - 1.7: Implement the swing controller in Cartesian space using PD feedback, and one with gravity compensation.
+        tau_swing = np.zeros(3)
+        des_foot_pos = np.zeros(3)
+        des_foot_vel = np.zeros(3)
+        # -----------------------------------------------
 
-        # Compute inertia matrix in task space.
-        # Mass Matrix and centrifugal missing
-        tau_swing = J.T @ (self.position_gain_fb * (err_pos) + self.velocity_gain_fb * (err_vel))
-        if self.use_feedback_linearization:
-            tau_swing += mass_matrix @ np.linalg.pinv(J) @ (accelleration - J_dot @ q_dot) + h
-    
 
         return tau_swing, des_foot_pos, des_foot_vel
 
-    def compute_swing_control_joint_space(
-        self, nmpc_joints_pos, nmpc_joints_vel, nmpc_joints_acc, qpos, qvel, legs_mass_matrix, legs_qfrc_bias, legs_qfrc_passive
-    ):
-        error_position = nmpc_joints_pos - qpos
-        error_position = error_position.reshape((3,))
 
-        error_velocity = nmpc_joints_vel - qvel
-        error_velocity = error_velocity.reshape((3,))
-
-        accelleration = nmpc_joints_acc
-        accelleration = accelleration.reshape((3,))
-        
-
-        tau_swing = self.position_gain_fb * error_position + self.velocity_gain_fb * error_velocity
-        # Feedback linearization
-        if self.use_feedback_linearization:
-            tau_swing += (
-                legs_mass_matrix
-                @ (accelleration + self.position_gain_fb * error_position + self.velocity_gain_fb * error_velocity)
-                + legs_qfrc_bias
-            )
-        
-        return tau_swing, None, None
 
     def update_swing_time(self, current_contact, legs_order, dt):
         for leg_id, leg_name in enumerate(legs_order):

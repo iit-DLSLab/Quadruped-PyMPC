@@ -15,10 +15,7 @@ class GaitType(Enum):
     TROT = 0
     PACE = 1
     BOUNDING = 2
-    CIRCULARCRAWL = 3
-    BFDIAGONALCRAWL = 4
-    BACKDIAGONALCRAWL = 5
-    FRONTDIAGONALCRAWL = 6
+    CRAWL = 3
     FULL_STANCE = 7
 
 

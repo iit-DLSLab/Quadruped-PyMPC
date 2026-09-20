@@ -198,7 +198,7 @@ mpc_params = {
 # -----------------------------------------------------------------------
 
 simulation_params = {
-    'swing_generator':             'scipy',  # 'scipy', 'explicit'
+    'swing_generator':             'cubic',  # 'scipy', 'explicit', 'cubic'
     'swing_position_gain_fb':      500,
     'swing_velocity_gain_fb':      10,
     'impedence_joint_position_gain':  10.0,
@@ -214,7 +214,7 @@ simulation_params = {
 
     'gait':                        'trot',  # 'trot', 'pace', 'crawl', 'bound', 'full_stance'
     'gait_params':                 {'trot': {'step_freq': 1.4, 'duty_factor': 0.65, 'type': GaitType.TROT.value},
-                                    'crawl': {'step_freq': 0.5, 'duty_factor': 0.8, 'type': GaitType.BACKDIAGONALCRAWL.value},
+                                    'crawl': {'step_freq': 0.0, 'duty_factor': 0.0, 'type': GaitType.CRAWL.value},
                                     'pace': {'step_freq': 1.4, 'duty_factor': 0.7, 'type': GaitType.PACE.value},
                                     'bound': {'step_freq': 1.8, 'duty_factor': 0.65, 'type': GaitType.BOUNDING.value},
                                     'full_stance': {'step_freq': 2, 'duty_factor': 0.65, 'type': GaitType.FULL_STANCE.value},

@@ -369,10 +369,12 @@ class WBInterface:
 
 
         # Compute Stance Torque ---------------------------------------------------------------------------
-        tau.FL = -np.matmul(feet_jac.FL[:, legs_qvel_idx.FL].T, nmpc_GRFs.FL)
-        tau.FR = -np.matmul(feet_jac.FR[:, legs_qvel_idx.FR].T, nmpc_GRFs.FR)
-        tau.RL = -np.matmul(feet_jac.RL[:, legs_qvel_idx.RL].T, nmpc_GRFs.RL)
-        tau.RR = -np.matmul(feet_jac.RR[:, legs_qvel_idx.RR].T, nmpc_GRFs.RR)
+        # Exercise 2.1-2.4---------------------------
+        tau.FL = np.zeros(3)
+        tau.FR = np.zeros(3)
+        tau.RL = np.zeros(3)
+        tau.RR = np.zeros(3)
+        # Exercise 2.1-2.4---------------------------
 
         self.stc.update_swing_time(self.current_contact, self.legs_order, simulation_dt)
 

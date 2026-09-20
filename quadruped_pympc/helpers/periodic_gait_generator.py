@@ -27,14 +27,9 @@ class PeriodicGaitGenerator:
             self.phase_offset = [0.8, 0.3, 0.8, 0.3]
         elif self.gait_type == GaitType.BOUNDING.value:
             self.phase_offset = [0.5, 0.5, 0.0, 0.0]
-        elif self.gait_type == GaitType.CIRCULARCRAWL.value:
-            self.phase_offset = [0.0, 0.25, 0.75, 0.5]
-        elif self.gait_type == GaitType.BFDIAGONALCRAWL.value:
-            self.phase_offset = [0.0, 0.25, 0.5, 0.75]
-        elif self.gait_type == GaitType.BACKDIAGONALCRAWL.value:
-            self.phase_offset = [0.0, 0.5, 0.75, 0.25]
-        elif self.gait_type == GaitType.FRONTDIAGONALCRAWL.value:
-            self.phase_offset = [0.5, 1.0, 0.75, 1.25]
+        elif self.gait_type == GaitType.CRAWL.value:
+            raise NotImplementedError("Crawl gait is not implemented yet.")
+            self.phase_offset = [0.0, 0.0, 0.0, 0.0]
         else:
             self.phase_offset = [0.0, 0.5, 0.5, 0.0]
 
