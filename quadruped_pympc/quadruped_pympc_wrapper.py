@@ -1,4 +1,5 @@
 import numpy as np
+import time
 from gym_quadruped.utils.quadruped_utils import LegsAttr
 
 from quadruped_pympc import config as cfg
@@ -132,6 +133,8 @@ class QuadrupedPyMPC_Wrapper:
 
         # Solve OCP ---------------------------------------------------------------------------------------
         if step_num % round(1 / (self.mpc_frequency * simulation_dt)) == 0:
+            
+            time_start_ocp = time.perf_counter()
             (
                 self.nmpc_GRFs,
                 self.nmpc_footholds,
@@ -149,6 +152,8 @@ class QuadrupedPyMPC_Wrapper:
                 self.wb_interface.pgg.step_freq,
                 optimize_swing,
             )
+            time_end_ocp = time.perf_counter()
+            print(f"Time taken to solve OCP: {(time_end_ocp - time_start_ocp) * 1000:.3f} ms")
 
             if cfg.mpc_params['type'] != 'sampling' and cfg.mpc_params['use_RTI']:
                 # If the controller is gradient and is using RTI, we need to linearize the mpc after its computation
