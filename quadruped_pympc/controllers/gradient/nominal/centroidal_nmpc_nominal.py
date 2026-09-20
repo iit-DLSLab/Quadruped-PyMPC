@@ -505,7 +505,7 @@ class Acados_NMPC_Nominal:
         Q_velocity = np.array([200, 200, 200])  # x_vel, y_vel, z_vel
         Q_base_angle = np.array([500, 500, 0])  # roll, pitch, yaw
         Q_base_angle_rates = np.array([20, 20, 50])  # roll_rate, pitch_rate, yaw_rate
-        Q_foot_pos = np.array([300, 300, 300])  # f_x, f_y, f_z (should be 4 times this, once per foot)
+        Q_foot_pos = np.array([300, 300, 300])  # grf_x, grf_y, grf_z 
         Q_com_position_z_integral = np.array([50])  # integral of z_com
         Q_com_velocity_x_integral = np.array([10])  # integral of x_com
         Q_com_velocity_y_integral = np.array([10])  # integral of y_com
@@ -513,7 +513,7 @@ class Acados_NMPC_Nominal:
         Q_roll_integral_integral = np.array([10])  # integral of roll
         Q_pitch_integral_integral = np.array([10])  # integral of pitch
 
-        R_foot_vel = np.array([0.0001, 0.0001, 0.00001])  # v_x, v_y, v_z (should be 4 times this, once per foot)
+        R_foot_vel = np.array([0.0001, 0.0001, 0.00001])  # v_x, v_y, v_z 
         if config.robot == "hyqreal":
             R_foot_force = np.array(
                 [0.00001, 0.00001, 0.00001]

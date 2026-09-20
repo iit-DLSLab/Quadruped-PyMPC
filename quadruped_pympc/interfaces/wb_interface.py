@@ -12,6 +12,7 @@ from quadruped_pympc.helpers.inverse_kinematics.inverse_kinematics_numeric_mujoc
 from quadruped_pympc.helpers.periodic_gait_generator import PeriodicGaitGenerator
 from quadruped_pympc.helpers.swing_trajectory_controller import SwingTrajectoryController
 from quadruped_pympc.helpers.terrain_estimator import TerrainEstimator
+from quadruped_pympc.helpers.terrain_estimator_vertical_fit import TerrainEstimatorVerticalFit
 from quadruped_pympc.helpers.velocity_modulator import VelocityModulator
 from quadruped_pympc.helpers.early_stance_detector import EarlyStanceDetector
 
@@ -85,7 +86,8 @@ class WBInterface:
         
 
         # Terrain estimator -----------------------------------------------------------------------
-        self.terrain_computation = TerrainEstimator()
+        #self.terrain_computation = TerrainEstimator()
+        self.terrain_computation = TerrainEstimatorVerticalFit()
 
         # Inverse Kinematics ---------------------------------------------------------------------
         self.ik = InverseKinematicsNumeric()
