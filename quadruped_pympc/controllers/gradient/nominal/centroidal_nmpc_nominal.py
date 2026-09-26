@@ -26,6 +26,10 @@ class Acados_NMPC_Nominal:
         self.use_RTI = config.mpc_params["use_RTI"]
         self.use_integrators = config.mpc_params["use_integrators"]
         self.use_warm_start = config.mpc_params["use_warm_start"]
+        # Riccati feedback gain of the first stage, see 'use_riccati_feedback' in the config
+        self.use_riccati_feedback = config.mpc_params.get("use_riccati_feedback", False)
+        self.riccati_K = None  # (12, 24) d(GRF)/d(state), None if not available
+        self.riccati_x = None  # (24,) state (not scaled) used by the last solution
         self.use_foothold_constraints = config.mpc_params["use_foothold_constraints"]
 
         self.use_static_stability = config.mpc_params["use_static_stability"]
@@ -173,7 +177,14 @@ class Acados_NMPC_Nominal:
 
         # Set initial state constraint
         X0 = np.zeros(shape=(nx,))
-        ocp.constraints.x0 = X0
+        if self.use_riccati_feedback:
+            # Same equality bounds as constraints.x0, but without eliminating x0 from the QP,
+            # otherwise hpipm cannot return the Riccati gain of the first stage
+            ocp.constraints.idxbx_0 = np.arange(nx)
+            ocp.constraints.lbx_0 = X0
+            ocp.constraints.ubx_0 = X0
+        else:
+            ocp.constraints.x0 = X0
 
         # Set initialize parameters
         init_contact_status = np.array([1.0, 1.0, 1.0, 1.0])
@@ -200,6 +211,11 @@ class Acados_NMPC_Nominal:
 
         # Set options
         ocp.solver_options.qp_solver = "PARTIAL_CONDENSING_HPIPM"  # FULL_CONDENSING_QPOASES PARTIAL_CONDENSING_OSQP
+        if self.use_riccati_feedback:
+            if self.use_DDP:
+                raise ValueError("use_riccati_feedback is not compatible with use_DDP")
+            # The Riccati gains are available only without condensing
+            ocp.solver_options.qp_solver_cond_N = self.horizon
         # PARTIAL_CONDENSING_HPIPM
         ocp.solver_options.hessian_approx = "GAUSS_NEWTON"  # 'GAUSS_NEWTON', 'EXACT'
         ocp.solver_options.integrator_type = "ERK"  # ERK IRK GNSF DISCRETE
@@ -1157,6 +1173,20 @@ class Acados_NMPC_Nominal:
         RL_previous_contact_sequence = self.previous_contact_sequence[2]
         RR_previous_contact_sequence = self.previous_contact_sequence[3]
 
+        if self.use_riccati_feedback:
+            riccati_x = np.concatenate(
+                (
+                    state["position"],
+                    state["linear_velocity"],
+                    state["orientation"],
+                    state["angular_velocity"],
+                    state["foot_FL"],
+                    state["foot_FR"],
+                    state["foot_RL"],
+                    state["foot_RR"],
+                )
+            )
+
         # Perform the scaling of the states and the reference
         state, reference, constraint = self.perform_scaling(state, reference, constraint)
 
@@ -1451,6 +1481,14 @@ class Acados_NMPC_Nominal:
             if self.verbose:
                 print("ocp time: ", self.acados_ocp_solver.get_stats('time_tot'))
 
+        if self.use_riccati_feedback:
+            # Feedback gain of the first stage of the last QP, u = K x + k. We keep only the rows of the GRFs
+            # and the columns of the physical states (no integrators). The scaling of the state (position
+            # subtracted) cancels out in the difference x_now - riccati_x, so riccati_x is not scaled
+            K = self.acados_ocp_solver.get_from_qp_in(0, "K")
+            self.riccati_K = K[12:24, 0:24].copy()
+            self.riccati_x = riccati_x
+
         # Take the solution
         control = self.acados_ocp_solver.get(0, "u")
         optimal_GRF = control[12:]
@@ -1683,6 +1721,8 @@ class Acados_NMPC_Nominal:
 
             optimal_GRF = self.previous_optimal_GRF
             self.reset()
+            # The gain belongs to a QP that did not converge
+            self.riccati_K = None
 
         # Save the previous optimal GRF, the previous status and the previous contact sequence
         self.previous_optimal_GRF = optimal_GRF

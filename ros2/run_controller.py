@@ -57,6 +57,7 @@ from gym_quadruped.utils.quadruped_utils import LegsAttr
 
 # Config imports
 from quadruped_pympc import config as cfg
+from quadruped_pympc.helpers.riccati_feedback import apply_riccati_feedback
 
 
 # Set the priority of the process
@@ -89,7 +90,10 @@ if(USE_PROCESS_SHARED_MEMORY_MPC):
     # 72      : best_sample_freq (1)
     # 73      : last_mpc_loop_time (1)
     # 74      : stamp_mono (1)
-    N_DBL = 75
+    # 75      : riccati feedback valid (1)
+    # 76..99  : riccati x_mpc (24)
+    # 100..387: riccati K (12x24)
+    N_DBL = 388
     IDX_GRF   = slice(0, 12)
     IDX_FH    = slice(12, 24)
     IDX_JP    = slice(24, 36)
@@ -99,6 +103,9 @@ if(USE_PROCESS_SHARED_MEMORY_MPC):
     IDX_BSF   = 72
     IDX_LAST  = 73
     IDX_STAMP = 74
+    IDX_RIC_VALID = 75
+    IDX_RIC_X = slice(76, 100)
+    IDX_RIC_K = slice(100, 388)
 
     def legsattr_to12(legs: LegsAttr) -> np.ndarray:
         return np.concatenate([np.asarray(legs.FL).reshape(-1),
@@ -209,6 +216,8 @@ class Quadruped_PyMPC_Node(Node):
         self.nmpc_joints_vel = LegsAttr(FL=np.zeros(3), FR=np.zeros(3), RL=np.zeros(3), RR=np.zeros(3))
         self.nmpc_joints_acc = LegsAttr(FL=np.zeros(3), FR=np.zeros(3), RL=np.zeros(3), RR=np.zeros(3))
         self.nmpc_predicted_state = np.zeros(12)
+        # (K, x_mpc) of the last MPC solution, see 'use_riccati_feedback' in the config
+        self.riccati_feedback = (None, None)
         
         self.best_sample_freq = self.wb_interface.pgg.step_freq
         self.state_current = None
@@ -293,6 +302,7 @@ class Quadruped_PyMPC_Node(Node):
                                                                             self.wb_interface.pgg.phase_signal,
                                                                             self.wb_interface.pgg.step_freq,
                                                                             self.optimize_swing)
+                    self.riccati_feedback = self.srbd_controller_interface.get_riccati_feedback()
                     
                     if(cfg.mpc_params['type'] != 'sampling' and cfg.mpc_params['use_RTI']):
                         # If the controller is gradient and is using RTI, we need to linearize the mpc after its computation
@@ -338,7 +348,8 @@ class Quadruped_PyMPC_Node(Node):
                 
                 
                 last_mpc_loop_time = time.time() - last_mpc_process_time
-                output_data_process.put([nmpc_GRFs, nmpc_footholds, nmpc_joints_pos, nmpc_joints_vel, nmpc_joints_acc, best_sample_freq, nmpc_predicted_state, last_mpc_loop_time])
+                output_data_process.put([nmpc_GRFs, nmpc_footholds, nmpc_joints_pos, nmpc_joints_vel, nmpc_joints_acc, best_sample_freq, nmpc_predicted_state, last_mpc_loop_time,
+                                         self.srbd_controller_interface.get_riccati_feedback()])
                 
                 
                 if(cfg.mpc_params['type'] != 'sampling' and cfg.mpc_params['use_RTI']):
@@ -400,6 +411,11 @@ class Quadruped_PyMPC_Node(Node):
                 arr[IDX_BSF]  = float(best_sample_freq)
                 arr[IDX_LAST] = float(last_mpc_loop_time)
                 arr[IDX_STAMP]= float(time.monotonic())
+                riccati_K, riccati_x = self.srbd_controller_interface.get_riccati_feedback()
+                arr[IDX_RIC_VALID] = float(riccati_K is not None)
+                if riccati_K is not None:
+                    arr[IDX_RIC_X] = riccati_x
+                    arr[IDX_RIC_K] = riccati_K.reshape(-1)
                 # mark stable
                 seq_out.value = (s | 1) + 1
 
@@ -601,6 +617,7 @@ class Quadruped_PyMPC_Node(Node):
                 self.best_sample_freq = data[5]
                 self.nmpc_predicted_state = data[6]
                 self.last_mpc_loop_time = data[7]
+                self.riccati_feedback = data[8]
         
         elif(USE_PROCESS_SHARED_MEMORY_MPC):
             if(not self.input_data_process.full()):
@@ -623,6 +640,10 @@ class Quadruped_PyMPC_Node(Node):
                         self.best_sample_freq  = float(tmp[IDX_BSF])
                         self.last_mpc_loop_time = float(tmp[IDX_LAST])
                         self.last_mpc_update_mono = float(tmp[IDX_STAMP])
+                        if tmp[IDX_RIC_VALID] > 0.5:
+                            self.riccati_feedback = (tmp[IDX_RIC_K].reshape(12, 24), tmp[IDX_RIC_X].copy())
+                        else:
+                            self.riccati_feedback = (None, None)
                         
         else:
             if time.time() - self.last_mpc_time > 1.0 / MPC_FREQ:
@@ -639,6 +660,7 @@ class Quadruped_PyMPC_Node(Node):
                                                                         self.wb_interface.pgg.phase_signal,
                                                                         self.wb_interface.pgg.step_freq,
                                                                         optimize_swing)
+                self.riccati_feedback = self.srbd_controller_interface.get_riccati_feedback()
                 
                 if(cfg.mpc_params['type'] != 'sampling' and cfg.mpc_params['use_RTI']):
                     # If the controller is gradient and is using RTI, we need to linearize the mpc after its computation
@@ -650,6 +672,14 @@ class Quadruped_PyMPC_Node(Node):
                 
         
         
+        # Close the loop on the GRFs at every step with the Riccati gain of the last MPC solution
+        grfs = self.nmpc_GRFs
+        riccati_K, riccati_x = self.riccati_feedback
+        if cfg.mpc_params.get('use_riccati_feedback', False) and riccati_K is not None:
+            grfs = apply_riccati_feedback(self.nmpc_GRFs, riccati_K, riccati_x, state_current,
+                                          self.wb_interface.current_contact, cfg.mpc_params['mu'],
+                                          cfg.mpc_params['grf_min'], cfg.mpc_params['grf_max'])
+
         # Compute Swing and Stance Torque ---------------------------------------------------------------------------
         self.tau, \
         pd_target_joints_pos, \
@@ -663,7 +693,7 @@ class Quadruped_PyMPC_Node(Node):
                                                                                 legs_qfrc_passive,
                                                                                 legs_qfrc_bias,
                                                                                 legs_mass_matrix,
-                                                                                self.nmpc_GRFs,
+                                                                                grfs,
                                                                                 self.nmpc_footholds,
                                                                                 legs_qpos_idx,
                                                                                 legs_qvel_idx,

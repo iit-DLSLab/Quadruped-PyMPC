@@ -135,6 +135,11 @@ mpc_params = {
     'as_rti_type':                             "Standard",  # "AS-RTI-A", "AS-RTI-B", "AS-RTI-C", "AS-RTI-D", "Standard"
     'as_rti_iter':                             1,  # > 0, the higher the better, but slower computation!
 
+    # If True, the Riccati feedback gain of the first stage is taken from acados (hpipm), and the whole body
+    # controller corrects the MPC GRFs at every control step with GRF = GRF_mpc + K (x_now - x_mpc), closing
+    # the loop without waiting for the next MPC solution. Only for the 'nominal' mpc, not with 'use_DDP'
+    'use_riccati_feedback':                    False,
+
     # This will force to use DDP instead of SQP, based on https://arxiv.org/abs/2403.10115.
     # Note that RTI is not compatible with DDP, and no state costraints for now are considered
     'use_DDP':                                 False,
@@ -144,7 +149,7 @@ mpc_params = {
     'num_qp_iterations':                       1,
 
     # this is used to speeding up or robustify acados' solver (hpipm).
-    'solver_mode':                             'balance',  # balance, robust, speed, crazy_speed
+    'solver_mode':                             'balance',  # balance, robust, fast, crazy_speed
 
 
     # these is used only for the case 'input_rates', using as GRF not the actual state

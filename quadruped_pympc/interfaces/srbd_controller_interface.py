@@ -18,6 +18,9 @@ class SRBDControllerInterface:
 
         self.previous_contact_mpc = np.array([1, 1, 1, 1])
 
+        if cfg.mpc_params.get('use_riccati_feedback', False) and self.type != 'nominal':
+            print("use_riccati_feedback is available only for the 'nominal' mpc, it will be ignored")
+
         # 'nominal' optimized directly the GRF
         # 'input_rates' optimizes the delta GRF
         # 'sampling' is a gpu-based mpc that samples the GRF
@@ -241,6 +244,18 @@ class SRBDControllerInterface:
             best_sample_freq,
             nmpc_predicted_state,
         )
+
+    def get_riccati_feedback(self):
+        """Riccati feedback of the last solution, see 'use_riccati_feedback' in the config.
+
+        Returns:
+            K (np.ndarray): (12, 24) gain d(GRF)/d(state), or None if not available
+            x (np.ndarray): (24,) state used by the last solution, or None if not available
+        """
+        K = getattr(self.controller, "riccati_K", None)
+        if K is None:
+            return None, None
+        return K, self.controller.riccati_x
 
     def compute_RTI(self):
         self.controller.acados_ocp_solver.options_set("rti_phase", 1)

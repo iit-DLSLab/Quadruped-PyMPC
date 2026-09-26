@@ -5,6 +5,7 @@ from quadruped_pympc import config as cfg
 from quadruped_pympc.interfaces.srbd_batched_controller_interface import SRBDBatchedControllerInterface
 from quadruped_pympc.interfaces.srbd_controller_interface import SRBDControllerInterface
 from quadruped_pympc.interfaces.wb_interface import WBInterface
+from quadruped_pympc.helpers.riccati_feedback import apply_riccati_feedback
 
 _DEFAULT_OBS = ("ref_base_height", "ref_base_angles", "nmpc_GRFs", "nmpc_footholds", "swing_time")
 
@@ -168,6 +169,22 @@ class QuadrupedPyMPC_Wrapper:
                 optimize_swing,
             )
 
+        # Close the loop on the GRFs at every step with the Riccati gain of the last MPC solution
+        grfs = self.nmpc_GRFs
+        if cfg.mpc_params.get('use_riccati_feedback', False):
+            K, x_mpc = self.srbd_controller_interface.get_riccati_feedback()
+            if K is not None:
+                grfs = apply_riccati_feedback(
+                    self.nmpc_GRFs,
+                    K,
+                    x_mpc,
+                    state_current,
+                    self.wb_interface.current_contact,
+                    cfg.mpc_params['mu'],
+                    cfg.mpc_params['grf_min'],
+                    cfg.mpc_params['grf_max'],
+                )
+
         # Compute Swing and Stance Torque ---------------------------------------------------------------------------
         tau, des_joints_pos, des_joints_vel = self.wb_interface.compute_stance_and_swing_torque(
             simulation_dt,
@@ -180,7 +197,7 @@ class QuadrupedPyMPC_Wrapper:
             legs_qfrc_passive,
             legs_qfrc_bias,
             legs_mass_matrix,
-            self.nmpc_GRFs,
+            grfs,
             self.nmpc_footholds,
             legs_qpos_idx,
             legs_qvel_idx,
