@@ -15,9 +15,11 @@ class SwingTrajectoryController:
         if self.generator == "scipy":
             from .swing_generators.scipy_swing_trajectory_generator import SwingTrajectoryGenerator
             self.swing_generator = SwingTrajectoryGenerator(swing_period=swing_period, step_height=step_height)
-        
+        elif self.generator == "hermite":
+            from .swing_generators.cubic_hermite_swing_trajectory_generator import SwingTrajectoryGenerator
+            self.swing_generator = SwingTrajectoryGenerator(swing_period=swing_period, step_height=step_height)
         else:
-            from .swing_generators.explicit_swing_trajectory_generator import SwingTrajectoryGenerator
+            from .swing_generators.cubic_bezier_swing_trajectory_generator import SwingTrajectoryGenerator
             self.swing_generator = SwingTrajectoryGenerator(swing_period=swing_period, step_height=step_height)
 
         self.position_gain_fb = position_gain_fb
@@ -34,9 +36,11 @@ class SwingTrajectoryController:
         if self.generator == "scipy":
             from .swing_generators.scipy_swing_trajectory_generator import SwingTrajectoryGenerator
             self.swing_generator = SwingTrajectoryGenerator(swing_period=swing_period, step_height=step_height)
-        
+        elif self.generator == "hermite":
+            from .swing_generators.cubic_hermite_swing_trajectory_generator import SwingTrajectoryGenerator
+            self.swing_generator = SwingTrajectoryGenerator(swing_period=swing_period, step_height=step_height)
         else:
-            from .swing_generators.explicit_swing_trajectory_generator import SwingTrajectoryGenerator
+            from .swing_generators.cubic_bezier_swing_trajectory_generator import SwingTrajectoryGenerator
             self.swing_generator = SwingTrajectoryGenerator(swing_period=swing_period, step_height=step_height)
         
         self.swing_period = swing_period
@@ -176,7 +180,7 @@ if __name__ == "__main__":
 
     # Change these settings to explore the two generators and the swing geometry.
     robot, leg = "go2", "FL"
-    generator = "explicit"  # "explicit" (Bezier) or "scipy" (cubic spline)
+    generator = "cubic_hermite"  # "cubic_hermite", "cubic_bezier", "scipy"
     # Duration [s], vertical control-point height [m], forward displacement [m].
     swing_period, step_height, step_length = 1.0, 0.08, 0.08
     dt = 0.002

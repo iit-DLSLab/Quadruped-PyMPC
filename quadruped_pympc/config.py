@@ -198,7 +198,7 @@ mpc_params = {
 # -----------------------------------------------------------------------
 
 simulation_params = {
-    'swing_generator':             'scipy',  # 'scipy', 'explicit'
+    'swing_generator':             'hermite',  # 'scipy', 'hermite', 'bezier'
     'swing_position_gain_fb':      500,
     'swing_velocity_gain_fb':      10,
     'impedence_joint_position_gain':  10.0,
