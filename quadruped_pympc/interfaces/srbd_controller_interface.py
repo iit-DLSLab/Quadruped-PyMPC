@@ -126,7 +126,7 @@ class SRBDControllerInterface:
                 self.controller = self.controller.with_newkey()
                 if self.controller.sampling_method == 'cem_mppi':
                     if iter_sampling == 0:
-                        self.controller = self.controller.with_newsigma(cfg.mpc_params['sigma_cem_mppi'])
+                        self.controller = self.controller.with_resetsigma_if_needed()
 
                     (
                         nmpc_GRFs,
@@ -142,8 +142,11 @@ class SRBDControllerInterface:
                         reference_state_jax,
                         contact_sequence,
                         self.controller.best_control_parameters,
-                        self.controller.master_key,
+                        self.controller.get_key(),
                         self.controller.sigma_cem_mppi,
+                        pgg_phase_signal,
+                        pgg_step_freq,
+                        optimize_swing,
                     )
                     self.controller = self.controller.with_newsigma(sigma_cem_mppi)
                 else:
@@ -161,7 +164,7 @@ class SRBDControllerInterface:
                         reference_state_jax,
                         contact_sequence,
                         self.controller.best_control_parameters,
-                        self.controller.master_key,
+                        self.controller.get_key(),
                         pgg_phase_signal,
                         nominal_sample_freq,
                         optimize_swing,

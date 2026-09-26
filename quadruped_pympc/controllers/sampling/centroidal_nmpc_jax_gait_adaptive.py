@@ -69,10 +69,10 @@ class Sampling_MPC:
 
 
         elif self.control_parametrization == "cubic_spline":
-            # Along the horizon, we have 1 splines per control input (3 forces)
-            # Each spline has 3 parameters
+            # Along the horizon, we have N cubic splines per control input (3 forces)
+            # Consecutive splines share a knot, so we have N+1 knots per force
             self.num_spline = config.mpc_params['num_splines']
-            self.num_control_parameters_single_leg = 4 * 3 * self.num_spline
+            self.num_control_parameters_single_leg = (self.num_spline + 1) * 3
 
             # In totale we have 4 legs
             self.num_control_parameters = self.num_control_parameters_single_leg * 4
@@ -107,6 +107,10 @@ class Sampling_MPC:
             self.sigma_cem_mppi = (
                 jnp.ones(self.num_control_parameters, dtype=dtype_general) * config.mpc_params['sigma_cem_mppi']
             )
+            # The covariance is reset to its initial value every k mpc calls,
+            # otherwise the one adapted in the previous call is used
+            self.sigma_cem_mppi_reset_every = config.mpc_params.get('sigma_cem_mppi_reset_every', 1)
+            self.num_calls_since_sigma_reset = 0
         else:
             # return error and stop execution
             print("Error: sampling method not recognized")
@@ -159,6 +163,9 @@ class Sampling_MPC:
         self.R = self.R.at[22, 22].set(0.1)  # foot_force_y_RR
         self.R = self.R.at[23, 23].set(0.001)  # foot_force_z_RR
 
+        # temperature of the MPPI update, relative to the spread of the costs
+        self.temperature_mppi = config.mpc_params.get('temperature_mppi', 0.03)
+
         # mu is the friction coefficient
         self.mu = config.mpc_params["mu"]
 
@@ -168,6 +175,7 @@ class Sampling_MPC:
 
         self.best_control_parameters = jnp.zeros((self.num_control_parameters,), dtype=dtype_general)
         self.master_key = jax.random.PRNGKey(42)
+        self.sampling_key = self.master_key
         self.initial_random_parameters = jax.random.uniform(
             key=self.master_key,
             minval=-self.max_sampling_forces_z,
@@ -186,21 +194,21 @@ class Sampling_MPC:
         self.vectorized_rollout = jax.vmap(self.compute_rollout, in_axes=(None, None, None, 0, 0), out_axes=0)
         self.jit_vectorized_rollout = jax.jit(self.vectorized_rollout, device=self.device)
 
+        # Used to shift the previous solution ahead (see shift_solution)
+        self.shift_accumulator = 0.0
+        if self.control_parametrization == "linear_spline" or self.control_parametrization == "cubic_spline":
+            self.jitted_shift_spline_parameters = jax.jit(self.shift_spline_parameters, device=self.device)
+
 
     def compute_linear_spline(self, parameters, step, horizon_leg):
         """
         Compute the linear spline parametrization of the GRF (N splines)
         """
 
-        # Adding the last boundary for the case when step is exactly self.horizon
-        chunk_boundaries = jnp.linspace(0, self.horizon, self.num_spline + 1)
-        # Find the chunk index by checking in which interval the step falls
-        index = jnp.max(jnp.where(step >= chunk_boundaries, jnp.arange(self.num_spline + 1), 0))
-        
-        tau = step / (horizon_leg/self.num_spline)
-        tau = tau - 1*index
-
-        q = (tau - 0.0) / (1.0 - 0.0)
+        # Find the spline index and the local coordinate q in [0, 1] inside it
+        tau = step / (horizon_leg / self.num_spline)
+        index = jnp.clip(jnp.floor(tau).astype(jnp.int32), 0, self.num_spline - 1)
+        q = tau - index
 
         shift = self.num_spline + 1
         f_x = (1 - q) * parameters[index + 0] + q * parameters[index + 1]
@@ -209,62 +217,40 @@ class Sampling_MPC:
 
         return f_x, f_y, f_z
 
-
     def compute_cubic_spline(self, parameters, step, horizon_leg):
         """
-        Compute the cubic spline parametrization of the GRF (N splines)
+        Compute the cubic spline parametrization of the GRF (N splines).
+        Consecutive splines share their knots, and the tangents are computed from the
+        neighbouring knots (Catmull-Rom, one-sided at the extremes), so the force is
+        continuous together with its derivative along the horizon.
         """
 
-        # Adding the last boundary for the case when step is exactly self.horizon
-        chunk_boundaries = jnp.linspace(0, self.horizon, self.num_spline + 1)
-        # Find the chunk index by checking in which interval the step falls
-        index = jnp.max(jnp.where(step >= chunk_boundaries, jnp.arange(self.num_spline + 1), 0))
-        
-        tau = step / (horizon_leg/self.num_spline)
-        tau = tau - 1*index
+        # Find the spline index and the local coordinate q in [0, 1] inside it
+        tau = step / (horizon_leg / self.num_spline)
+        index = jnp.clip(jnp.floor(tau).astype(jnp.int32), 0, self.num_spline - 1)
+        q = tau - index
 
-        q = (tau - 0.0) / (1.0 - 0.0)
-
-        start_index = 10 * index
-
-        q = (tau - 0.0) / (1.0 - 0.0)
+        # Hermite basis
         a = 2 * q * q * q - 3 * q * q + 1
-        b = (q * q * q - 2 * q * q + q) * 1.0
+        b = q * q * q - 2 * q * q + q
         c = -2 * q * q * q + 3 * q * q
-        d = (q * q * q - q * q) * 1.0
+        d = q * q * q - q * q
 
-        phi = (1.0 / 2.0) * (
-            ((parameters[start_index + 2] - parameters[start_index + 1]) / 1.0)
-            + ((parameters[start_index + 1] - parameters[start_index + 0]) / 1.0)
-        )
-        phi_next = (1.0 / 2.0) * (
-            ((parameters[start_index + 3] - parameters[start_index + 2]) / 1.0)
-            + ((parameters[start_index + 2] - parameters[start_index + 1]) / 1.0)
-        )
-        f_x = a * parameters[start_index + 1] + b * phi + c * parameters[start_index + 2] + d * phi_next
+        # Neighbouring knots used for the tangents at the start and end of the spline
+        index_prev = jnp.maximum(index - 1, 0)
+        index_next = jnp.minimum(index + 2, self.num_spline)
 
-        phi = (1.0 / 2.0) * (
-            ((parameters[start_index + 6] - parameters[start_index + 5]) / 1.0)
-            + ((parameters[start_index + 5] - parameters[start_index + 4]) / 1.0)
-        )
-        phi_next = (1.0 / 2.0) * (
-            ((parameters[start_index + 7] - parameters[start_index + 6]) / 1.0)
-            + ((parameters[start_index + 6] - parameters[start_index + 5]) / 1.0)
-        )
-        f_y = a * parameters[start_index + 5] + b * phi + c * parameters[start_index + 6] + d * phi_next
+        def interpolate(knots):
+            tangent = (knots[index + 1] - knots[index_prev]) / (index + 1 - index_prev)
+            tangent_next = (knots[index_next] - knots[index]) / (index_next - index)
+            return a * knots[index] + b * tangent + c * knots[index + 1] + d * tangent_next
 
-        phi = (1.0 / 2.0) * (
-            ((parameters[start_index + 10] - parameters[start_index + 9]) / 1.0)
-            + ((parameters[start_index + 9] - parameters[start_index + 8]) / 1.0)
-        )
-        phi_next = (1.0 / 2.0) * (
-            ((parameters[start_index + 11] - parameters[start_index + 10]) / 1.0)
-            + ((parameters[start_index + 10] - parameters[start_index + 9]) / 1.0)
-        )
-        f_z = a * parameters[start_index + 9] + b * phi + c * parameters[start_index + 10] + d * phi_next
+        shift = self.num_spline + 1
+        f_x = interpolate(parameters[0:shift])
+        f_y = interpolate(parameters[shift : shift * 2])
+        f_z = interpolate(parameters[shift * 2 : shift * 3])
 
         return f_x, f_y, f_z
-    
 
     def compute_zero_order_spline(self, parameters, step, horizon_leg):
         """
@@ -278,17 +264,21 @@ class Sampling_MPC:
         return f_x, f_y, f_z
 
     def enforce_force_constraints(
-        self, f_x_FL, f_y_FL, f_z_FL, f_x_FR, f_y_FR, f_z_FR, f_x_RL, f_y_RL, f_z_RL, f_x_RR, f_y_RR, f_z_RR
+        self, f_x_FL, f_y_FL, f_z_FL, f_x_FR, f_y_FR, f_z_FR, f_x_RL, f_y_RL, f_z_RL, f_x_RR, f_y_RR, f_z_RR, contact
     ):
         """
         Enforce the friction cone and the force limits constraints
         """
 
-        # Enforce push-only of the ground!
-        f_z_FL = jax.numpy.where(f_z_FL > self.f_z_min, f_z_FL, self.f_z_min)
-        f_z_FR = jax.numpy.where(f_z_FR > self.f_z_min, f_z_FR, self.f_z_min)
-        f_z_RL = jax.numpy.where(f_z_RL > self.f_z_min, f_z_RL, self.f_z_min)
-        f_z_RR = jax.numpy.where(f_z_RR > self.f_z_min, f_z_RR, self.f_z_min)
+        # Enforce push-only of the ground! The minimum force applies only to the legs in stance
+        f_z_min_FL = self.f_z_min * contact[0]
+        f_z_min_FR = self.f_z_min * contact[1]
+        f_z_min_RL = self.f_z_min * contact[2]
+        f_z_min_RR = self.f_z_min * contact[3]
+        f_z_FL = jax.numpy.where(f_z_FL > f_z_min_FL, f_z_FL, f_z_min_FL)
+        f_z_FR = jax.numpy.where(f_z_FR > f_z_min_FR, f_z_FR, f_z_min_FR)
+        f_z_RL = jax.numpy.where(f_z_RL > f_z_min_RL, f_z_RL, f_z_min_RL)
+        f_z_RR = jax.numpy.where(f_z_RR > f_z_min_RR, f_z_RR, f_z_min_RR)
 
         # Enforce maximum force per leg!
         f_z_FL = jax.numpy.where(f_z_FL < self.f_z_max, f_z_FL, self.f_z_max)
@@ -382,7 +372,7 @@ class Sampling_MPC:
             number_of_legs_in_stance = (
                 contact_sequence[0][n] + contact_sequence[1][n] + contact_sequence[2][n] + contact_sequence[3][n]
             )
-            reference_force_stance_legs = (self.robot.mass * 9.81) / number_of_legs_in_stance
+            reference_force_stance_legs = (self.robot.mass * 9.81) / jnp.maximum(number_of_legs_in_stance, 1)
 
             f_z_FL = reference_force_stance_legs + f_z_FL
             f_z_FR = reference_force_stance_legs + f_z_FR
@@ -409,7 +399,8 @@ class Sampling_MPC:
             # Enforce force constraints
             f_x_FL, f_y_FL, f_z_FL, f_x_FR, f_y_FR, f_z_FR, f_x_RL, f_y_RL, f_z_RL, f_x_RR, f_y_RR, f_z_RR = (
                 self.enforce_force_constraints(
-                    f_x_FL, f_y_FL, f_z_FL, f_x_FR, f_y_FR, f_z_FR, f_x_RL, f_y_RL, f_z_RL, f_x_RR, f_y_RR, f_z_RR
+                    f_x_FL, f_y_FL, f_z_FL, f_x_FR, f_y_FR, f_z_FR, f_x_RL, f_y_RL, f_z_RL, f_x_RR, f_y_RR, f_z_RR,
+                    [contact_sequence[0][n], contact_sequence[1][n], contact_sequence[2][n], contact_sequence[3][n]],
                 )
             )
 
@@ -501,72 +492,71 @@ class Sampling_MPC:
         return cost
 
     def with_newkey(self):
-        newkey, subkey = jax.random.split(self.master_key)
-        self.master_key = newkey
+        self.master_key, self.sampling_key = jax.random.split(self.master_key)
         return self
 
     def get_key(self):
-        return self.master_key
+        return self.sampling_key
 
     def with_newsigma(self, sigma):
         self.sigma_cem_mppi = sigma
         return self
 
+    def with_resetsigma_if_needed(self):
+        """
+        Reset the CEM-MPPI covariance to its initial value every sigma_cem_mppi_reset_every mpc calls
+        """
+        if self.num_calls_since_sigma_reset % self.sigma_cem_mppi_reset_every == 0:
+            self.sigma_cem_mppi = (
+                jnp.ones(self.num_control_parameters, dtype=dtype_general) * config.mpc_params['sigma_cem_mppi']
+            )
+            self.num_calls_since_sigma_reset = 0
+        self.num_calls_since_sigma_reset += 1
+        return self
+
     def get_sigma(self):
         return self.sigma_cem_mppi
 
+    def shift_spline_parameters(self, best_control_parameters, step):
+        """
+        Shift the spline knots ahead of step (in horizon steps), by resampling
+        the previous solution at the new knot times. The last knot holds its value.
+        """
+
+        parameters = best_control_parameters.reshape((4, self.num_control_parameters_single_leg))
+        knot_steps = jnp.minimum(jnp.linspace(0, self.horizon, self.num_spline + 1) + step, self.horizon)
+
+        def evaluate_leg(leg_parameters):
+            return jax.vmap(lambda s: jnp.stack(self.spline_fun_FL(leg_parameters, s, self.horizon)))(knot_steps)
+
+        # (legs, knots, xyz) -> (legs, xyz, knots), which is the parameter ordering
+        knots = jax.vmap(evaluate_leg)(parameters)
+        return jnp.transpose(knots, (0, 2, 1)).reshape((self.num_control_parameters,))
+
     def shift_solution(self, best_control_parameters, step):
         """
-        This function shift the control parameter ahed
+        This function shift the control parameter ahed of step (in horizon steps)
         """
 
-        best_control_parameters = np.array(best_control_parameters)
-        FL_control = copy.deepcopy(best_control_parameters[0 : self.num_control_parameters_single_leg])
-        FR_control = copy.deepcopy(
-            best_control_parameters[self.num_control_parameters_single_leg : self.num_control_parameters_single_leg * 2]
-        )
-        RL_control = copy.deepcopy(
-            best_control_parameters[
-                self.num_control_parameters_single_leg * 2 : self.num_control_parameters_single_leg * 3
-            ]
-        )
-        RR_control = copy.deepcopy(
-            best_control_parameters[
-                self.num_control_parameters_single_leg * 3 : self.num_control_parameters_single_leg * 4
-            ]
-        )
+        if self.control_parametrization == "linear_spline" or self.control_parametrization == "cubic_spline":
+            return np.array(self.jitted_shift_spline_parameters(jnp.asarray(best_control_parameters), step))
 
-        FL_control_temp = copy.deepcopy(FL_control)
-        FL_control[0], FL_control[2], FL_control[4] = self.spline_fun_FL(FL_control_temp, step)
-        # FL_control[1], FL_control[3], FL_control[5] = controller.spline_fun_FL(FL_control_temp, controller.horizon+step)
+        # Zero order: one parameter per horizon step, so we can only shift by an integer
+        # number of steps. The fractional part is accumulated for the next calls
+        self.shift_accumulator += step
+        num_steps = int(np.floor(self.shift_accumulator))
+        self.shift_accumulator -= num_steps
+        if num_steps == 0:
+            return best_control_parameters
 
-        FR_control_temp = copy.deepcopy(FR_control)
-        FR_control[0], FR_control[2], FR_control[4] = self.spline_fun_FR(FR_control_temp, step)
-        # FR_control[1], FR_control[3], FR_control[5] = controller.spline_fun_FR(FR_control_temp, controller.horizon+step)
-
-        RL_control_temp = copy.deepcopy(RL_control)
-        RL_control[0], RL_control[2], RL_control[4] = self.spline_fun_RL(RL_control_temp, step)
-        # RL_control[1], RL_control[3], RL_control[5] = controller.spline_fun_RL(RL_control_temp, controller.horizon+step)
-
-        RR_control_temp = copy.deepcopy(RR_control)
-        RR_control[0], RR_control[2], RR_control[4] = self.spline_fun_RR(RR_control_temp, step)
-        # RR_control[1], RR_control[3], RR_control[5] = controller.spline_fun_RR(RR_control_temp, controller.horizon+step)
-
-        best_control_parameters[0 : self.num_control_parameters_single_leg] = FL_control
-        best_control_parameters[self.num_control_parameters_single_leg : self.num_control_parameters_single_leg * 2] = (
-            FR_control
-        )
-        best_control_parameters[
-            self.num_control_parameters_single_leg * 2 : self.num_control_parameters_single_leg * 3
-        ] = RL_control
-        best_control_parameters[
-            self.num_control_parameters_single_leg * 3 : self.num_control_parameters_single_leg * 4
-        ] = RR_control
-
-        return best_control_parameters
+        num_steps = min(num_steps, self.horizon)
+        parameters = np.array(best_control_parameters).reshape((4, 3, self.horizon))
+        last = np.repeat(parameters[:, :, -1:], num_steps, axis=2)
+        parameters = np.concatenate((parameters[:, :, num_steps:], last), axis=2)
+        return parameters.reshape((self.num_control_parameters,))
 
     def prepare_state_and_reference(
-        self, state_current, reference_state, current_contact, previous_contact, mpc_frequency=100
+        self, state_current, reference_state, current_contact, previous_contact, mpc_frequency=None
     ):
         """
         This function jaxify the current state and reference for further processing.
@@ -574,7 +564,9 @@ class Sampling_MPC:
 
         # Shift the previous solution ahead
         if config.mpc_params['shift_solution']:
-            index_shift = 1.0 / mpc_frequency
+            if mpc_frequency is None:
+                mpc_frequency = config.simulation_params['mpc_frequency']
+            index_shift = (1.0 / mpc_frequency) / self.dt
             self.best_control_parameters = self.shift_solution(self.best_control_parameters, index_shift)
 
         state_current_jax = np.concatenate(
@@ -647,6 +639,7 @@ class Sampling_MPC:
         """
 
         # Generate random parameters
+        key_gaussian_1, key_gaussian_2, key_uniform = jax.random.split(key, 3)
 
         # The first control parameters is the old best one, so we add zero noise there
         additional_random_parameters = self.initial_random_parameters * 0.0
@@ -656,7 +649,7 @@ class Sampling_MPC:
         sigma_gaussian_1 = self.sigma_random_sampling[0]
         additional_random_parameters = additional_random_parameters.at[
             1 : 1 + int(self.num_parallel_computations / 3)
-        ].set(sigma_gaussian_1 * jax.random.normal(key=key, shape=(num_sample_gaussian_1, self.num_control_parameters)))
+        ].set(sigma_gaussian_1 * jax.random.normal(key=key_gaussian_1, shape=(num_sample_gaussian_1, self.num_control_parameters)))
 
         # SECOND GAUSSIAN
         num_sample_gaussian_2 = (1 + int(self.num_parallel_computations / 3) * 2) - (
@@ -665,7 +658,7 @@ class Sampling_MPC:
         sigma_gaussian_2 = self.sigma_random_sampling[1]
         additional_random_parameters = additional_random_parameters.at[
             1 + int(self.num_parallel_computations / 3) : 1 + int(self.num_parallel_computations / 3) * 2
-        ].set(sigma_gaussian_2 * jax.random.normal(key=key, shape=(num_sample_gaussian_2, self.num_control_parameters)))
+        ].set(sigma_gaussian_2 * jax.random.normal(key=key_gaussian_2, shape=(num_sample_gaussian_2, self.num_control_parameters)))
 
         # UNIFORM
         max_sampling_forces = self.sigma_random_sampling[2]
@@ -674,7 +667,7 @@ class Sampling_MPC:
             1 + int(self.num_parallel_computations / 3) * 2 : int(self.num_parallel_computations)
         ].set(
             jax.random.uniform(
-                key=key,
+                key=key_uniform,
                 minval=-max_sampling_forces,
                 maxval=max_sampling_forces,
                 shape=(num_samples_uniform, self.num_control_parameters),
@@ -688,8 +681,8 @@ class Sampling_MPC:
         available_freq_increment = jnp.where(optimize_swing, self.step_freq_delta, nominal_step_frequency)
         # available_freq_increment = self.step_freq_delta
 
-        # step_frequencies_vec = jax.random.choice(key, available_freq_increment, shape=(self.num_parallel_computations, ))*optimize_swing + nominal_step_frequency
-        step_frequencies_vec = jax.random.choice(key, available_freq_increment, shape=(self.num_parallel_computations,))
+        # step_frequencies_vec = jax.random.choice(jax.random.fold_in(key, 1), available_freq_increment, shape=(self.num_parallel_computations, ))*optimize_swing + nominal_step_frequency
+        step_frequencies_vec = jax.random.choice(jax.random.fold_in(key, 1), available_freq_increment, shape=(self.num_parallel_computations,))
 
         # Do rollout
         costs = self.jit_vectorized_rollout(state, reference, timing, control_parameters_vec, step_frequencies_vec)
@@ -727,7 +720,7 @@ class Sampling_MPC:
         number_of_legs_in_stance = (
             contact_sequence[0][0] + contact_sequence[1][0] + contact_sequence[2][0] + contact_sequence[3][0]
         )
-        reference_force_stance_legs = (self.robot.mass * 9.81) / number_of_legs_in_stance
+        reference_force_stance_legs = (self.robot.mass * 9.81) / jnp.maximum(number_of_legs_in_stance, 1)
 
         fz_FL = reference_force_stance_legs + fz_FL
         fz_FR = reference_force_stance_legs + fz_FR
@@ -753,7 +746,8 @@ class Sampling_MPC:
         # Enforce force constraints
         fx_FL, fy_FL, fz_FL, fx_FR, fy_FR, fz_FR, fx_RL, fy_RL, fz_RL, fx_RR, fy_RR, fz_RR = (
             self.enforce_force_constraints(
-                fx_FL, fy_FL, fz_FL, fx_FR, fy_FR, fz_FR, fx_RL, fy_RL, fz_RL, fx_RR, fy_RR, fz_RR
+                fx_FL, fy_FL, fz_FL, fx_FR, fy_FR, fz_FR, fx_RL, fy_RL, fz_RL, fx_RR, fy_RR, fz_RR,
+                [contact_sequence[0][0], contact_sequence[1][0], contact_sequence[2][0], contact_sequence[3][0]],
             )
         )
 
@@ -834,7 +828,7 @@ class Sampling_MPC:
         # Sampling step frequency
         available_freq_increment = self.step_freq_delta
         step_frequencies_vec = jax.random.choice(
-            key, available_freq_increment, shape=(self.num_parallel_computations,)
+            jax.random.fold_in(key, 1), available_freq_increment, shape=(self.num_parallel_computations,)
         )  # *optimize_swing + nominal_step_frequency
 
         # Do rollout
@@ -849,10 +843,13 @@ class Sampling_MPC:
         best_cost = costs.take(best_index)
 
         # Compute MPPI update
+        # The costs are normalized by their spread (median - best, robust to the saturated
+        # rollouts), so the temperature does not depend on the scale of the cost function
         beta = best_cost
-        temperature = 1.0
-        exp_costs = jnp.exp((-1.0 / temperature) * (costs - beta))
-        denom = np.sum(exp_costs)
+        temperature = self.temperature_mppi
+        cost_spread = jnp.maximum(jnp.median(costs) - beta, 1e-6)
+        exp_costs = jnp.exp((-1.0 / temperature) * (costs - beta) / cost_spread)
+        denom = jnp.sum(exp_costs)
         weights = exp_costs / denom
         weighted_inputs = weights[:, jnp.newaxis, jnp.newaxis] * additional_random_parameters.reshape(
             (self.num_parallel_computations, self.num_control_parameters, 1)
@@ -883,7 +880,7 @@ class Sampling_MPC:
         number_of_legs_in_stance = (
             contact_sequence[0][0] + contact_sequence[1][0] + contact_sequence[2][0] + contact_sequence[3][0]
         )
-        reference_force_stance_legs = (self.robot.mass * 9.81) / number_of_legs_in_stance
+        reference_force_stance_legs = (self.robot.mass * 9.81) / jnp.maximum(number_of_legs_in_stance, 1)
 
         fz_FL = reference_force_stance_legs + fz_FL
         fz_FR = reference_force_stance_legs + fz_FR
@@ -909,7 +906,8 @@ class Sampling_MPC:
         # Enforce force constraints
         fx_FL, fy_FL, fz_FL, fx_FR, fy_FR, fz_FR, fx_RL, fy_RL, fz_RL, fx_RR, fy_RR, fz_RR = (
             self.enforce_force_constraints(
-                fx_FL, fy_FL, fz_FL, fx_FR, fy_FR, fz_FR, fx_RL, fy_RL, fz_RL, fx_RR, fy_RR, fz_RR
+                fx_FL, fy_FL, fz_FL, fx_FR, fy_FR, fz_FR, fx_RL, fy_RL, fz_RL, fx_RR, fy_RR, fz_RR,
+                [contact_sequence[0][0], contact_sequence[1][0], contact_sequence[2][0], contact_sequence[3][0]],
             )
         )
 
@@ -994,7 +992,7 @@ class Sampling_MPC:
         # Sampling step frequency
         available_freq_increment = jnp.array([0.0, 0.2, 0.4])
         step_frequencies_vec = (
-            jax.random.choice(key, available_freq_increment, shape=(self.num_parallel_computations,)) * optimize_swing
+            jax.random.choice(jax.random.fold_in(key, 1), available_freq_increment, shape=(self.num_parallel_computations,)) * optimize_swing
             + nominal_step_frequency
         )
 
@@ -1010,10 +1008,13 @@ class Sampling_MPC:
         best_cost = costs.take(best_index)
 
         # Compute MPPI update
+        # The costs are normalized by their spread (median - best, robust to the saturated
+        # rollouts), so the temperature does not depend on the scale of the cost function
         beta = best_cost
-        temperature = 1.0
-        exp_costs = jnp.exp((-1.0 / temperature) * (costs - beta))
-        denom = np.sum(exp_costs)
+        temperature = self.temperature_mppi
+        cost_spread = jnp.maximum(jnp.median(costs) - beta, 1e-6)
+        exp_costs = jnp.exp((-1.0 / temperature) * (costs - beta) / cost_spread)
+        denom = jnp.sum(exp_costs)
         weights = exp_costs / denom
         weighted_inputs = weights[:, jnp.newaxis, jnp.newaxis] * additional_random_parameters.reshape(
             (self.num_parallel_computations, self.num_control_parameters, 1)
@@ -1044,7 +1045,7 @@ class Sampling_MPC:
         number_of_legs_in_stance = (
             contact_sequence[0][0] + contact_sequence[1][0] + contact_sequence[2][0] + contact_sequence[3][0]
         )
-        reference_force_stance_legs = (self.robot.mass * 9.81) / number_of_legs_in_stance
+        reference_force_stance_legs = (self.robot.mass * 9.81) / jnp.maximum(number_of_legs_in_stance, 1)
 
         fz_FL = reference_force_stance_legs + fz_FL
         fz_FR = reference_force_stance_legs + fz_FR
@@ -1070,7 +1071,8 @@ class Sampling_MPC:
         # Enforce force constraints
         fx_FL, fy_FL, fz_FL, fx_FR, fy_FR, fz_FR, fx_RL, fy_RL, fz_RL, fx_RR, fy_RR, fz_RR = (
             self.enforce_force_constraints(
-                fx_FL, fy_FL, fz_FL, fx_FR, fy_FR, fz_FR, fx_RL, fy_RL, fz_RL, fx_RR, fy_RR, fz_RR
+                fx_FL, fy_FL, fz_FL, fx_FR, fy_FR, fz_FR, fx_RL, fy_RL, fz_RL, fx_RR, fy_RR, fz_RR,
+                [contact_sequence[0][0], contact_sequence[1][0], contact_sequence[2][0], contact_sequence[3][0]],
             )
         )
 
@@ -1132,3 +1134,7 @@ class Sampling_MPC:
 
     def reset(self):
         print("Resetting the controller")
+        self.shift_accumulator = 0.0
+        # Force a reset of the CEM-MPPI covariance at the next call
+        if self.sampling_method == 'cem_mppi':
+            self.num_calls_since_sigma_reset = 0

@@ -181,15 +181,17 @@ mpc_params = {
     # ----- START properties only for the sampling-based mpc -----
 
     # this is used only in the case 'sampling'.
-    'sampling_method':                         'random_sampling',  # 'random_sampling', 'mppi', 'cem_mppi'
+    'sampling_method':                         'cem_mppi',  # 'random_sampling', 'mppi', 'cem_mppi'
     'control_parametrization':                 'cubic_spline', # 'cubic_spline', 'linear_spline', 'zero_order'
     'num_splines':                             2,  # number of splines to use for the control parametrization
-    'num_parallel_computations':               10000,  # More is better, but slower computation!
+    'num_parallel_computations':               1000,  # More is better, but slower computation!
     'num_sampling_iterations':                 1,  # More is better, but slower computation!
     'device':                                  'gpu',  # 'gpu', 'cpu'
     # convariances for the sampling methods
     'sigma_cem_mppi':                          3,
+    'sigma_cem_mppi_reset_every':              2,  # reset the cem_mppi covariance every k mpc calls (1 = always)
     'sigma_mppi':                              3,
+    'temperature_mppi':                        0.03,  # relative to the cost spread. Lower = greedier (better tracking), higher = smoother (more robust)
     'sigma_random_sampling':                   [0.2, 3, 10],
     'shift_solution':                          False,
 
