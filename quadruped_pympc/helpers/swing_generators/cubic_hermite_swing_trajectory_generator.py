@@ -1,6 +1,8 @@
 import matplotlib.pyplot as plt
 import numpy as np
 
+from quadruped_pympc import config as cfg
+
 
 class SwingTrajectoryGenerator:
     """Generate a Cartesian swing using two cubic Hermite polynomials.
@@ -9,14 +11,16 @@ class SwingTrajectoryGenerator:
     touchdown. The segments share position and velocity at the apex (C1
     continuity). All positions must use the same coordinate frame, with z
     pointing upward; distances are in metres and times are in seconds.
+
+    If an early contact is detected (reflex), the swing is replanned from the
+    hit point over the remaining swing time, with a higher apex.
     """
 
     def __init__(self, step_height: float, swing_period: float) -> None:
-        """Set the absolute apex z coordinate and the total swing duration.
+        """Set the step height and the total swing duration.
 
-        Despite its name, step_height is not an offset from lift-off. Choose
-        it above both endpoint heights to obtain an upward swing with a true
-        maximum at the apex.
+        step_height is the apex height above the highest between lift-off
+        and touchdown, as in the other swing generators.
         """
         # A positive duration is required to normalize time and compute derivatives.
         if not np.isfinite(swing_period) or swing_period <= 0:
@@ -24,6 +28,14 @@ class SwingTrajectoryGenerator:
         self.step_height = step_height
         self.swing_period = swing_period
         self.half_swing_period = swing_period / 2
+
+        # Reflexes: set by the early stance detector for the steps after an early contact
+        self.reflex_next_steps_height_enhancement = False
+        self.reflex_max_step_height = cfg.simulation_params['reflex_max_step_height']
+
+        # When blind, the obstacle that caused the early contact is higher than
+        # expected, so the reflex touchdown is placed above the planned foothold
+        self.blind_locomotion = cfg.simulation_params['visual_foothold_adaptation'] == 'blind'
 
     def plot_trajectory_3d(self, curve_points: np.ndarray) -> None:
         """Display sampled Cartesian positions supplied as an (N, 3) array."""
@@ -73,40 +85,73 @@ class SwingTrajectoryGenerator:
         plt.show()
 
     def compute_control_points(
-        self, swing_time: float, lift_off: np.ndarray, touch_down: np.ndarray
-    ) -> tuple[float, np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
+        self, swing_time: float, lift_off: np.ndarray, touch_down: np.ndarray,
+        early_stance_hitmoment=-1, early_stance_hitpoint=None,
+    ) -> tuple[float, float, np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
         """Return the Hermite boundary data for the active half of the swing.
 
         swing_time is elapsed time since lift-off. Endpoint inputs may be flat,
         row or column vectors containing three Cartesian coordinates.
-        Returns (local_time, start_position, end_position, start_velocity,
-        end_velocity), with velocities expressed in metres per second.
+        Returns (local_time, segment_duration, start_position, end_position,
+        start_velocity, end_velocity), with velocities expressed in metres per second.
         These are Hermite boundary conditions, not Bezier control points.
         """
         # Normalize input shapes so every vector operation produces a (3,) array.
-        lift_off = np.asarray(lift_off, dtype=float).reshape(3)
-        touch_down = np.asarray(touch_down, dtype=float).reshape(3)
-        # Place the apex halfway along the horizontal displacement, at t = swing_period/2.
-        # Its vertical coordinate is prescribed independently of endpoint heights.
-        apex = 0.5 * (lift_off + touch_down)
-        apex[2] = self.step_height
-        # The horizontal cubic p(s) = p_LO + (3*s**2 - 2*s**3)*(p_TD-p_LO),
-        # s = t/swing_period, has zero endpoint velocities and midpoint velocity
-        # 1.5*delta/swing_period.
+        start = np.asarray(lift_off, dtype=float).reshape(3)
+        end = np.asarray(touch_down, dtype=float).reshape(3)
+        start_time = 0.0
+        reflex = False
+        if self.reflex_next_steps_height_enhancement:
+            height = self.reflex_max_step_height
+        else:
+            height = self.step_height
+
+        if early_stance_hitpoint is not None and early_stance_hitmoment != -1:
+            # Reflex: restart from the hit point, over the remaining swing time.
+            # As in the scipy generator, the new touchdown is a bit before the planned
+            # one and, when blind, raised since the obstacle is higher than expected.
+            hitpoint = np.asarray(early_stance_hitpoint, dtype=float).reshape(3)
+            reflex_apex_z = 0.5 * (hitpoint[2] + end[2]) + self.reflex_max_step_height
+            end = 0.2 * hitpoint + 0.8 * end
+            if self.blind_locomotion:
+                end[2] = np.asarray(touch_down, dtype=float).reshape(3)[2] + self.reflex_max_step_height / 2.0
+            start = hitpoint
+            start_time = float(np.clip(early_stance_hitmoment, 0.0, self.swing_period))
+            reflex = True
+
+        duration = self.swing_period - start_time
+        half_duration = duration / 2
+        if half_duration <= 0.0:
+            # Hit exactly at touchdown time: hold the end position.
+            return 0.0, 1.0, end, end, np.zeros(3), np.zeros(3)
+
+        # Place the apex halfway along the horizontal displacement, in the middle of the
+        # (remaining) swing, at step height above the highest of the two endpoints.
+        # For the reflex, as in the scipy generator, the apex is above the midpoint between
+        # hit point and planned touchdown (the raised blind touchdown would otherwise push
+        # it out of the leg workspace).
+        apex = 0.5 * (start + end)
+        if not reflex:
+            apex[2] = max(start[2], end[2]) + height
+        else:
+            apex[2] = reflex_apex_z
+        # The horizontal cubic p(s) = p_start + (3*s**2 - 2*s**3)*(p_end-p_start),
+        # s = t/duration, has zero endpoint velocities and midpoint velocity
+        # 1.5*delta/duration.
         # Reusing that velocity in both halves reproduces this cubic in x and y,
         # so horizontal acceleration is continuous as well as velocity.
-        apex_velocity = 1.5 * (touch_down - lift_off) / self.swing_period
+        apex_velocity = 1.5 * (end - start) / duration
         # Only vertical motion stops at the apex; horizontal motion can continue.
         apex_velocity[2] = 0.0
         # Clamp evaluation to the endpoints instead of extrapolating the cubics.
-        swing_time = float(np.clip(swing_time, 0.0, self.swing_period))
+        local_time = float(np.clip(swing_time, start_time, self.swing_period)) - start_time
 
         # Both segments use exactly the same apex position and velocity.
         # At the knot itself, select the first segment (left-hand acceleration).
-        if swing_time <= self.half_swing_period:
-            return swing_time, lift_off, apex, np.zeros(3), apex_velocity
+        if local_time <= half_duration:
+            return local_time, half_duration, start, apex, np.zeros(3), apex_velocity
         # Reset the local clock for the descending segment, without wrapping the touchdown time.
-        return swing_time - self.half_swing_period, apex, touch_down, apex_velocity, np.zeros(3)
+        return local_time - half_duration, half_duration, apex, end, apex_velocity, np.zeros(3)
 
     def compute_trajectory_references(
         self, swing_time: float, lift_off: np.ndarray, touch_down: np.ndarray,
@@ -116,20 +161,18 @@ class SwingTrajectoryGenerator:
 
         Velocity is zero at lift-off and touchdown, and its z component is
         zero at the apex. Vertical acceleration may jump at the apex when
-        endpoint heights differ. Early-contact arguments are accepted for
-        controller compatibility; this generator does not replan on contact.
+        endpoint heights differ. If early_stance_hitpoint is given, the swing
+        is replanned from the hit point (reflex).
         Times outside the swing interval hold the corresponding endpoint.
 
         Returns three (3,) arrays: position [m], velocity [m/s], and
         acceleration [m/s^2], all expressed in the input coordinate frame.
         """
         # Shift time to the beginning of the active segment: tau = t - t_s.
-        # First half: t_s = 0; second half: t_s = swing_period/2.
-        # T = t_f - t_s is the SEGMENT duration, not the total swing period.
-        tau, q_s, q_f, q_dot_s, q_dot_f = self.compute_control_points(
-            swing_time, lift_off, touch_down
+        # T is the SEGMENT duration, not the total swing period.
+        tau, T, q_s, q_f, q_dot_s, q_dot_f = self.compute_control_points(
+            swing_time, lift_off, touch_down, early_stance_hitmoment, early_stance_hitpoint
         )
-        T = self.half_swing_period
 
         # Solve the four endpoint constraints componentwise in x, y and z:
         # q(0) = q_s, q(T) = q_f, q_dot(0) = q_dot_s, q_dot(T) = q_dot_f.

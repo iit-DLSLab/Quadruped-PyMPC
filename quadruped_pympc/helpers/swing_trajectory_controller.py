@@ -221,8 +221,8 @@ if __name__ == "__main__":
     # This reference frame is only translated: its axes remain world-aligned.
     # Therefore velocities and Jacobians need no rotation or translation correction.
     lift_off, touch_down = np.zeros(3), np.array([step_length, 0.0, 0.0])
-    # Translate into coordinates relative to the initial foot: the explicit
-    # generator uses step_height as an absolute z control-point coordinate.
+    # Translate into coordinates relative to the initial foot: step_height is the
+    # apex height above the swing endpoints.
     controller = SwingTrajectoryController(
         step_height, swing_period, np.full(3, 400.0), np.full(3, 40.0), generator
     )
