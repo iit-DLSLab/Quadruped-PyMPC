@@ -14,15 +14,16 @@ class EarlyStanceDetector:
         self.hitpoints = LegsAttr(FL=None, FR=None, RR=None, RL=None)
 
 
-        if(cfg.mpc_params['type'] == 'sampling'):
-            self.activated = False # TO FIX
-
         self.trigger_mode = cfg.simulation_params['reflex_trigger_mode']
         if(self.trigger_mode == False):
             self.activated = False
         else:
             self.activated = True
             
+
+        if(cfg.mpc_params['type'] == 'sampling'):
+            self.activated = False # TO FIX
+
 
         self.early_stance_time_threshold = 0.07
         self.relative_tracking_error_threshold = 0.3
