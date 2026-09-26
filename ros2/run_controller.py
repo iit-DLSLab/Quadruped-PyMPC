@@ -76,7 +76,7 @@ os.system("sudo echo -20 > /proc/" + str(pid) + "/autogroup")
 
 USE_THREADED_MPC = False
 USE_PROCESS_QUEUE_MPC = False
-USE_PROCESS_SHARED_MEMORY_MPC = False
+USE_PROCESS_SHARED_MEMORY_MPC = True
 if(USE_PROCESS_SHARED_MEMORY_MPC):
         # -------------------- Shared-memory layout for MPC → WBC --------------------------------------
     # Payload layout (float64):
