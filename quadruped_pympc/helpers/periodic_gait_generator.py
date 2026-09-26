@@ -45,8 +45,9 @@ class PeriodicGaitGenerator:
         self.n_contact = len(self.phase_offset)
         self.time_before_switch_freq = 0
 
-    def run(self, dt, new_step_freq):
-        contact = np.zeros(self.n_contact)
+    def run(self, dt, new_step_freq, out=None):
+        """Advance the gait, optionally writing contacts into a caller-owned array."""
+        contact = np.empty(self.n_contact) if out is None else out
         for leg in range(self.n_contact):
             # Increase time by dt
             # self.t[leg] += dt*self.step_freq
@@ -104,7 +105,7 @@ class PeriodicGaitGenerator:
             contact_sequence = np.zeros((self.n_contact, self.horizon))
 
             # the first value is simply the current predicted contact by the timer
-            contact_sequence[:, 0] = self.run(0.0, self.step_freq)
+            self.run(0.0, self.step_freq, out=contact_sequence[:, 0])
 
             # contact_sequence_dts contains a list of dt (usefull for nonuniform sampling)
             # contact_sequence_lenghts contains the number of steps for each dt
@@ -113,7 +114,7 @@ class PeriodicGaitGenerator:
                 if i >= contact_sequence_lenghts[j]:
                     j += 1
                 dt = contact_sequence_dts[j]
-                contact_sequence[:, i] = self.run(dt, self.step_freq)
+                self.run(dt, self.step_freq, out=contact_sequence[:, i])
             self.set_phase_signal(t_init, init_init)
             return contact_sequence
 

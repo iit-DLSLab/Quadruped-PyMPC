@@ -101,14 +101,11 @@ class FootholdReferenceGenerator:
 
         # Compensation due to desired velocity
         delta_ref_H = (self.stance_time / 2.0) * ref_base_lin_vel_H
-        delta_ref_H = np.clip(delta_ref_H, -self.hip_height * 1.5, self.hip_height * 1.5)
-        vel_offset = np.concatenate((delta_ref_H, np.zeros(1)))
+        np.clip(delta_ref_H, -self.hip_height * 1.5, self.hip_height * 1.5, out=delta_ref_H)
 
         # Compensation for the error in velocity tracking
         error_compensation = np.sqrt(com_height_nominal / self.gravity_constant) * (base_vel_mvg - ref_base_lin_vel_H)
-        error_compensation = np.where(error_compensation > 0.05, 0.05, error_compensation)
-        error_compensation = np.where(error_compensation < -0.05, -0.05, error_compensation)
-        error_compensation = np.concatenate((error_compensation, np.zeros(1)))
+        np.clip(error_compensation, -0.05, 0.05, out=error_compensation)
 
         # Reference footholds in the horizontal frame
         ref_feet = LegsAttr(*[np.zeros(3) for _ in range(4)])
@@ -129,7 +126,9 @@ class FootholdReferenceGenerator:
         ref_feet.RR[1] -= self.hip_offset
 
         # Add the velocity compensation and desired velocity to the feet positions
-        ref_feet += vel_offset + error_compensation  # Add offset to all feet
+        horizontal_offset = delta_ref_H + error_compensation
+        for leg in ('FL', 'FR', 'RL', 'RR'):
+            ref_feet[leg][:2] += horizontal_offset
 
         # Reference footholds in world frame
         ref_feet.FL[0:2] = R_W2H.T @ ref_feet.FL[:2] + base_position[0:2]

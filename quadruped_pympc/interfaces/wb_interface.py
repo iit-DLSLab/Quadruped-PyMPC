@@ -377,8 +377,8 @@ class WBInterface:
         self.stc.update_swing_time(self.current_contact, self.legs_order, simulation_dt)
 
         # Compute Swing Torque ------------------------------------------------------------------------------
-        des_foot_pos = LegsAttr(*[np.zeros((3,)) for _ in range(4)])
-        des_foot_vel = LegsAttr(*[np.zeros((3,)) for _ in range(4)])
+        des_foot_pos = LegsAttr(FL=None, FR=None, RL=None, RR=None)
+        des_foot_vel = LegsAttr(FL=None, FR=None, RL=None, RR=None)
 
         # The swing controller is in the end-effector space
         for leg_id, leg_name in enumerate(self.legs_order):
@@ -405,7 +405,7 @@ class WBInterface:
             else:
                 des_foot_pos[leg_name] = nmpc_footholds[leg_name]
                 # des_foot_pos[leg_name] = self.frg.touch_down_positions[leg_name]
-                des_foot_vel[leg_name] = des_foot_vel[leg_name] * 0.0
+                des_foot_vel[leg_name] = np.zeros(3)
 
 
         self.last_des_foot_pos = des_foot_pos
@@ -419,8 +419,6 @@ class WBInterface:
 
 
         # Compute PD targets for the joints ----------------------------------------------------------------
-        des_joints_pos = LegsAttr(*[np.zeros((3, 1)) for _ in range(4)])
-        des_joints_vel = LegsAttr(*[np.zeros((3, 1)) for _ in range(4)])
         if cfg.mpc_params['type'] != 'kinodynamic':
             qpos_predicted = copy.deepcopy(qpos)
             # TODO use predicted rotation too
@@ -429,21 +427,26 @@ class WBInterface:
                 qpos_predicted, des_foot_pos.FL, des_foot_pos.FR, des_foot_pos.RL, des_foot_pos.RR
             )
 
-            des_joints_pos.FL = np.array(temp[0:3]).reshape((3,))
-            des_joints_pos.FR = np.array(temp[3:6]).reshape((3,))
-            des_joints_pos.RL = np.array(temp[6:9]).reshape((3,))
-            des_joints_pos.RR = np.array(temp[9:12]).reshape((3,))
+            des_joints_pos = LegsAttr(
+                FL=np.array(temp[0:3]).reshape((3,)),
+                FR=np.array(temp[3:6]).reshape((3,)),
+                RL=np.array(temp[6:9]).reshape((3,)),
+                RR=np.array(temp[9:12]).reshape((3,)),
+            )
 
-            # TODO This should be done over the the desired joint positions jacobian
-            des_joints_vel.FL = np.linalg.pinv(feet_jac.FL[:, legs_qvel_idx.FL]) @ des_foot_vel.FL
-            des_joints_vel.FR = np.linalg.pinv(feet_jac.FR[:, legs_qvel_idx.FR]) @ des_foot_vel.FR
-            des_joints_vel.RL = np.linalg.pinv(feet_jac.RL[:, legs_qvel_idx.RL]) @ des_foot_vel.RL
-            des_joints_vel.RR = np.linalg.pinv(feet_jac.RR[:, legs_qvel_idx.RR]) @ des_foot_vel.RR
+            # TODO This should be done over the desired joint positions jacobian
+            des_joints_vel = LegsAttr(
+                FL=np.linalg.pinv(feet_jac.FL[:, legs_qvel_idx.FL]) @ des_foot_vel.FL,
+                FR=np.linalg.pinv(feet_jac.FR[:, legs_qvel_idx.FR]) @ des_foot_vel.FR,
+                RL=np.linalg.pinv(feet_jac.RL[:, legs_qvel_idx.RL]) @ des_foot_vel.RL,
+                RR=np.linalg.pinv(feet_jac.RR[:, legs_qvel_idx.RR]) @ des_foot_vel.RR,
+            )
 
         else:
             # In the case of the kinodynamic model, we just use the NMPC predicted joints
             des_joints_pos = nmpc_joints_pos
             des_joints_pos = nmpc_joints_vel
+            des_joints_vel = LegsAttr(*[np.zeros((3, 1)) for _ in range(4)])
 
         # Saturate of desired joint positions and velocities
         max_joints_pos_difference = 3.0

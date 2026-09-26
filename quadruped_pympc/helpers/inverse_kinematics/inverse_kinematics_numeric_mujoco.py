@@ -111,7 +111,7 @@ class InverseKinematicsNumeric:
             dq = damped_pinv @ total_err
 
             # Integrate joint velocities to obtain joint positions.
-            q_joint = self.env.mjData.qpos.copy()[7:]
+            q_joint = self.env.mjData.qpos[7:].copy()
             q_joint += dq * DT
             self.env.mjData.qpos[7:] = q_joint
 
