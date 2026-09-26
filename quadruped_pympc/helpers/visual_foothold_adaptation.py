@@ -9,7 +9,7 @@ class VisualFootholdAdaptation:
         legs_order,
         adaptation_strategy='height',
         edge_threshold=0.03,
-        safety_margin=0.0,
+        safety_margin=0.02,
         max_box_half_cells=2,
         foot_radius=0.02,
     ):
