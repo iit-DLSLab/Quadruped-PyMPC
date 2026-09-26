@@ -369,10 +369,12 @@ class WBInterface:
 
 
         # Compute Stance Torque ---------------------------------------------------------------------------
-        tau.FL = -np.matmul(feet_jac.FL[:, legs_qvel_idx.FL].T, nmpc_GRFs.FL)
-        tau.FR = -np.matmul(feet_jac.FR[:, legs_qvel_idx.FR].T, nmpc_GRFs.FR)
-        tau.RL = -np.matmul(feet_jac.RL[:, legs_qvel_idx.RL].T, nmpc_GRFs.RL)
-        tau.RR = -np.matmul(feet_jac.RR[:, legs_qvel_idx.RR].T, nmpc_GRFs.RR)
+        # Reuse the joint Jacobian blocks for torque and velocity targets.
+        joint_jacobians = LegsAttr(**{
+            leg: feet_jac[leg][:, legs_qvel_idx[leg]] for leg in self.legs_order
+        })
+        for leg in self.legs_order:
+            tau[leg] = -joint_jacobians[leg].T @ nmpc_GRFs[leg]
 
         self.stc.update_swing_time(self.current_contact, self.legs_order, simulation_dt)
 
@@ -389,7 +391,7 @@ class WBInterface:
                     self.stc.compute_swing_control_cartesian_space(
                         leg_id=leg_id,
                         q_dot=qvel[legs_qvel_idx[leg_name]],
-                        J=feet_jac[leg_name][:, legs_qvel_idx[leg_name]],
+                        J=joint_jacobians[leg_name],
                         J_dot=feet_jac_dot[leg_name][:, legs_qvel_idx[leg_name]],
                         lift_off=self.frg.lift_off_positions[leg_name],
                         touch_down=nmpc_footholds[leg_name],
@@ -435,12 +437,13 @@ class WBInterface:
             )
 
             # TODO This should be done over the desired joint positions jacobian
-            des_joints_vel = LegsAttr(
-                FL=np.linalg.pinv(feet_jac.FL[:, legs_qvel_idx.FL]) @ des_foot_vel.FL,
-                FR=np.linalg.pinv(feet_jac.FR[:, legs_qvel_idx.FR]) @ des_foot_vel.FR,
-                RL=np.linalg.pinv(feet_jac.RL[:, legs_qvel_idx.RL]) @ des_foot_vel.RL,
-                RR=np.linalg.pinv(feet_jac.RR[:, legs_qvel_idx.RR]) @ des_foot_vel.RR,
-            )
+            des_joints_vel = LegsAttr(FL=None, FR=None, RL=None, RR=None)
+            for leg_id, leg in enumerate(self.legs_order):
+                if self.current_contact[leg_id] == 0:
+                    des_joints_vel[leg] = np.linalg.pinv(joint_jacobians[leg]) @ des_foot_vel[leg]
+                else:
+                    # A stance foot has zero desired velocity, including at singular poses.
+                    des_joints_vel[leg] = np.zeros(3)
 
         else:
             # In the case of the kinodynamic model, we just use the NMPC predicted joints

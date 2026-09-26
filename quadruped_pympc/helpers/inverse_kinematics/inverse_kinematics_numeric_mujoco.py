@@ -105,10 +105,8 @@ class InverseKinematicsNumeric:
             total_jac = np.vstack((J_FL, J_FR, J_RL, J_RR))
             total_err = 100*np.hstack((err_FL, err_FR, err_RL, err_RR))
 
-            # Solve the IK problem
-            #dq = total_jac.T @ np.linalg.solve(total_jac @ total_jac.T + damp_matrix, total_err)
-            damped_pinv = np.linalg.inv(total_jac.T @ total_jac + damp_matrix) @ total_jac.T
-            dq = damped_pinv @ total_err
+            # Solve the damped normal equations directly; only one RHS is needed.
+            dq = np.linalg.solve(total_jac.T @ total_jac + damp_matrix, total_jac.T @ total_err)
 
             # Integrate joint velocities to obtain joint positions.
             q_joint = self.env.mjData.qpos[7:].copy()

@@ -48,7 +48,6 @@ import threading
 import multiprocessing
 from multiprocessing import shared_memory, Value
 
-import copy
 
 # Gym and Simulation related imports
 import mujoco
@@ -490,14 +489,14 @@ class Quadruped_PyMPC_Node(Node):
             return
 
         
-        # Update the mujoco model
-        self.env.mjData.qpos[0:3] = copy.deepcopy(self.position) # s.e. height
+        # Slice assignment copies values into MuJoCo; no intermediate copies are needed.
+        self.env.mjData.qpos[0:3] = self.position # s.e. height
         #self.env.mjData.qpos[0:3] = np.zeros(3) # proprioceptive height
-        self.env.mjData.qpos[3:7] = copy.deepcopy(self.orientation)
-        self.env.mjData.qvel[0:3] = copy.deepcopy(self.linear_velocity)
-        self.env.mjData.qvel[3:6] = copy.deepcopy(self.angular_velocity)
-        self.env.mjData.qpos[7:] = copy.deepcopy(self.joint_positions)
-        self.env.mjData.qvel[6:] = copy.deepcopy(self.joint_velocities)
+        self.env.mjData.qpos[3:7] = self.orientation
+        self.env.mjData.qvel[0:3] = self.linear_velocity
+        self.env.mjData.qvel[3:6] = self.angular_velocity
+        self.env.mjData.qpos[7:] = self.joint_positions
+        self.env.mjData.qvel[6:] = self.joint_velocities
         self.env.mjModel.opt.timestep = simulation_dt
         self.env.mjModel.opt.disableflags = 16 # Disable the collision detection
         mujoco.mj_forward(self.env.mjModel, self.env.mjData)   
@@ -511,7 +510,6 @@ class Quadruped_PyMPC_Node(Node):
         # And get the state of the robot
         legs_order = ["FL", "FR", "RL", "RR"]
         feet_pos = self.env.feet_pos(frame='world')
-        feet_vel = self.env.feet_vel(frame='world')
         hip_pos = self.env.hip_positions(frame='world')
         base_lin_vel = self.env.base_lin_vel(frame='world')
         base_ang_vel = self.env.base_ang_vel(frame='base')
@@ -541,6 +539,8 @@ class Quadruped_PyMPC_Node(Node):
 
         # Compute feet jacobian
         feet_jac = self.env.feet_jacobians(frame='world', return_rot_jac=False)
+        # Reuse these Jacobians instead of recomputing them inside env.feet_vel().
+        feet_vel = LegsAttr(**{leg: feet_jac[leg] @ qvel for leg in self.legs_order})
         feet_jac_dot = self.env.feet_jacobians_dot(frame='world', return_rot_jac=False)
 
 
@@ -692,9 +692,9 @@ class Quadruped_PyMPC_Node(Node):
 
         control_signal_msg = ControlSignal()
         control_signal_msg.timestamp = float(self.get_clock().now().nanoseconds)
-        control_signal_msg.joints_torques = np.concatenate([self.tau.FL, self.tau.FR, self.tau.RL, self.tau.RR], axis=0).flatten().tolist()
-        control_signal_msg.joints_position = np.concatenate([pd_target_joints_pos.FL, pd_target_joints_pos.FR, pd_target_joints_pos.RL, pd_target_joints_pos.RR], axis=0).flatten().tolist()
-        control_signal_msg.joints_velocity = np.concatenate([pd_target_joints_vel.FL, pd_target_joints_vel.FR, pd_target_joints_vel.RL, pd_target_joints_vel.RR], axis=0).flatten().tolist()
+        control_signal_msg.joints_torques = np.concatenate([self.tau.FL, self.tau.FR, self.tau.RL, self.tau.RR], axis=0).ravel().tolist()
+        control_signal_msg.joints_position = np.concatenate([pd_target_joints_pos.FL, pd_target_joints_pos.FR, pd_target_joints_pos.RL, pd_target_joints_pos.RR], axis=0).ravel().tolist()
+        control_signal_msg.joints_velocity = np.concatenate([pd_target_joints_vel.FL, pd_target_joints_vel.FR, pd_target_joints_vel.RL, pd_target_joints_vel.RR], axis=0).ravel().tolist()
         control_signal_msg.kp = (self.impedence_joint_position_gain).tolist()
         control_signal_msg.kd = (self.impedence_joint_velocity_gain).tolist()
         self.publisher_control_signal.publish(control_signal_msg)
