@@ -33,6 +33,7 @@ from quadruped_pympc import config as cfg
 
 IT_MAX = 5
 DT = 1e-2
+TOLERANCE = 2e-3  # [m] stop iterating when every foot is closer than this to its target
 damp = 1e-3
 damp_matrix = damp * np.eye(12)
 
@@ -53,6 +54,11 @@ class InverseKinematicsNumeric:
         self.env = QuadrupedEnv(
             robot=robot_name,
         )
+
+    def _update_kinematics(self):
+        # Only what the feet positions and Jacobians need, instead of the full mj_fwdPosition
+        mujoco.mj_kinematics(self.env.mjModel, self.env.mjData)
+        mujoco.mj_comPos(self.env.mjModel, self.env.mjData)
 
     def compute_solution(
         self,
@@ -78,8 +84,9 @@ class InverseKinematicsNumeric:
 
         # Set the initial states
         self.env.mjData.qpos = q
-        mujoco.mj_fwdPosition(self.env.mjModel, self.env.mjData)
+        self._update_kinematics()
 
+        q_joint = self.env.mjData.qpos[7:].copy()
         for j in range(IT_MAX):
             feet_pos = self.env.feet_pos(frame='world')
 
@@ -93,6 +100,9 @@ class InverseKinematicsNumeric:
             err_RL = RL_foot_target_position - RL_foot_actual_pos
             err_RR = RR_foot_target_position - RR_foot_actual_pos
 
+            # Already close enough to the targets, no need for other iterations
+            if max(norm(err_FL), norm(err_FR), norm(err_RL), norm(err_RR)) < TOLERANCE:
+                break
 
             # Compute feet jacobian
             feet_jac = self.env.feet_jacobians(frame='world', return_rot_jac=False)
@@ -113,7 +123,9 @@ class InverseKinematicsNumeric:
             q_joint += dq * DT
             self.env.mjData.qpos[7:] = q_joint
 
-            mujoco.mj_fwdPosition(self.env.mjModel, self.env.mjData)
+            # The kinematics after the last iteration is not needed
+            if j < IT_MAX - 1:
+                self._update_kinematics()
             #mujoco.mj_kinematics(self.env.mjModel, self.env.mjData)
             #mujoco.mj_step(self.env.mjModel, self.env.mjData)
 
