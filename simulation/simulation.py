@@ -184,7 +184,7 @@ def run_simulation(
 
             # Get the inertia matrix
             if qpympc_cfg.simulation_params["use_inertia_recomputation"]:
-                inertia = env.get_base_inertia().flatten()  # Reflected inertia of base at qpos, in world frame
+                inertia = env.get_base_inertia().flatten()  # SRBD inertia about the CoM at qpos, in base frame
             else:
                 inertia = qpympc_cfg.inertia.flatten()
 
