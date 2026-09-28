@@ -90,6 +90,14 @@ class WBInterface:
         # Inverse Kinematics ---------------------------------------------------------------------
         self.ik = InverseKinematicsNumeric()
 
+        # Joint Coulomb friction from the robot model. MuJoCo solves it as a constraint, so it is not part of
+        # qfrc_passive and has to be compensated explicitly.
+        self.legs_frictionloss = LegsAttr(**{
+            leg: self.ik.env.mjModel.dof_frictionloss[self.ik.env.legs_qvel_idx[leg]].copy() for leg in self.legs_order
+        })
+        self.use_friction_compensation = cfg.simulation_params['use_friction_compensation']
+        self.friction_compensation_vel_eps = cfg.simulation_params['friction_compensation_vel_eps']
+
         if cfg.simulation_params['visual_foothold_adaptation'] != 'blind':
             # Visual foothold adaptation -------------------------------------------------------------
             self.vfa = VisualFootholdAdaptation(
@@ -413,11 +421,13 @@ class WBInterface:
         self.last_des_foot_pos = des_foot_pos
 
         # Compensate for friction -------------------------------------------------------------
-        if(self.stc.use_friction_compensation): #TODO fix this flag, is not only related to swing
-            tau.FL -= legs_qfrc_passive.FL
-            tau.FR -= legs_qfrc_passive.FR
-            tau.RL -= legs_qfrc_passive.RL
-            tau.RR -= legs_qfrc_passive.RR
+        if self.use_friction_compensation:
+            for leg_name in self.legs_order:
+                # Viscous damping (qfrc_passive) and Coulomb friction (a solver constraint, not in qfrc_passive)
+                tau[leg_name] -= legs_qfrc_passive[leg_name]
+                tau[leg_name] += self.legs_frictionloss[leg_name] * np.tanh(
+                    qvel[legs_qvel_idx[leg_name]] / self.friction_compensation_vel_eps
+                )
 
 
         # Compute PD targets for the joints ----------------------------------------------------------------

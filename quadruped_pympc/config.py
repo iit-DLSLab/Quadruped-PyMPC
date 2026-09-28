@@ -238,6 +238,10 @@ simulation_params = {
     'impedence_joint_position_gain':  10.0,
     'impedence_joint_velocity_gain':  2.0,
 
+    # Joint friction compensation: viscous damping (qfrc_passive) and Coulomb friction (model frictionloss)
+    'use_friction_compensation':   True,
+    'friction_compensation_vel_eps': 0.05,  # [rad/s] velocity at which the smoothed Coulomb sign saturates
+
     'step_height':                 0.2 * hip_height,  
 
     # Visual Foothold adapatation

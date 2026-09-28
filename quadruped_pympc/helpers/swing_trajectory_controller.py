@@ -28,7 +28,6 @@ class SwingTrajectoryController:
         self.swing_time = [0, 0, 0, 0]
 
         self.use_feedback_linearization = True
-        self.use_friction_compensation = True
 
         self.rising_edge_detected = False
 
