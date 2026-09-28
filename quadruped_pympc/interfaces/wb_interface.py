@@ -179,7 +179,7 @@ class WBInterface:
         # Modulate the desired velocity if the robot is in strange positions
         if self.vm.activated:
             ref_base_lin_vel, ref_base_ang_vel = self.vm.modulate_velocities(
-                ref_base_lin_vel, ref_base_ang_vel, feet_pos, hip_pos
+                ref_base_lin_vel, ref_base_ang_vel, feet_pos, hip_pos, base_ori_euler_xyz[2]
             )
 
         # Update the desired contact sequence ---------------------------

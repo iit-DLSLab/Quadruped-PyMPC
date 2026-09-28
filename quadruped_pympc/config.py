@@ -16,62 +16,83 @@ qpos0_js = robot_cfg.qpos0_js
 hip_height = robot_cfg.hip_height
 
 # ----------------------------------------------------------------------------------------------------------------
+# Nominal hip-to-foot offsets (m): +x front/-x rear, +y left/-y right, in the horizontal heading frame.
 # Mass and SRBD inertia (whole robot, about its CoM, expressed in the base frame) in the 'home' keyframe of the gym_quadruped MJCF (foot collision bodies excluded)
 if (robot == 'go1'):
+    hip_offset_x = 0.0
+    hip_offset_y = 0.095
     mass = 12.743
     inertia = np.array([[ 1.268390e-01, -4.377506e-04, -1.432618e-02],
                         [-4.377506e-04,  3.940320e-01, -9.140054e-05],
                         [-1.432618e-02, -9.140054e-05,  4.228811e-01]])
 
 elif (robot == 'go2'):
+    hip_offset_x = 0.0
+    hip_offset_y = 0.095
     mass = 15.206
     inertia = np.array([[ 1.702904e-01,  1.216598e-04, -1.647458e-02],
                         [ 1.216598e-04,  4.837366e-01, -3.120047e-05],
                         [-1.647458e-02, -3.120047e-05,  5.353721e-01]])
 
 elif (robot == 'a2'):
+    hip_offset_x = 0.0
+    hip_offset_y = 0.095
     mass = 40.071
     inertia = np.array([[ 7.689768e-01,  6.960592e-04, -9.620317e-02],
                         [ 6.960592e-04,  2.048805e+00,  2.700440e-06],
                         [-9.620317e-02,  2.700440e-06,  2.428280e+00]])
 
 elif (robot == 'aliengo'):
+    hip_offset_x = 0.0
+    hip_offset_y = 0.083
     mass = 24.638
     inertia = np.array([[ 2.325974e-01, -1.025321e-03, -1.614396e-02],
                         [-1.025321e-03,  8.951498e-01, -6.527086e-04],
                         [-1.614396e-02, -6.527086e-04,  9.195693e-01]])
 
 elif (robot == 'b2'):
+    hip_offset_x = 0.0
+    hip_offset_y = 0.095
     mass = 83.498
     inertia = np.array([[ 1.654483e+00, -1.608186e-02, -2.646546e-01],
                         [-1.608186e-02,  7.004132e+00, -3.650494e-03],
                         [-2.646546e-01, -3.650494e-03,  7.561386e+00]])
 
 elif (robot == 'hyqreal1'):
+    hip_offset_x = 0.0
+    hip_offset_y = 0.095
     mass = 107.573
     inertia = np.array([[ 4.540910e+00,  5.145509e-03, -5.106845e-01],
                         [ 5.145509e-03,  2.018049e+01, -8.456211e-04],
                         [-5.106845e-01, -8.456211e-04,  2.136024e+01]])
 
 elif (robot == 'hyqreal2'):
+    hip_offset_x = 0.0
+    hip_offset_y = 0.095
     mass = 126.694
     inertia = np.array([[ 4.893050e+00,  2.716032e-05, -1.849255e-01],
                         [ 2.716032e-05,  1.781918e+01, -6.545602e-03],
                         [-1.849255e-01, -6.545602e-03,  1.846831e+01]])
 
 elif (robot == 'mini_cheetah'):
+    hip_offset_x = 0.0
+    hip_offset_y = 0.095
     mass = 12.473
     inertia = np.array([[ 9.811458e-02,  3.536596e-04,  2.504832e-04],
                         [ 3.536596e-04,  2.804790e-01, -2.740048e-05],
                         [ 2.504832e-04, -2.740048e-05,  3.522035e-01]])
 
 elif (robot == 'spot'):
+    hip_offset_x = 0.0
+    hip_offset_y = 0.095
     mass = 50.340
     inertia = np.array([[ 6.609257e-01,  8.818121e-05, -1.394429e-01],
                         [ 8.818121e-05,  2.057524e+00,  8.727701e-05],
                         [-1.394429e-01,  8.727701e-05,  2.189357e+00]])
 
 elif (robot == 'pegasus'):
+    hip_offset_x = 0.112
+    hip_offset_y = 0.148
     mass = 83.077
     inertia = np.array([[ 3.666069e+00, -1.496914e-02, -2.939266e-01],
                         [-1.496914e-02,  1.108444e+01, -9.354534e-04],

@@ -76,7 +76,6 @@ def run_simulation(
         env.viewer.user_scn.flags[mujoco.mjtRndFlag.mjRND_REFLECTION] = False
 
     # Initialization of variables used in the main control loop --------------------------------
-
     # Torque vector
     tau = LegsAttr(*[np.zeros((env.mjModel.nv, 1)) for _ in range(4)])
     # Torque limits

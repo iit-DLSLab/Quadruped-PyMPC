@@ -41,7 +41,8 @@ class FootholdReferenceGenerator:
 
         # The footholds are wrt the hip position, so if we want to change
         # the default foothold, we need to use a variable to add an offset
-        self.hip_offset = 0.1
+        self.hip_offset_y = cfg.hip_offset_y
+        self.hip_offset_x = cfg.hip_offset_x
 
         # Placeholder for the last reference footholds before modification from height/vfa
         self.last_reference_footholds = LegsAttr(
@@ -120,10 +121,14 @@ class FootholdReferenceGenerator:
         # Offsets to the X axis result in spread/crossed legs (+x values lead to spread legs in front/back)
         # TODO: This should not be hardcoded, should be a property of the robot cofiguration and passed as argment
         #  to this function, not loaded from the config file.
-        ref_feet.FL[1] += self.hip_offset
-        ref_feet.FR[1] -= self.hip_offset
-        ref_feet.RL[1] += self.hip_offset
-        ref_feet.RR[1] -= self.hip_offset
+        ref_feet.FL[1] += self.hip_offset_y
+        ref_feet.FR[1] -= self.hip_offset_y
+        ref_feet.RL[1] += self.hip_offset_y
+        ref_feet.RR[1] -= self.hip_offset_y
+        ref_feet.FL[0] += self.hip_offset_x
+        ref_feet.FR[0] += self.hip_offset_x
+        ref_feet.RL[0] -= self.hip_offset_x
+        ref_feet.RR[0] -= self.hip_offset_x
 
         # Add the velocity compensation and desired velocity to the feet positions
         horizontal_offset = delta_ref_H + error_compensation
