@@ -53,7 +53,8 @@ If you find the work useful, please consider citing one of our works:
   year={2024},
   pages={13757-13764},
   doi={10.1109/IROS58592.2024.10801698}}
-](https://arxiv.org/abs/2605.02147)```
+](https://arxiv.org/abs/2605.02147)
+```
 #### [Adaptive Non-Linear Centroidal MPC With Stability Guarantees for Robust Locomotion of Legged Robots (RAL-2025)](https://arxiv.org/abs/2409.01144):
 ```
 @ARTICLE{elobaid2025adaptivestablempc,
