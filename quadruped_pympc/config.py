@@ -226,6 +226,10 @@ mpc_params = {
     'temperature_mppi':                        0.03,  # relative to the cost spread. Lower = greedier (better tracking), higher = smoother (more robust)
     'sigma_random_sampling':                   [0.2, 3, 10],
     'shift_solution':                          False,
+    # refine the sampled solution with a few Adam steps on the gradient of the rollout cost (0 = off).
+    # The refined solution is used only if it decreases the cost
+    'gradient_refinement_steps':               2,
+    'gradient_refinement_lr':                  0.5,  # [N] approximately the change of each parameter per step
 
     # ----- END properties for the sampling-based mpc -----
     }

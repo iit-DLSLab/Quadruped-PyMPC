@@ -166,6 +166,10 @@ class Sampling_MPC:
         # temperature of the MPPI update, relative to the spread of the costs
         self.temperature_mppi = config.mpc_params.get('temperature_mppi', 0.03)
 
+        # number of Adam steps on the gradient of the rollout cost used to refine the sampled solution
+        self.gradient_refinement_steps = config.mpc_params.get('gradient_refinement_steps', 0)
+        self.gradient_refinement_lr = config.mpc_params.get('gradient_refinement_lr', 1.0)
+
         # mu is the friction coefficient
         self.mu = config.mpc_params["mu"]
 
@@ -491,6 +495,43 @@ class Sampling_MPC:
         cost += (step_frequency - 1.3) * 100 * (step_frequency - 1.3)
         return cost
 
+    def refine_parameters(self, state, reference, timing, control_parameters, step_frequency, cost):
+        """
+        Refine the control parameters with a few Adam steps on the gradient of the rollout cost,
+        keeping the step frequency fixed. The refined parameters are used only if they decrease the cost.
+        """
+
+        if self.gradient_refinement_steps == 0:
+            return control_parameters, cost
+
+        cost_and_grad = jax.value_and_grad(
+            lambda parameters: self.compute_rollout(state, reference, timing, parameters, step_frequency)
+        )
+        beta_1, beta_2, eps = 0.9, 0.999, 1e-8
+
+        def adam_step(k, carry):
+            parameters, m, v = carry
+            _, grad = cost_and_grad(parameters)
+            grad = jnp.where(jnp.isfinite(grad), grad, 0.0)
+            m = beta_1 * m + (1 - beta_1) * grad
+            v = beta_2 * v + (1 - beta_2) * grad * grad
+            m_hat = m / (1 - beta_1 ** (k + 1))
+            v_hat = v / (1 - beta_2 ** (k + 1))
+            parameters = parameters - self.gradient_refinement_lr * m_hat / (jnp.sqrt(v_hat) + eps)
+            return parameters, m, v
+
+        zeros = jnp.zeros_like(control_parameters)
+        refined_parameters, _, _ = jax.lax.fori_loop(
+            0, self.gradient_refinement_steps, adam_step, (control_parameters, zeros, zeros)
+        )
+
+        refined_cost = self.compute_rollout(state, reference, timing, refined_parameters, step_frequency)
+        use_refined = jnp.isfinite(refined_cost) & (refined_cost < cost)
+        return (
+            jnp.where(use_refined, refined_parameters, control_parameters),
+            jnp.where(use_refined, refined_cost, cost),
+        )
+
     def with_newkey(self):
         self.master_key, self.sampling_key = jax.random.split(self.master_key)
         return self
@@ -697,6 +738,11 @@ class Sampling_MPC:
         best_control_parameters = control_parameters_vec[best_index]
         best_step_frequency = step_frequencies_vec[best_index]
 
+        # Refine the solution with a few gradient steps on the rollout cost
+        best_control_parameters, best_cost = self.refine_parameters(
+            state, reference, timing, best_control_parameters, best_step_frequency, best_cost
+        )
+
         # and redistribute it to each leg
         best_control_parameters_FL = best_control_parameters[0 : self.num_control_parameters_single_leg]
         best_control_parameters_FR = best_control_parameters[
@@ -856,6 +902,13 @@ class Sampling_MPC:
         )
         best_control_parameters += jnp.sum(weighted_inputs, axis=0).reshape((self.num_control_parameters,))
         best_step_frequency = step_frequencies_vec[best_index]
+
+        # Refine the solution with a few gradient steps on the rollout cost
+        if self.gradient_refinement_steps > 0:
+            mean_cost = self.compute_rollout(state, reference, timing, best_control_parameters, best_step_frequency)
+            best_control_parameters, best_cost = self.refine_parameters(
+                state, reference, timing, best_control_parameters, best_step_frequency, mean_cost
+            )
 
         # And redistribute it to each leg
         best_control_parameters_FL = best_control_parameters[0 : self.num_control_parameters_single_leg]
@@ -1022,6 +1075,13 @@ class Sampling_MPC:
         best_control_parameters += jnp.sum(weighted_inputs, axis=0).reshape((self.num_control_parameters,))
         best_step_frequency = step_frequencies_vec[best_index]
 
+        # Refine the solution with a few gradient steps on the rollout cost
+        if self.gradient_refinement_steps > 0:
+            mean_cost = self.compute_rollout(state, reference, timing, best_control_parameters, best_step_frequency)
+            best_control_parameters, best_cost = self.refine_parameters(
+                state, reference, timing, best_control_parameters, best_step_frequency, mean_cost
+            )
+
         # And redistribute it to each leg
         best_control_parameters_FL = best_control_parameters[0 : self.num_control_parameters_single_leg]
         best_control_parameters_FR = best_control_parameters[
@@ -1128,6 +1188,7 @@ class Sampling_MPC:
             nmpc_predicted_state,
             best_control_parameters,
             best_cost,
+            best_step_frequency,
             costs,
             new_sigma_cem_mppi,
         )
