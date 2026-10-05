@@ -22,11 +22,10 @@ Features gradient-based mpc:
 Features sampling-based mpc:
 - 10000 parallel rollouts in less than 2ms on an nvidia 4050 mobile gpu!
 - optional step frequency adaptation for enhancing robustness
-- implements different strategies: [random sampling](https://arxiv.org/pdf/2212.00541.pdf), [mppi](https://sites.gatech.edu/acds/mppi/), or [cemppi](https://arxiv.org/pdf/2203.16633.pdf) 
+- implements different strategies: [random sampling](https://arxiv.org/pdf/2212.00541.pdf), [mppi](https://sites.gatech.edu/acds/mppi/), [cemppi](https://arxiv.org/pdf/2203.16633.pdf) and [ot-mpc](https://arxiv.org/abs/2605.02147)
 - different control parametrizations: zero-order, linear splines or cubic splines (see [mujoco-mpc](https://arxiv.org/pdf/2212.00541.pdf))
 - optional control refinement via rollout gradient
-- optional high-frequency feedback gains via [Feedback-MPPI](https://arxiv.org/abs/2506.14855)
-- [Sampling-Based Control via Entropy-Regularized Optimal Transport](https://arxiv.org/abs/2605.02147)
+- optional high-frequency feedback gains via [Feedback-MPPI](https://arxiv.org/abs/2506.14855) 
 
 Real-world deployment via:
 - [muse](https://github.com/iit-DLSLab/muse/tree/unitree_sdk) for state estimation
@@ -54,7 +53,7 @@ If you find the work useful, please consider citing one of our works:
   year={2024},
   pages={13757-13764},
   doi={10.1109/IROS58592.2024.10801698}}
-```
+](https://arxiv.org/abs/2605.02147)```
 #### [Adaptive Non-Linear Centroidal MPC With Stability Guarantees for Robust Locomotion of Legged Robots (RAL-2025)](https://arxiv.org/abs/2409.01144):
 ```
 @ARTICLE{elobaid2025adaptivestablempc,
