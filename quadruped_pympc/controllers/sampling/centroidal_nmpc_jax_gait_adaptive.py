@@ -170,6 +170,14 @@ class Sampling_MPC:
         self.gradient_refinement_steps = config.mpc_params.get('gradient_refinement_steps', 0)
         self.gradient_refinement_lr = config.mpc_params.get('gradient_refinement_lr', 1.0)
 
+        # Feedback-MPPI gain of the first GRF (https://arxiv.org/abs/2506.14855), see 'use_riccati_feedback' in
+        # the config. Not available with random sampling, which has no weights to differentiate
+        self.use_riccati_feedback = (
+            config.mpc_params.get('use_riccati_feedback', False) and self.sampling_method != 'random_sampling'
+        )
+        self.riccati_K = None  # (12, 24) d(GRF)/d(state), None if not available
+        self.riccati_x = None  # (24,) state used by the last solution
+
         # mu is the friction coefficient
         self.mu = config.mpc_params["mu"]
 
@@ -532,6 +540,59 @@ class Sampling_MPC:
             jnp.where(use_refined, refined_cost, cost),
         )
 
+    def compute_first_stage_grfs(self, control_parameters, contact_sequence):
+        """
+        GRFs of the first step of the horizon given the control parameters (same as the ones returned by compute_control)
+        """
+
+        spline_funs = (self.spline_fun_FL, self.spline_fun_FR, self.spline_fun_RL, self.spline_fun_RR)
+        contact = [contact_sequence[0][0], contact_sequence[1][0], contact_sequence[2][0], contact_sequence[3][0]]
+        number_of_legs_in_stance = contact[0] + contact[1] + contact[2] + contact[3]
+        reference_force_stance_legs = (self.robot.mass * 9.81) / jnp.maximum(number_of_legs_in_stance, 1)
+
+        forces = []
+        for leg_id in range(4):
+            leg_parameters = control_parameters[
+                self.num_control_parameters_single_leg * leg_id : self.num_control_parameters_single_leg * (leg_id + 1)
+            ]
+            f_x, f_y, f_z = spline_funs[leg_id](leg_parameters, 0.0, 1)
+            f_x = f_x * contact[leg_id] / (self.max_sampling_forces_z / self.max_sampling_forces_x)
+            f_y = f_y * contact[leg_id] / (self.max_sampling_forces_z / self.max_sampling_forces_y)
+            f_z = (reference_force_stance_legs + f_z) * contact[leg_id]
+            forces += [f_x, f_y, f_z]
+
+        return jnp.array(self.enforce_force_constraints(*forces, contact))
+
+    def compute_feedback_gain(
+        self, costs_gradient, weights, additional_random_parameters, temperature, control_parameters, contact_sequence
+    ):
+        """
+        Feedback-MPPI gain (https://arxiv.org/abs/2506.14855): sensitivity of the first GRF of the MPPI solution
+        to the initial state, obtained by differentiating the MPPI weights through the rollouts.
+
+        With w_k = exp(-J_k / temperature) / sum_j exp(-J_j / temperature), the MPPI update
+        theta = theta_prev + sum_k w_k * eps_k gives
+            d(theta)/d(x0) = -1/temperature * sum_k w_k * eps_k (dJ_k/dx0 - sum_j w_j dJ_j/dx0)^T
+        and K = d(GRF)/d(theta) @ d(theta)/d(x0). The dependence of the cost spread on x0 is neglected.
+
+        Args:
+            costs_gradient (jnp.array): (num_samples, 24) gradient of the cost of each rollout w.r.t. the initial state
+            weights (jnp.array): (num_samples,) MPPI weights
+            additional_random_parameters (jnp.array): (num_samples, num_parameters) noise of each sample
+            temperature (float): temperature of the weights, in the same units of the costs
+            control_parameters (jnp.array): (num_parameters,) control parameters of the solution
+            contact_sequence (jnp.array): contact sequence of the legs
+
+        Returns:
+            (jnp.array): (12, 24) gain d(GRF)/d(state)
+        """
+
+        costs_gradient = jnp.where(jnp.isfinite(costs_gradient), costs_gradient, 0.0)
+        weights_gradient = -(weights / temperature)[:, jnp.newaxis] * (costs_gradient - weights @ costs_gradient)
+        parameters_gradient = additional_random_parameters.T @ weights_gradient
+        grf_jacobian = jax.jacfwd(self.compute_first_stage_grfs)(control_parameters, contact_sequence)
+        return grf_jacobian @ parameters_gradient
+
     def with_newkey(self):
         self.master_key, self.sampling_key = jax.random.split(self.master_key)
         return self
@@ -843,6 +904,7 @@ class Sampling_MPC:
             best_cost,
             best_step_frequency,
             costs,
+            None,
         )
 
     def compute_control_mppi(
@@ -908,6 +970,21 @@ class Sampling_MPC:
             mean_cost = self.compute_rollout(state, reference, timing, best_control_parameters, best_step_frequency)
             best_control_parameters, best_cost = self.refine_parameters(
                 state, reference, timing, best_control_parameters, best_step_frequency, mean_cost
+            )
+
+        # Feedback-MPPI gain of the first GRF, see 'use_riccati_feedback' in the config
+        feedback_gain = None
+        if self.use_riccati_feedback:
+            costs_gradient = jax.vmap(jax.grad(self.compute_rollout), in_axes=(None, None, None, 0, 0))(
+                state, reference, timing, control_parameters_vec, step_frequencies_vec
+            )
+            feedback_gain = self.compute_feedback_gain(
+                costs_gradient,
+                weights,
+                additional_random_parameters,
+                temperature * cost_spread,
+                best_control_parameters,
+                contact_sequence,
             )
 
         # And redistribute it to each leg
@@ -1010,6 +1087,7 @@ class Sampling_MPC:
             best_cost,
             best_step_frequency,
             costs,
+            feedback_gain,
         )
 
     def compute_control_cem_mppi(
@@ -1080,6 +1158,21 @@ class Sampling_MPC:
             mean_cost = self.compute_rollout(state, reference, timing, best_control_parameters, best_step_frequency)
             best_control_parameters, best_cost = self.refine_parameters(
                 state, reference, timing, best_control_parameters, best_step_frequency, mean_cost
+            )
+
+        # Feedback-MPPI gain of the first GRF, see 'use_riccati_feedback' in the config
+        feedback_gain = None
+        if self.use_riccati_feedback:
+            costs_gradient = jax.vmap(jax.grad(self.compute_rollout), in_axes=(None, None, None, 0, 0))(
+                state, reference, timing, control_parameters_vec, step_frequencies_vec
+            )
+            feedback_gain = self.compute_feedback_gain(
+                costs_gradient,
+                weights,
+                additional_random_parameters,
+                temperature * cost_spread,
+                best_control_parameters,
+                contact_sequence,
             )
 
         # And redistribute it to each leg
@@ -1191,6 +1284,7 @@ class Sampling_MPC:
             best_step_frequency,
             costs,
             new_sigma_cem_mppi,
+            feedback_gain,
         )
 
     def reset(self):

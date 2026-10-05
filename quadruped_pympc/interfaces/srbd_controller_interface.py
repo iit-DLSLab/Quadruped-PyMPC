@@ -18,8 +18,10 @@ class SRBDControllerInterface:
 
         self.previous_contact_mpc = np.array([1, 1, 1, 1])
 
-        if cfg.mpc_params.get('use_riccati_feedback', False) and self.type != 'nominal':
-            print("use_riccati_feedback is available only for the 'nominal' mpc, it will be ignored")
+        if cfg.mpc_params.get('use_riccati_feedback', False) and not (
+            self.type == 'nominal' or (self.type == 'sampling' and cfg.mpc_params['sampling_method'] != 'random_sampling')
+        ):
+            print("use_riccati_feedback is available only for the 'nominal' and 'sampling' (mppi, cem_mppi) mpc, it will be ignored")
 
         # 'nominal' optimized directly the GRF
         # 'input_rates' optimizes the delta GRF
@@ -140,6 +142,7 @@ class SRBDControllerInterface:
                         best_sample_freq,
                         costs,
                         sigma_cem_mppi,
+                        feedback_gain,
                     ) = self.controller.jitted_compute_control(
                         state_current_jax,
                         reference_state_jax,
@@ -162,6 +165,7 @@ class SRBDControllerInterface:
                         best_cost,
                         best_sample_freq,
                         costs,
+                        feedback_gain,
                     ) = self.controller.jitted_compute_control(
                         state_current_jax,
                         reference_state_jax,
@@ -172,6 +176,11 @@ class SRBDControllerInterface:
                         nominal_sample_freq,
                         optimize_swing,
                     )
+
+            # Feedback-MPPI gain of the last sampling iteration, see 'use_riccati_feedback' in the config
+            if feedback_gain is not None:
+                self.controller.riccati_K = np.array(feedback_gain)
+                self.controller.riccati_x = np.array(state_current_jax)
 
             nmpc_footholds = LegsAttr(
                 FL=ref_state["ref_foot_FL"][0],

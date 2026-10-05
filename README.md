@@ -25,6 +25,7 @@ Features sampling-based mpc:
 - implements different strategies: [random sampling](https://arxiv.org/pdf/2212.00541.pdf), [mppi](https://sites.gatech.edu/acds/mppi/), or [cemppi](https://arxiv.org/pdf/2203.16633.pdf) 
 - different control parametrizations: zero-order, linear splines or cubic splines (see [mujoco-mpc](https://arxiv.org/pdf/2212.00541.pdf))
 - optional control refinement via rollout gradient
+- optional high-frequency feedback gains via [Feedback-MPPI](https://arxiv.org/abs/2506.14855)
 
 Real-world deployment via:
 - [muse](https://github.com/iit-DLSLab/muse/tree/unitree_sdk) for state estimation

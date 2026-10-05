@@ -135,6 +135,13 @@ mpc_params = {
     'optimize_step_freq':                      False,
     'step_freq_available':                     [1.4, 2.0, 2.4],
 
+    # If True, the Riccati feedback gain of the first stage is taken from acados (hpipm), and the whole body
+    # controller corrects the MPC GRFs at every control step with GRF = GRF_mpc + K (x_now - x_mpc), closing
+    # the loop without waiting for the next MPC solution. Only for the 'nominal' mpc, not with 'use_DDP'.
+    # For the 'sampling' mpc (mppi and cem_mppi) the gain is computed as in Feedback-MPPI
+    # (https://arxiv.org/abs/2506.14855), differentiating the MPPI weights through the rollouts
+    'use_riccati_feedback':                    False,
+
     # ----- START properties only for the gradient-based mpc -----
 
     # this is used if you want to manually warm start the mpc
@@ -162,10 +169,6 @@ mpc_params = {
     'as_rti_type':                             "Standard",  # "AS-RTI-A", "AS-RTI-B", "AS-RTI-C", "AS-RTI-D", "Standard"
     'as_rti_iter':                             1,  # > 0, the higher the better, but slower computation!
 
-    # If True, the Riccati feedback gain of the first stage is taken from acados (hpipm), and the whole body
-    # controller corrects the MPC GRFs at every control step with GRF = GRF_mpc + K (x_now - x_mpc), closing
-    # the loop without waiting for the next MPC solution. Only for the 'nominal' mpc, not with 'use_DDP'
-    'use_riccati_feedback':                    False,
 
     # This will force to use DDP instead of SQP, based on https://arxiv.org/abs/2403.10115.
     # Note that RTI is not compatible with DDP, and no state costraints for now are considered
@@ -216,15 +219,15 @@ mpc_params = {
     'sampling_method':                         'cem_mppi',  # 'random_sampling', 'mppi', 'cem_mppi'
     'control_parametrization':                 'cubic_spline', # 'cubic_spline', 'linear_spline', 'zero_order'
     'num_splines':                             2,  # number of splines to use for the control parametrization
-    'num_parallel_computations':               1000,  # More is better, but slower computation!
+    'num_parallel_computations':               10000,  # More is better, but slower computation!
     'num_sampling_iterations':                 1,  # More is better, but slower computation!
     'device':                                  'gpu',  # 'gpu', 'cpu'
     # convariances for the sampling methods
-    'sigma_cem_mppi':                          3,
+    'sigma_cem_mppi':                          20.0,
     'sigma_cem_mppi_reset_every':              2,  # reset the cem_mppi covariance every k mpc calls (1 = always)
-    'sigma_mppi':                              3,
+    'sigma_mppi':                              20.0,
     'temperature_mppi':                        0.03,  # relative to the cost spread. Lower = greedier (better tracking), higher = smoother (more robust)
-    'sigma_random_sampling':                   [0.2, 3, 10],
+    'sigma_random_sampling':                   [1.0, 8.0, 20.0],
     'shift_solution':                          False,
     # refine the sampled solution with a few Adam steps on the gradient of the rollout cost (0 = off).
     # The refined solution is used only if it decreases the cost
