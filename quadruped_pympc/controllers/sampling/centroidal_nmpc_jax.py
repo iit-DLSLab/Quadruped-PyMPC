@@ -108,6 +108,15 @@ class Sampling_MPC:
             # otherwise the one adapted in the previous call is used
             self.sigma_cem_mppi_reset_every = config.mpc_params.get('sigma_cem_mppi_reset_every', 1)
             self.num_calls_since_sigma_reset = 0
+        elif self.sampling_method == 'ot_mpc':
+            # OT-MPC (https://arxiv.org/abs/2605.02147), see compute_control_ot_mpc
+            self.compute_control = self.compute_control_ot_mpc
+            self.sigma_ot_mpc = config.mpc_params.get('sigma_ot_mpc', 20.0)
+            self.ot_mpc_num_particles = config.mpc_params.get('ot_mpc_num_particles', 16)
+            self.ot_mpc_epsilon = config.mpc_params.get('ot_mpc_epsilon', 0.05)
+            self.ot_mpc_step_size = config.mpc_params.get('ot_mpc_step_size', 0.7)
+            self.ot_mpc_exploration = config.mpc_params.get('ot_mpc_exploration', 0.1)
+            self.ot_mpc_sinkhorn_iterations = config.mpc_params.get('ot_mpc_sinkhorn_iterations', 30)
         else:
             # return error and stop execution
             print("Error: sampling method not recognized")
@@ -168,9 +177,9 @@ class Sampling_MPC:
         self.gradient_refinement_lr = config.mpc_params.get('gradient_refinement_lr', 1.0)
 
         # Feedback-MPPI gain of the first GRF (https://arxiv.org/abs/2506.14855), see 'use_riccati_feedback' in
-        # the config. Not available with random sampling, which has no weights to differentiate
+        # the config. Not available with random sampling, which has no weights to differentiate, and with OT-MPC
         self.use_riccati_feedback = (
-            config.mpc_params.get('use_riccati_feedback', False) and self.sampling_method != 'random_sampling'
+            config.mpc_params.get('use_riccati_feedback', False) and self.sampling_method in ('mppi', 'cem_mppi')
         )
         self.riccati_K = None  # (12, 24) d(GRF)/d(state), None if not available
         self.riccati_x = None  # (24,) state used by the last solution
@@ -191,6 +200,10 @@ class Sampling_MPC:
             maxval=self.max_sampling_forces_z,
             shape=(self.num_parallel_computations, self.num_control_parameters),
         )
+
+        # OT-MPC particles (candidate solutions), kept across mpc calls
+        if self.sampling_method == 'ot_mpc':
+            self.reset_particles()
 
         # jitting the vmap function!
         self.vectorized_rollout = jax.vmap(self.compute_rollout, in_axes=(None, None, 0, None), out_axes=0)
@@ -633,11 +646,15 @@ class Sampling_MPC:
 
     def shift_solution(self, best_control_parameters, step):
         """
-        This function shift the control parameter ahed of step (in horizon steps)
+        This function shift the control parameter ahed of step (in horizon steps).
+        best_control_parameters can also be a batch of solutions, (num_solutions, num_parameters)
         """
 
         if self.control_parametrization == "linear_spline" or self.control_parametrization == "cubic_spline":
-            return np.array(self.jitted_shift_spline_parameters(jnp.asarray(best_control_parameters), step))
+            parameters = jnp.asarray(best_control_parameters)
+            if parameters.ndim == 2:
+                return np.array(jax.vmap(self.jitted_shift_spline_parameters, in_axes=(0, None))(parameters, step))
+            return np.array(self.jitted_shift_spline_parameters(parameters, step))
 
         # Zero order: one parameter per horizon step, so we can only shift by an integer
         # number of steps. The fractional part is accumulated for the next calls
@@ -648,10 +665,23 @@ class Sampling_MPC:
             return best_control_parameters
 
         num_steps = min(num_steps, self.horizon)
-        parameters = np.array(best_control_parameters).reshape((4, 3, self.horizon))
-        last = np.repeat(parameters[:, :, -1:], num_steps, axis=2)
-        parameters = np.concatenate((parameters[:, :, num_steps:], last), axis=2)
-        return parameters.reshape((self.num_control_parameters,))
+        shape = np.shape(best_control_parameters)
+        parameters = np.array(best_control_parameters).reshape((-1, 4, 3, self.horizon))
+        last = np.repeat(parameters[..., -1:], num_steps, axis=3)
+        parameters = np.concatenate((parameters[..., num_steps:], last), axis=3)
+        return parameters.reshape(shape)
+
+    def reset_particles(self):
+        """
+        Initialize the OT-MPC particles around the zero solution (gravity compensation). The particles
+        must start distinct, since identical particles get identical couplings and never separate
+        """
+
+        key = jax.random.fold_in(self.master_key, 1)
+        noise = self.sigma_ot_mpc * jax.random.normal(
+            key=key, shape=(self.ot_mpc_num_particles, self.num_control_parameters), dtype=dtype_general
+        )
+        self.particles = np.array(noise.at[0].set(0.0))
 
     def prepare_state_and_reference(
         self, state_current, reference_state, current_contact, previous_contact, mpc_frequency=None
@@ -665,7 +695,11 @@ class Sampling_MPC:
             if mpc_frequency is None:
                 mpc_frequency = config.simulation_params['mpc_frequency']
             index_shift = (1.0 / mpc_frequency) / self.dt
-            self.best_control_parameters = self.shift_solution(self.best_control_parameters, index_shift)
+            if self.sampling_method == 'ot_mpc':
+                # OT-MPC is warm started from the particles, the best one is among them
+                self.particles = self.shift_solution(self.particles, index_shift)
+            else:
+                self.best_control_parameters = self.shift_solution(self.best_control_parameters, index_shift)
 
         state_current_jax = np.concatenate(
             (
@@ -718,6 +752,16 @@ class Sampling_MPC:
             self.best_control_parameters[
                 self.num_control_parameters_single_leg * 3 : self.num_control_parameters_single_leg * 4
             ] = 0.0
+
+        if self.sampling_method == 'ot_mpc':
+            self.particles = np.array(self.particles)
+            for leg_id in range(4):
+                if previous_contact[leg_id] == 1 and current_contact[leg_id] == 0:
+                    self.particles[
+                        :,
+                        self.num_control_parameters_single_leg * leg_id : self.num_control_parameters_single_leg
+                        * (leg_id + 1),
+                    ] = 0.0
 
         return state_current_jax, reference_state_jax
 
@@ -792,93 +836,12 @@ class Sampling_MPC:
             state, reference, contact_sequence, best_control_parameters, best_cost
         )
 
-        # and redistribute it to each leg
-        best_control_parameters_FL = best_control_parameters[0 : self.num_control_parameters_single_leg]
-        best_control_parameters_FR = best_control_parameters[
-            self.num_control_parameters_single_leg : self.num_control_parameters_single_leg * 2
-        ]
-        best_control_parameters_RL = best_control_parameters[
-            self.num_control_parameters_single_leg * 2 : self.num_control_parameters_single_leg * 3
-        ]
-        best_control_parameters_RR = best_control_parameters[
-            self.num_control_parameters_single_leg * 3 : self.num_control_parameters_single_leg * 4
-        ]
-
         # Compute the GRF associated to the best parameter
-        fx_FL, fy_FL, fz_FL = self.spline_fun_FL(best_control_parameters_FL, 0.0, 1)
-        fx_FR, fy_FR, fz_FR = self.spline_fun_FR(best_control_parameters_FR, 0.0, 1)
-        fx_RL, fy_RL, fz_RL = self.spline_fun_RL(best_control_parameters_RL, 0.0, 1)
-        fx_RR, fy_RR, fz_RR = self.spline_fun_RR(best_control_parameters_RR, 0.0, 1)
-
-        # Add the gravity compensation to the stance legs and put to zero
-        # the GRF of the swing legs
-        number_of_legs_in_stance = (
-            contact_sequence[0][0] + contact_sequence[1][0] + contact_sequence[2][0] + contact_sequence[3][0]
-        )
-        reference_force_stance_legs = (self.robot.mass * 9.81) / jnp.maximum(number_of_legs_in_stance, 1)
-
-        fz_FL = reference_force_stance_legs + fz_FL
-        fz_FR = reference_force_stance_legs + fz_FR
-        fz_RL = reference_force_stance_legs + fz_RL
-        fz_RR = reference_force_stance_legs + fz_RR
-
-        fx_FL = fx_FL * contact_sequence[0][0] / (self.max_sampling_forces_z/self.max_sampling_forces_x)
-        fy_FL = fy_FL * contact_sequence[0][0] / (self.max_sampling_forces_z/self.max_sampling_forces_y)
-        fz_FL = fz_FL * contact_sequence[0][0] 
-
-        fx_FR = fx_FR * contact_sequence[1][0] / (self.max_sampling_forces_z/self.max_sampling_forces_x)
-        fy_FR = fy_FR * contact_sequence[1][0] / (self.max_sampling_forces_z/self.max_sampling_forces_y)
-        fz_FR = fz_FR * contact_sequence[1][0]
-
-        fx_RL = fx_RL * contact_sequence[2][0] / (self.max_sampling_forces_z/self.max_sampling_forces_x)
-        fy_RL = fy_RL * contact_sequence[2][0] / (self.max_sampling_forces_z/self.max_sampling_forces_y)
-        fz_RL = fz_RL * contact_sequence[2][0]
-
-        fx_RR = fx_RR * contact_sequence[3][0] / (self.max_sampling_forces_z/self.max_sampling_forces_x)
-        fy_RR = fy_RR * contact_sequence[3][0] / (self.max_sampling_forces_z/self.max_sampling_forces_y)
-        fz_RR = fz_RR * contact_sequence[3][0]
-
-        # Enforce force constraints
-        fx_FL, fy_FL, fz_FL, fx_FR, fy_FR, fz_FR, fx_RL, fy_RL, fz_RL, fx_RR, fy_RR, fz_RR = (
-            self.enforce_force_constraints(
-                fx_FL, fy_FL, fz_FL, fx_FR, fy_FR, fz_FR, fx_RL, fy_RL, fz_RL, fx_RR, fy_RR, fz_RR,
-                [contact_sequence[0][0], contact_sequence[1][0], contact_sequence[2][0], contact_sequence[3][0]],
-            )
-        )
-
-        nmpc_GRFs = jnp.array([fx_FL, fy_FL, fz_FL, fx_FR, fy_FR, fz_FR, fx_RL, fy_RL, fz_RL, fx_RR, fy_RR, fz_RR])
+        nmpc_GRFs = self.compute_first_stage_grfs(best_control_parameters, contact_sequence)
         nmpc_footholds = jnp.array([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0])
 
         # Compute predicted state for IK
-        input = jnp.array(
-            [
-                jnp.float32(0),
-                jnp.float32(0),
-                jnp.float32(0),
-                jnp.float32(0),
-                jnp.float32(0),
-                jnp.float32(0),
-                jnp.float32(0),
-                jnp.float32(0),
-                jnp.float32(0),
-                jnp.float32(0),
-                jnp.float32(0),
-                jnp.float32(0),
-                fx_FL,
-                fy_FL,
-                fz_FL,
-                fx_FR,
-                fy_FR,
-                fz_FR,
-                fx_RL,
-                fy_RL,
-                fz_RL,
-                fx_RR,
-                fy_RR,
-                fz_RR,
-            ],
-            dtype=dtype_general,
-        )
+        input = jnp.concatenate((jnp.zeros(12, dtype=dtype_general), nmpc_GRFs.astype(dtype_general)))
         current_contact = jnp.array(
             [contact_sequence[0][0], contact_sequence[1][0], contact_sequence[2][0], contact_sequence[3][0]],
             dtype=dtype_general,
@@ -962,93 +925,12 @@ class Sampling_MPC:
                 contact_sequence,
             )
 
-        # And redistribute it to each leg
-        best_control_parameters_FL = best_control_parameters[0 : self.num_control_parameters_single_leg]
-        best_control_parameters_FR = best_control_parameters[
-            self.num_control_parameters_single_leg : self.num_control_parameters_single_leg * 2
-        ]
-        best_control_parameters_RL = best_control_parameters[
-            self.num_control_parameters_single_leg * 2 : self.num_control_parameters_single_leg * 3
-        ]
-        best_control_parameters_RR = best_control_parameters[
-            self.num_control_parameters_single_leg * 3 : self.num_control_parameters_single_leg * 4
-        ]
-
         # Compute the GRF associated to the best parameter
-        fx_FL, fy_FL, fz_FL = self.spline_fun_FL(best_control_parameters_FL, 0.0, 1)
-        fx_FR, fy_FR, fz_FR = self.spline_fun_FR(best_control_parameters_FR, 0.0, 1)
-        fx_RL, fy_RL, fz_RL = self.spline_fun_RL(best_control_parameters_RL, 0.0, 1)
-        fx_RR, fy_RR, fz_RR = self.spline_fun_RR(best_control_parameters_RR, 0.0, 1)
-
-        # Add the gravity compensation to the stance legs and put to zero
-        # the GRF of the swing legs
-        number_of_legs_in_stance = (
-            contact_sequence[0][0] + contact_sequence[1][0] + contact_sequence[2][0] + contact_sequence[3][0]
-        )
-        reference_force_stance_legs = (self.robot.mass * 9.81) / jnp.maximum(number_of_legs_in_stance, 1)
-
-        fz_FL = reference_force_stance_legs + fz_FL
-        fz_FR = reference_force_stance_legs + fz_FR
-        fz_RL = reference_force_stance_legs + fz_RL
-        fz_RR = reference_force_stance_legs + fz_RR
-
-        fx_FL = fx_FL * contact_sequence[0][0] / (self.max_sampling_forces_z/self.max_sampling_forces_x)
-        fy_FL = fy_FL * contact_sequence[0][0] / (self.max_sampling_forces_z/self.max_sampling_forces_y)
-        fz_FL = fz_FL * contact_sequence[0][0] 
-
-        fx_FR = fx_FR * contact_sequence[1][0] / (self.max_sampling_forces_z/self.max_sampling_forces_x)
-        fy_FR = fy_FR * contact_sequence[1][0] / (self.max_sampling_forces_z/self.max_sampling_forces_y)
-        fz_FR = fz_FR * contact_sequence[1][0]
-
-        fx_RL = fx_RL * contact_sequence[2][0] / (self.max_sampling_forces_z/self.max_sampling_forces_x)
-        fy_RL = fy_RL * contact_sequence[2][0] / (self.max_sampling_forces_z/self.max_sampling_forces_y)
-        fz_RL = fz_RL * contact_sequence[2][0]
-
-        fx_RR = fx_RR * contact_sequence[3][0] / (self.max_sampling_forces_z/self.max_sampling_forces_x)
-        fy_RR = fy_RR * contact_sequence[3][0] / (self.max_sampling_forces_z/self.max_sampling_forces_y)
-        fz_RR = fz_RR * contact_sequence[3][0]
-
-        # Enforce force constraints
-        fx_FL, fy_FL, fz_FL, fx_FR, fy_FR, fz_FR, fx_RL, fy_RL, fz_RL, fx_RR, fy_RR, fz_RR = (
-            self.enforce_force_constraints(
-                fx_FL, fy_FL, fz_FL, fx_FR, fy_FR, fz_FR, fx_RL, fy_RL, fz_RL, fx_RR, fy_RR, fz_RR,
-                [contact_sequence[0][0], contact_sequence[1][0], contact_sequence[2][0], contact_sequence[3][0]],
-            )
-        )
-
-        nmpc_GRFs = jnp.array([fx_FL, fy_FL, fz_FL, fx_FR, fy_FR, fz_FR, fx_RL, fy_RL, fz_RL, fx_RR, fy_RR, fz_RR])
+        nmpc_GRFs = self.compute_first_stage_grfs(best_control_parameters, contact_sequence)
         nmpc_footholds = jnp.array([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0])
 
         # Compute predicted state for IK
-        input = jnp.array(
-            [
-                jnp.float32(0),
-                jnp.float32(0),
-                jnp.float32(0),
-                jnp.float32(0),
-                jnp.float32(0),
-                jnp.float32(0),
-                jnp.float32(0),
-                jnp.float32(0),
-                jnp.float32(0),
-                jnp.float32(0),
-                jnp.float32(0),
-                jnp.float32(0),
-                fx_FL,
-                fy_FL,
-                fz_FL,
-                fx_FR,
-                fy_FR,
-                fz_FR,
-                fx_RL,
-                fy_RL,
-                fz_RL,
-                fx_RR,
-                fy_RR,
-                fz_RR,
-            ],
-            dtype=dtype_general,
-        )
+        input = jnp.concatenate((jnp.zeros(12, dtype=dtype_general), nmpc_GRFs.astype(dtype_general)))
         current_contact = jnp.array(
             [contact_sequence[0][0], contact_sequence[1][0], contact_sequence[2][0], contact_sequence[3][0]],
             dtype=dtype_general,
@@ -1135,92 +1017,12 @@ class Sampling_MPC:
                 contact_sequence,
             )
 
-        # And redistribute it to each leg
-        best_control_parameters_FL = best_control_parameters[0 : self.num_control_parameters_single_leg]
-        best_control_parameters_FR = best_control_parameters[
-            self.num_control_parameters_single_leg : self.num_control_parameters_single_leg * 2
-        ]
-        best_control_parameters_RL = best_control_parameters[
-            self.num_control_parameters_single_leg * 2 : self.num_control_parameters_single_leg * 3
-        ]
-        best_control_parameters_RR = best_control_parameters[
-            self.num_control_parameters_single_leg * 3 : self.num_control_parameters_single_leg * 4
-        ]
-
         # Compute the GRF associated to the best parameter
-        fx_FL, fy_FL, fz_FL = self.spline_fun_FL(best_control_parameters_FL, 0.0, 1)
-        fx_FR, fy_FR, fz_FR = self.spline_fun_FR(best_control_parameters_FR, 0.0, 1)
-        fx_RL, fy_RL, fz_RL = self.spline_fun_RL(best_control_parameters_RL, 0.0, 1)
-        fx_RR, fy_RR, fz_RR = self.spline_fun_RR(best_control_parameters_RR, 0.0, 1)
-
-        # Add the gravity compensation to the stance legs and put to zero
-        # the GRF of the swing legs
-        number_of_legs_in_stance = (
-            contact_sequence[0][0] + contact_sequence[1][0] + contact_sequence[2][0] + contact_sequence[3][0]
-        )
-        reference_force_stance_legs = (self.robot.mass * 9.81) / jnp.maximum(number_of_legs_in_stance, 1)
-
-        fz_FL = reference_force_stance_legs + fz_FL
-        fz_FR = reference_force_stance_legs + fz_FR
-        fz_RL = reference_force_stance_legs + fz_RL
-        fz_RR = reference_force_stance_legs + fz_RR
-
-        fx_FL = fx_FL * contact_sequence[0][0] / (self.max_sampling_forces_z/self.max_sampling_forces_x)
-        fy_FL = fy_FL * contact_sequence[0][0] / (self.max_sampling_forces_z/self.max_sampling_forces_y)
-        fz_FL = fz_FL * contact_sequence[0][0] 
-
-        fx_FR = fx_FR * contact_sequence[1][0] / (self.max_sampling_forces_z/self.max_sampling_forces_x)
-        fy_FR = fy_FR * contact_sequence[1][0] / (self.max_sampling_forces_z/self.max_sampling_forces_y)
-        fz_FR = fz_FR * contact_sequence[1][0]
-
-        fx_RL = fx_RL * contact_sequence[2][0] / (self.max_sampling_forces_z/self.max_sampling_forces_x)
-        fy_RL = fy_RL * contact_sequence[2][0] / (self.max_sampling_forces_z/self.max_sampling_forces_y)
-        fz_RL = fz_RL * contact_sequence[2][0]
-
-        fx_RR = fx_RR * contact_sequence[3][0] / (self.max_sampling_forces_z/self.max_sampling_forces_x)
-        fy_RR = fy_RR * contact_sequence[3][0] / (self.max_sampling_forces_z/self.max_sampling_forces_y)
-        fz_RR = fz_RR * contact_sequence[3][0]
-
-        # Enforce force constraints
-        fx_FL, fy_FL, fz_FL, fx_FR, fy_FR, fz_FR, fx_RL, fy_RL, fz_RL, fx_RR, fy_RR, fz_RR = (
-            self.enforce_force_constraints(
-                fx_FL, fy_FL, fz_FL, fx_FR, fy_FR, fz_FR, fx_RL, fy_RL, fz_RL, fx_RR, fy_RR, fz_RR,
-                [contact_sequence[0][0], contact_sequence[1][0], contact_sequence[2][0], contact_sequence[3][0]],
-            )
-        )
-
-        nmpc_GRFs = jnp.array([fx_FL, fy_FL, fz_FL, fx_FR, fy_FR, fz_FR, fx_RL, fy_RL, fz_RL, fx_RR, fy_RR, fz_RR])
+        nmpc_GRFs = self.compute_first_stage_grfs(best_control_parameters, contact_sequence)
         nmpc_footholds = jnp.array([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0])
+
         # Compute predicted state for IK
-        input = jnp.array(
-            [
-                jnp.float32(0),
-                jnp.float32(0),
-                jnp.float32(0),
-                jnp.float32(0),
-                jnp.float32(0),
-                jnp.float32(0),
-                jnp.float32(0),
-                jnp.float32(0),
-                jnp.float32(0),
-                jnp.float32(0),
-                jnp.float32(0),
-                jnp.float32(0),
-                fx_FL,
-                fy_FL,
-                fz_FL,
-                fx_FR,
-                fy_FR,
-                fz_FR,
-                fx_RL,
-                fy_RL,
-                fz_RL,
-                fx_RR,
-                fy_RR,
-                fz_RR,
-            ],
-            dtype=dtype_general,
-        )
+        input = jnp.concatenate((jnp.zeros(12, dtype=dtype_general), nmpc_GRFs.astype(dtype_general)))
         current_contact = jnp.array(
             [contact_sequence[0][0], contact_sequence[1][0], contact_sequence[2][0], contact_sequence[3][0]],
             dtype=dtype_general,
@@ -1249,9 +1051,141 @@ class Sampling_MPC:
             feedback_gain,
         )
 
+    def sinkhorn(self, log_q, log_p, transport_cost, epsilon):
+        """
+        Entropic optimal transport coupling between particles and proposals (Algorithm 1 of
+        https://arxiv.org/abs/2605.02147), in log domain for numerical stability.
+
+        Args:
+            log_q (jnp.array): (num_particles,) log marginal of the particles
+            log_p (jnp.array): (num_proposals,) log marginal of the proposals
+            transport_cost (jnp.array): (num_particles, num_proposals) transport cost
+            epsilon (float): entropic regularization
+
+        Returns:
+            (jnp.array): (num_particles, num_proposals) log of the coupling
+        """
+
+        log_K = -transport_cost / epsilon
+
+        def sinkhorn_step(k, carry):
+            log_u, log_v = carry
+            log_u = log_q - jax.nn.logsumexp(log_K + log_v[jnp.newaxis, :], axis=1)
+            log_v = log_p - jax.nn.logsumexp(log_K + log_u[:, jnp.newaxis], axis=0)
+            return log_u, log_v
+
+        log_u, log_v = jax.lax.fori_loop(
+            0, self.ot_mpc_sinkhorn_iterations, sinkhorn_step, (jnp.zeros_like(log_q), jnp.zeros_like(log_p))
+        )
+        return log_u[:, jnp.newaxis] + log_K + log_v[jnp.newaxis, :]
+
+    def compute_control_ot_mpc(
+        self,
+        state,
+        reference,
+        contact_sequence,
+        particles,
+        key,
+        timing,
+        nominal_step_frequency,
+        optimize_swing,
+    ):
+        """
+        This function computes the control parameters by applying one iteration of Sinkhorn Coordinate Descent,
+        as in OT-MPC (https://arxiv.org/abs/2605.02147). Instead of the global MPPI average, each particle moves
+        toward the barycenter of the low-cost proposals it is coupled with by entropic optimal transport, so
+        that distinct modes are refined locally and not averaged. The lowest-cost particle is applied.
+        """
+
+        num_particles = self.ot_mpc_num_particles
+        num_proposals = self.num_parallel_computations
+        num_global = int(self.ot_mpc_exploration * (num_proposals - num_particles))
+        num_local = num_proposals - num_particles - num_global
+
+        # Proposals: the particles themselves (zero noise), perturbations of the particles
+        # for local refinement, and a broad gaussian around zero (gravity compensation) for exploration
+        key_local, key_global = jax.random.split(key)
+        local_proposals = particles[jnp.arange(num_local) % num_particles] + self.sigma_ot_mpc * jax.random.normal(
+            key=key_local, shape=(num_local, self.num_control_parameters), dtype=dtype_general
+        )
+        global_proposals = self.sigma_ot_mpc * jax.random.normal(
+            key=key_global, shape=(num_global, self.num_control_parameters), dtype=dtype_general
+        )
+        proposals = jnp.concatenate((particles, local_proposals, global_proposals), axis=0)
+
+        # Do rollout
+        costs = self.jit_vectorized_rollout(state, reference, proposals, contact_sequence)
+
+        # Saturate the cost in case of NaN or inf
+        costs = jnp.where(jnp.isnan(costs), 1000000, costs)
+        costs = jnp.where(jnp.isinf(costs), 1000000, costs)
+
+        # Gibbs marginal of the proposals, with the costs normalized by their spread as in MPPI,
+        # and uniform marginal of the particles to encourage exploration
+        temperature = self.temperature_mppi
+        min_cost = jnp.min(costs)
+        cost_spread = jnp.maximum(jnp.median(costs) - min_cost, 1e-6)
+        log_p = jax.nn.log_softmax((-1.0 / temperature) * (costs - min_cost) / cost_spread)
+        log_q = jnp.full((num_particles,), -jnp.log(num_particles), dtype=dtype_general)
+
+        # Transport cost 0.5 * ||z_i - y_j||^2, the regularization is relative to its median
+        transport_cost = 0.5 * jnp.maximum(
+            jnp.sum(particles**2, axis=1)[:, jnp.newaxis]
+            + jnp.sum(proposals**2, axis=1)[jnp.newaxis, :]
+            - 2.0 * particles @ proposals.T,
+            0.0,
+        )
+        epsilon = self.ot_mpc_epsilon * jnp.maximum(jnp.median(transport_cost), 1e-6)
+        log_coupling = self.sinkhorn(log_q, log_p, transport_cost, epsilon)
+
+        # Relaxed barycentric update of the particles
+        barycenters = jax.nn.softmax(log_coupling, axis=1) @ proposals
+        particles = (1.0 - self.ot_mpc_step_size) * particles + self.ot_mpc_step_size * barycenters
+
+        # Take the lowest-cost particle
+        particle_costs = self.jit_vectorized_rollout(state, reference, particles, contact_sequence)
+        particle_costs = jnp.where(jnp.isfinite(particle_costs), particle_costs, 1000000)
+        best_index = jnp.argmin(particle_costs)
+        best_cost = particle_costs[best_index]
+        best_control_parameters = particles[best_index]
+
+        # Refine the solution with a few gradient steps on the rollout cost, and give it back to the particles
+        best_control_parameters, best_cost = self.refine_parameters(
+            state, reference, contact_sequence, best_control_parameters, best_cost
+        )
+        particles = particles.at[best_index].set(best_control_parameters)
+
+        # Compute the GRF associated to the best parameter
+        nmpc_GRFs = self.compute_first_stage_grfs(best_control_parameters, contact_sequence)
+        nmpc_footholds = jnp.array([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0])
+
+        # Compute predicted state for IK
+        input = jnp.concatenate((jnp.zeros(12, dtype=dtype_general), nmpc_GRFs.astype(dtype_general)))
+        current_contact = jnp.array(
+            [contact_sequence[0][0], contact_sequence[1][0], contact_sequence[2][0], contact_sequence[3][0]],
+            dtype=dtype_general,
+        )
+        nmpc_predicted_state = self.robot.integrate_jax(state, input, current_contact, 0)
+
+        best_freq = 1.4
+
+        return (
+            nmpc_GRFs,
+            nmpc_footholds,
+            nmpc_predicted_state,
+            best_control_parameters,
+            best_cost,
+            best_freq,
+            costs,
+            None,
+            particles,
+        )
+
     def reset(self):
         print("Resetting the controller")
         self.shift_accumulator = 0.0
         # Force a reset of the CEM-MPPI covariance at the next call
         if self.sampling_method == 'cem_mppi':
             self.num_calls_since_sigma_reset = 0
+        if self.sampling_method == 'ot_mpc':
+            self.reset_particles()

@@ -804,92 +804,12 @@ class Sampling_MPC:
             state, reference, timing, best_control_parameters, best_step_frequency, best_cost
         )
 
-        # and redistribute it to each leg
-        best_control_parameters_FL = best_control_parameters[0 : self.num_control_parameters_single_leg]
-        best_control_parameters_FR = best_control_parameters[
-            self.num_control_parameters_single_leg : self.num_control_parameters_single_leg * 2
-        ]
-        best_control_parameters_RL = best_control_parameters[
-            self.num_control_parameters_single_leg * 2 : self.num_control_parameters_single_leg * 3
-        ]
-        best_control_parameters_RR = best_control_parameters[
-            self.num_control_parameters_single_leg * 3 : self.num_control_parameters_single_leg * 4
-        ]
-
         # Compute the GRF associated to the best parameter
-        fx_FL, fy_FL, fz_FL = self.spline_fun_FL(best_control_parameters_FL, 0.0, 1)
-        fx_FR, fy_FR, fz_FR = self.spline_fun_FR(best_control_parameters_FR, 0.0, 1)
-        fx_RL, fy_RL, fz_RL = self.spline_fun_RL(best_control_parameters_RL, 0.0, 1)
-        fx_RR, fy_RR, fz_RR = self.spline_fun_RR(best_control_parameters_RR, 0.0, 1)
-
-        # Add the gravity compensation to the stance legs and put to zero
-        # the GRF of the swing legs
-        number_of_legs_in_stance = (
-            contact_sequence[0][0] + contact_sequence[1][0] + contact_sequence[2][0] + contact_sequence[3][0]
-        )
-        reference_force_stance_legs = (self.robot.mass * 9.81) / jnp.maximum(number_of_legs_in_stance, 1)
-
-        fz_FL = reference_force_stance_legs + fz_FL
-        fz_FR = reference_force_stance_legs + fz_FR
-        fz_RL = reference_force_stance_legs + fz_RL
-        fz_RR = reference_force_stance_legs + fz_RR
-
-        fx_FL = fx_FL * contact_sequence[0][0] / (self.max_sampling_forces_z/self.max_sampling_forces_x)
-        fy_FL = fy_FL * contact_sequence[0][0] / (self.max_sampling_forces_z/self.max_sampling_forces_y)
-        fz_FL = fz_FL * contact_sequence[0][0] 
-
-        fx_FR = fx_FR * contact_sequence[1][0] / (self.max_sampling_forces_z/self.max_sampling_forces_x)
-        fy_FR = fy_FR * contact_sequence[1][0] / (self.max_sampling_forces_z/self.max_sampling_forces_y)
-        fz_FR = fz_FR * contact_sequence[1][0]
-
-        fx_RL = fx_RL * contact_sequence[2][0] / (self.max_sampling_forces_z/self.max_sampling_forces_x)
-        fy_RL = fy_RL * contact_sequence[2][0] / (self.max_sampling_forces_z/self.max_sampling_forces_y)
-        fz_RL = fz_RL * contact_sequence[2][0]
-
-        fx_RR = fx_RR * contact_sequence[3][0] / (self.max_sampling_forces_z/self.max_sampling_forces_x)
-        fy_RR = fy_RR * contact_sequence[3][0] / (self.max_sampling_forces_z/self.max_sampling_forces_y)
-        fz_RR = fz_RR * contact_sequence[3][0]
-
-        # Enforce force constraints
-        fx_FL, fy_FL, fz_FL, fx_FR, fy_FR, fz_FR, fx_RL, fy_RL, fz_RL, fx_RR, fy_RR, fz_RR = (
-            self.enforce_force_constraints(
-                fx_FL, fy_FL, fz_FL, fx_FR, fy_FR, fz_FR, fx_RL, fy_RL, fz_RL, fx_RR, fy_RR, fz_RR,
-                [contact_sequence[0][0], contact_sequence[1][0], contact_sequence[2][0], contact_sequence[3][0]],
-            )
-        )
-
-        nmpc_GRFs = jnp.array([fx_FL, fy_FL, fz_FL, fx_FR, fy_FR, fz_FR, fx_RL, fy_RL, fz_RL, fx_RR, fy_RR, fz_RR])
+        nmpc_GRFs = self.compute_first_stage_grfs(best_control_parameters, contact_sequence)
         nmpc_footholds = jnp.array([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0])
+
         # Compute predicted state for IK
-        input = jnp.array(
-            [
-                jnp.float32(0),
-                jnp.float32(0),
-                jnp.float32(0),
-                jnp.float32(0),
-                jnp.float32(0),
-                jnp.float32(0),
-                jnp.float32(0),
-                jnp.float32(0),
-                jnp.float32(0),
-                jnp.float32(0),
-                jnp.float32(0),
-                jnp.float32(0),
-                fx_FL,
-                fy_FL,
-                fz_FL,
-                fx_FR,
-                fy_FR,
-                fz_FR,
-                fx_RL,
-                fy_RL,
-                fz_RL,
-                fx_RR,
-                fy_RR,
-                fz_RR,
-            ],
-            dtype=dtype_general,
-        )
+        input = jnp.concatenate((jnp.zeros(12, dtype=dtype_general), nmpc_GRFs.astype(dtype_general)))
         current_contact = jnp.array(
             [contact_sequence[0][0], contact_sequence[1][0], contact_sequence[2][0], contact_sequence[3][0]],
             dtype=dtype_general,
@@ -987,92 +907,12 @@ class Sampling_MPC:
                 contact_sequence,
             )
 
-        # And redistribute it to each leg
-        best_control_parameters_FL = best_control_parameters[0 : self.num_control_parameters_single_leg]
-        best_control_parameters_FR = best_control_parameters[
-            self.num_control_parameters_single_leg : self.num_control_parameters_single_leg * 2
-        ]
-        best_control_parameters_RL = best_control_parameters[
-            self.num_control_parameters_single_leg * 2 : self.num_control_parameters_single_leg * 3
-        ]
-        best_control_parameters_RR = best_control_parameters[
-            self.num_control_parameters_single_leg * 3 : self.num_control_parameters_single_leg * 4
-        ]
-
         # Compute the GRF associated to the best parameter
-        fx_FL, fy_FL, fz_FL = self.spline_fun_FL(best_control_parameters_FL, 0.0, 1)
-        fx_FR, fy_FR, fz_FR = self.spline_fun_FR(best_control_parameters_FR, 0.0, 1)
-        fx_RL, fy_RL, fz_RL = self.spline_fun_RL(best_control_parameters_RL, 0.0, 1)
-        fx_RR, fy_RR, fz_RR = self.spline_fun_RR(best_control_parameters_RR, 0.0, 1)
-
-        # Add the gravity compensation to the stance legs and put to zero
-        # the GRF of the swing legs
-        number_of_legs_in_stance = (
-            contact_sequence[0][0] + contact_sequence[1][0] + contact_sequence[2][0] + contact_sequence[3][0]
-        )
-        reference_force_stance_legs = (self.robot.mass * 9.81) / jnp.maximum(number_of_legs_in_stance, 1)
-
-        fz_FL = reference_force_stance_legs + fz_FL
-        fz_FR = reference_force_stance_legs + fz_FR
-        fz_RL = reference_force_stance_legs + fz_RL
-        fz_RR = reference_force_stance_legs + fz_RR
-
-        fx_FL = fx_FL * contact_sequence[0][0] / (self.max_sampling_forces_z/self.max_sampling_forces_x)
-        fy_FL = fy_FL * contact_sequence[0][0] / (self.max_sampling_forces_z/self.max_sampling_forces_y)
-        fz_FL = fz_FL * contact_sequence[0][0] 
-
-        fx_FR = fx_FR * contact_sequence[1][0] / (self.max_sampling_forces_z/self.max_sampling_forces_x)
-        fy_FR = fy_FR * contact_sequence[1][0] / (self.max_sampling_forces_z/self.max_sampling_forces_y)
-        fz_FR = fz_FR * contact_sequence[1][0]
-
-        fx_RL = fx_RL * contact_sequence[2][0] / (self.max_sampling_forces_z/self.max_sampling_forces_x)
-        fy_RL = fy_RL * contact_sequence[2][0] / (self.max_sampling_forces_z/self.max_sampling_forces_y)
-        fz_RL = fz_RL * contact_sequence[2][0]
-
-        fx_RR = fx_RR * contact_sequence[3][0] / (self.max_sampling_forces_z/self.max_sampling_forces_x)
-        fy_RR = fy_RR * contact_sequence[3][0] / (self.max_sampling_forces_z/self.max_sampling_forces_y)
-        fz_RR = fz_RR * contact_sequence[3][0]
-
-        # Enforce force constraints
-        fx_FL, fy_FL, fz_FL, fx_FR, fy_FR, fz_FR, fx_RL, fy_RL, fz_RL, fx_RR, fy_RR, fz_RR = (
-            self.enforce_force_constraints(
-                fx_FL, fy_FL, fz_FL, fx_FR, fy_FR, fz_FR, fx_RL, fy_RL, fz_RL, fx_RR, fy_RR, fz_RR,
-                [contact_sequence[0][0], contact_sequence[1][0], contact_sequence[2][0], contact_sequence[3][0]],
-            )
-        )
-
-        nmpc_GRFs = jnp.array([fx_FL, fy_FL, fz_FL, fx_FR, fy_FR, fz_FR, fx_RL, fy_RL, fz_RL, fx_RR, fy_RR, fz_RR])
+        nmpc_GRFs = self.compute_first_stage_grfs(best_control_parameters, contact_sequence)
         nmpc_footholds = jnp.array([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0])
+
         # Compute predicted state for IK
-        input = jnp.array(
-            [
-                jnp.float32(0),
-                jnp.float32(0),
-                jnp.float32(0),
-                jnp.float32(0),
-                jnp.float32(0),
-                jnp.float32(0),
-                jnp.float32(0),
-                jnp.float32(0),
-                jnp.float32(0),
-                jnp.float32(0),
-                jnp.float32(0),
-                jnp.float32(0),
-                fx_FL,
-                fy_FL,
-                fz_FL,
-                fx_FR,
-                fy_FR,
-                fz_FR,
-                fx_RL,
-                fy_RL,
-                fz_RL,
-                fx_RR,
-                fy_RR,
-                fz_RR,
-            ],
-            dtype=dtype_general,
-        )
+        input = jnp.concatenate((jnp.zeros(12, dtype=dtype_general), nmpc_GRFs.astype(dtype_general)))
         current_contact = jnp.array(
             [contact_sequence[0][0], contact_sequence[1][0], contact_sequence[2][0], contact_sequence[3][0]],
             dtype=dtype_general,
@@ -1175,92 +1015,12 @@ class Sampling_MPC:
                 contact_sequence,
             )
 
-        # And redistribute it to each leg
-        best_control_parameters_FL = best_control_parameters[0 : self.num_control_parameters_single_leg]
-        best_control_parameters_FR = best_control_parameters[
-            self.num_control_parameters_single_leg : self.num_control_parameters_single_leg * 2
-        ]
-        best_control_parameters_RL = best_control_parameters[
-            self.num_control_parameters_single_leg * 2 : self.num_control_parameters_single_leg * 3
-        ]
-        best_control_parameters_RR = best_control_parameters[
-            self.num_control_parameters_single_leg * 3 : self.num_control_parameters_single_leg * 4
-        ]
-
         # Compute the GRF associated to the best parameter
-        fx_FL, fy_FL, fz_FL = self.spline_fun_FL(best_control_parameters_FL, 0.0, 1)
-        fx_FR, fy_FR, fz_FR = self.spline_fun_FR(best_control_parameters_FR, 0.0, 1)
-        fx_RL, fy_RL, fz_RL = self.spline_fun_RL(best_control_parameters_RL, 0.0, 1)
-        fx_RR, fy_RR, fz_RR = self.spline_fun_RR(best_control_parameters_RR, 0.0, 1)
-
-        # Add the gravity compensation to the stance legs and put to zero
-        # the GRF of the swing legs
-        number_of_legs_in_stance = (
-            contact_sequence[0][0] + contact_sequence[1][0] + contact_sequence[2][0] + contact_sequence[3][0]
-        )
-        reference_force_stance_legs = (self.robot.mass * 9.81) / jnp.maximum(number_of_legs_in_stance, 1)
-
-        fz_FL = reference_force_stance_legs + fz_FL
-        fz_FR = reference_force_stance_legs + fz_FR
-        fz_RL = reference_force_stance_legs + fz_RL
-        fz_RR = reference_force_stance_legs + fz_RR
-
-        fx_FL = fx_FL * contact_sequence[0][0] / (self.max_sampling_forces_z/self.max_sampling_forces_x)
-        fy_FL = fy_FL * contact_sequence[0][0] / (self.max_sampling_forces_z/self.max_sampling_forces_y)
-        fz_FL = fz_FL * contact_sequence[0][0] 
-
-        fx_FR = fx_FR * contact_sequence[1][0] / (self.max_sampling_forces_z/self.max_sampling_forces_x)
-        fy_FR = fy_FR * contact_sequence[1][0] / (self.max_sampling_forces_z/self.max_sampling_forces_y)
-        fz_FR = fz_FR * contact_sequence[1][0]
-
-        fx_RL = fx_RL * contact_sequence[2][0] / (self.max_sampling_forces_z/self.max_sampling_forces_x)
-        fy_RL = fy_RL * contact_sequence[2][0] / (self.max_sampling_forces_z/self.max_sampling_forces_y)
-        fz_RL = fz_RL * contact_sequence[2][0]
-
-        fx_RR = fx_RR * contact_sequence[3][0] / (self.max_sampling_forces_z/self.max_sampling_forces_x)
-        fy_RR = fy_RR * contact_sequence[3][0] / (self.max_sampling_forces_z/self.max_sampling_forces_y)
-        fz_RR = fz_RR * contact_sequence[3][0]
-
-        # Enforce force constraints
-        fx_FL, fy_FL, fz_FL, fx_FR, fy_FR, fz_FR, fx_RL, fy_RL, fz_RL, fx_RR, fy_RR, fz_RR = (
-            self.enforce_force_constraints(
-                fx_FL, fy_FL, fz_FL, fx_FR, fy_FR, fz_FR, fx_RL, fy_RL, fz_RL, fx_RR, fy_RR, fz_RR,
-                [contact_sequence[0][0], contact_sequence[1][0], contact_sequence[2][0], contact_sequence[3][0]],
-            )
-        )
-
-        nmpc_GRFs = jnp.array([fx_FL, fy_FL, fz_FL, fx_FR, fy_FR, fz_FR, fx_RL, fy_RL, fz_RL, fx_RR, fy_RR, fz_RR])
+        nmpc_GRFs = self.compute_first_stage_grfs(best_control_parameters, contact_sequence)
         nmpc_footholds = jnp.array([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0])
+
         # Compute predicted state for IK
-        input = jnp.array(
-            [
-                jnp.float32(0),
-                jnp.float32(0),
-                jnp.float32(0),
-                jnp.float32(0),
-                jnp.float32(0),
-                jnp.float32(0),
-                jnp.float32(0),
-                jnp.float32(0),
-                jnp.float32(0),
-                jnp.float32(0),
-                jnp.float32(0),
-                jnp.float32(0),
-                fx_FL,
-                fy_FL,
-                fz_FL,
-                fx_FR,
-                fy_FR,
-                fz_FR,
-                fx_RL,
-                fy_RL,
-                fz_RL,
-                fx_RR,
-                fy_RR,
-                fz_RR,
-            ],
-            dtype=dtype_general,
-        )
+        input = jnp.concatenate((jnp.zeros(12, dtype=dtype_general), nmpc_GRFs.astype(dtype_general)))
         current_contact = jnp.array(
             [contact_sequence[0][0], contact_sequence[1][0], contact_sequence[2][0], contact_sequence[3][0]],
             dtype=dtype_general,

@@ -26,6 +26,7 @@ Features sampling-based mpc:
 - different control parametrizations: zero-order, linear splines or cubic splines (see [mujoco-mpc](https://arxiv.org/pdf/2212.00541.pdf))
 - optional control refinement via rollout gradient
 - optional high-frequency feedback gains via [Feedback-MPPI](https://arxiv.org/abs/2506.14855)
+- [Sampling-Based Control via Entropy-Regularized Optimal Transport](https://arxiv.org/abs/2605.02147)
 
 Real-world deployment via:
 - [muse](https://github.com/iit-DLSLab/muse/tree/unitree_sdk) for state estimation

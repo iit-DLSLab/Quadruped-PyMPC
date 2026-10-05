@@ -178,7 +178,7 @@ mpc_params = {
     # More is better, but slower computation!
     'num_qp_iterations':                       1,
 
-    # this is used to speeding up or robustify acados' solver (hpipm).
+    # this is used to speequanto manca?ding up or robustify acados' solver (hpipm).
     'solver_mode':                             'balance',  # balance, robust, fast, crazy_speed
 
 
@@ -216,7 +216,7 @@ mpc_params = {
     # ----- START properties only for the sampling-based mpc -----
 
     # this is used only in the case 'sampling'.
-    'sampling_method':                         'cem_mppi',  # 'random_sampling', 'mppi', 'cem_mppi'
+    'sampling_method':                         'ot_mpc',  # 'random_sampling', 'mppi', 'cem_mppi', 'ot_mpc'
     'control_parametrization':                 'cubic_spline', # 'cubic_spline', 'linear_spline', 'zero_order'
     'num_splines':                             2,  # number of splines to use for the control parametrization
     'num_parallel_computations':               10000,  # More is better, but slower computation!
@@ -228,6 +228,14 @@ mpc_params = {
     'sigma_mppi':                              20.0,
     'temperature_mppi':                        0.03,  # relative to the cost spread. Lower = greedier (better tracking), higher = smoother (more robust)
     'sigma_random_sampling':                   [1.0, 8.0, 20.0],
+    # OT-MPC (https://arxiv.org/abs/2605.02147): particles move toward the low-cost proposals they are coupled with
+    # by entropic optimal transport, instead of the global MPPI average. It uses also temperature_mppi
+    'sigma_ot_mpc':                            20.0,
+    'ot_mpc_num_particles':                    16,  # candidate solutions kept across mpc calls
+    'ot_mpc_epsilon':                          0.05,  # entropic regularization, relative to the median transport cost
+    'ot_mpc_step_size':                        0.7,  # relaxation of the barycentric update, in (0, 1]
+    'ot_mpc_exploration':                      0.1,  # fraction of proposals sampled around zero instead of the particles
+    'ot_mpc_sinkhorn_iterations':              30,
     'shift_solution':                          False,
     # refine the sampled solution with a few Adam steps on the gradient of the rollout cost (0 = off).
     # The refined solution is used only if it decreases the cost

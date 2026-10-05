@@ -19,7 +19,7 @@ class SRBDControllerInterface:
         self.previous_contact_mpc = np.array([1, 1, 1, 1])
 
         if cfg.mpc_params.get('use_riccati_feedback', False) and not (
-            self.type == 'nominal' or (self.type == 'sampling' and cfg.mpc_params['sampling_method'] != 'random_sampling')
+            self.type == 'nominal' or (self.type == 'sampling' and cfg.mpc_params['sampling_method'] in ('mppi', 'cem_mppi'))
         ):
             print("use_riccati_feedback is available only for the 'nominal' and 'sampling' (mppi, cem_mppi) mpc, it will be ignored")
 
@@ -155,6 +155,27 @@ class SRBDControllerInterface:
                         optimize_swing,
                     )
                     self.controller = self.controller.with_newsigma(sigma_cem_mppi)
+                elif self.controller.sampling_method == 'ot_mpc':
+                    (
+                        nmpc_GRFs,
+                        nmpc_footholds,
+                        nmpc_predicted_state,
+                        self.controller.best_control_parameters,
+                        best_cost,
+                        best_sample_freq,
+                        costs,
+                        feedback_gain,
+                        self.controller.particles,
+                    ) = self.controller.jitted_compute_control(
+                        state_current_jax,
+                        reference_state_jax,
+                        contact_sequence,
+                        self.controller.particles,
+                        self.controller.get_key(),
+                        pgg_phase_signal,
+                        pgg_step_freq,
+                        optimize_swing,
+                    )
                 else:
                     nominal_sample_freq = pgg_step_freq
                     (
