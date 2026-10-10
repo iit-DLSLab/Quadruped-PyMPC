@@ -97,6 +97,7 @@ class WBInterface:
         })
         self.use_friction_compensation = cfg.simulation_params['use_friction_compensation']
         self.friction_compensation_vel_eps = cfg.simulation_params['friction_compensation_vel_eps']
+        self.friction_compensation_ratio = cfg.simulation_params['friction_compensation_ratio']
 
         if cfg.simulation_params['visual_foothold_adaptation'] != 'blind':
             # Visual foothold adaptation -------------------------------------------------------------
@@ -424,10 +425,10 @@ class WBInterface:
         if self.use_friction_compensation:
             for leg_name in self.legs_order:
                 # Viscous damping (qfrc_passive) and Coulomb friction (a solver constraint, not in qfrc_passive)
-                tau[leg_name] -= legs_qfrc_passive[leg_name]
-                tau[leg_name] += self.legs_frictionloss[leg_name] * np.tanh(
+                friction = -legs_qfrc_passive[leg_name] + self.legs_frictionloss[leg_name] * np.tanh(
                     qvel[legs_qvel_idx[leg_name]] / self.friction_compensation_vel_eps
                 )
+                tau[leg_name] += self.friction_compensation_ratio * friction
 
 
         # Compute PD targets for the joints ----------------------------------------------------------------

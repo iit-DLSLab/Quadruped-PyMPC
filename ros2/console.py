@@ -228,7 +228,12 @@ class Console():
                             self.controller_node.wb_interface.use_friction_compensation = True
                         elif(temp == "False"):
                             self.controller_node.wb_interface.use_friction_compensation = False
-                    
+
+                    print("Friction Compensation Ratio: ", self.controller_node.wb_interface.friction_compensation_ratio)
+                    temp = input("Friction Compensation Ratio: >>> ")
+                    if(temp != ""):
+                        self.controller_node.wb_interface.friction_compensation_ratio = max(0.0, min(float(temp), 1.0))
+
                     
 
                     print("Use Integrators in MPC: ", self.controller_node.srbd_controller_interface.controller.use_integrators)
