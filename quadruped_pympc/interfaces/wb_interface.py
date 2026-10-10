@@ -97,6 +97,7 @@ class WBInterface:
         })
         self.use_friction_compensation = cfg.simulation_params['use_friction_compensation']
         self.friction_compensation_vel_eps = cfg.simulation_params['friction_compensation_vel_eps']
+        self.friction_compensation_vel_deadband = cfg.simulation_params['friction_compensation_vel_deadband']
         self.friction_compensation_ratio = cfg.simulation_params['friction_compensation_ratio']
 
         if cfg.simulation_params['visual_foothold_adaptation'] != 'blind':
@@ -424,9 +425,14 @@ class WBInterface:
         # Compensate for friction -------------------------------------------------------------
         if self.use_friction_compensation:
             for leg_name in self.legs_order:
+                # Below the deadband the velocity cannot be told apart from the measurement noise, so the
+                # Coulomb compensation is zero there instead of a torque with a random sign
+                leg_qvel = qvel[legs_qvel_idx[leg_name]]
+                leg_qvel = np.sign(leg_qvel) * np.maximum(np.abs(leg_qvel) - self.friction_compensation_vel_deadband, 0.0)
+
                 # Viscous damping (qfrc_passive) and Coulomb friction (a solver constraint, not in qfrc_passive)
                 friction = -legs_qfrc_passive[leg_name] + self.legs_frictionloss[leg_name] * np.tanh(
-                    qvel[legs_qvel_idx[leg_name]] / self.friction_compensation_vel_eps
+                    leg_qvel / self.friction_compensation_vel_eps
                 )
                 tau[leg_name] += self.friction_compensation_ratio * friction
 

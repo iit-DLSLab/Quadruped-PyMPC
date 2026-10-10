@@ -234,6 +234,11 @@ class Console():
                     if(temp != ""):
                         self.controller_node.wb_interface.friction_compensation_ratio = max(0.0, min(float(temp), 1.0))
 
+                    print("Friction Compensation Velocity Deadband: ", self.controller_node.wb_interface.friction_compensation_vel_deadband)
+                    temp = input("Friction Compensation Velocity Deadband: >>> ")
+                    if(temp != ""):
+                        self.controller_node.wb_interface.friction_compensation_vel_deadband = max(0.0, float(temp))
+
                     
 
                     print("Use Integrators in MPC: ", self.controller_node.srbd_controller_interface.controller.use_integrators)
