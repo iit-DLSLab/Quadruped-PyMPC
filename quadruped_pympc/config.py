@@ -255,7 +255,7 @@ simulation_params = {
 
     # Joint friction compensation: viscous damping (qfrc_passive) and Coulomb friction (model frictionloss)
     'use_friction_compensation':   True,
-    'friction_compensation_vel_eps': 0.05,  # [rad/s] velocity at which the smoothed Coulomb sign saturates
+    'friction_compensation_vel_eps': 0.5,  # [rad/s] velocity at which the smoothed Coulomb sign saturates
 
     'step_height':                 0.2 * hip_height,  
 
