@@ -54,6 +54,7 @@ class WBInterface:
         self.pgg = PeriodicGaitGenerator(
             duty_factor=duty_factor, step_freq=step_frequency, gait_type=gait_type, horizon=horizon
         )
+        self.pgg.start_and_stop_activated = cfg.simulation_params['start_and_stop_activated']
         # in the case of nonuniform discretization, we create a list of dts and horizons for each nonuniform discretization
         if cfg.mpc_params['use_nonuniform_discretization']:
             self.contact_sequence_dts = [cfg.mpc_params['dt_fine_grained'], mpc_dt]
@@ -199,7 +200,8 @@ class WBInterface:
             self.pgg.update_start_and_stop(
                 feet_pos,
                 hip_pos,
-                self.frg.hip_offset,
+                self.frg.hip_offset_x,
+                self.frg.hip_offset_y,
                 base_pos,
                 base_ori_euler_xyz,
                 base_lin_vel,

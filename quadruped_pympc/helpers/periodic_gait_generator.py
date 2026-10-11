@@ -130,7 +130,8 @@ class PeriodicGaitGenerator:
         self,
         feet_pos,
         hip_pos,
-        hip_offset,
+        hip_offset_x,
+        hip_offset_y,
         base_pos,
         base_ori_euler_xyz,
         base_lin_vel,
@@ -151,10 +152,15 @@ class PeriodicGaitGenerator:
         feet_pos_h.RL[:2] = R_W2H @ (feet_pos.RL[:2] - base_pos[0:2])
         feet_pos_h.RR[:2] = R_W2H @ (feet_pos.RR[:2] - base_pos[0:2])
 
-        feet_pos_h.FL[1] -= hip_offset
-        feet_pos_h.FR[1] += hip_offset
-        feet_pos_h.RL[1] -= hip_offset
-        feet_pos_h.RR[1] += hip_offset
+        # Remove the nominal foothold offsets (see FootholdReferenceGenerator) so feet are compared to the hips
+        feet_pos_h.FL[1] -= hip_offset_y
+        feet_pos_h.FR[1] += hip_offset_y
+        feet_pos_h.RL[1] -= hip_offset_y
+        feet_pos_h.RR[1] += hip_offset_y
+        feet_pos_h.FL[0] -= hip_offset_x
+        feet_pos_h.FR[0] -= hip_offset_x
+        feet_pos_h.RL[0] += hip_offset_x
+        feet_pos_h.RR[0] += hip_offset_x
 
         hip_pos_h = LegsAttr(*[np.zeros(3) for _ in range(4)])
         hip_pos_h.FL[:2] = R_W2H @ (hip_pos.FL[:2] - base_pos[0:2])

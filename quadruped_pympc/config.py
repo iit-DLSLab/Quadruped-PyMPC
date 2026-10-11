@@ -274,6 +274,8 @@ simulation_params = {
                                     'bound': {'step_freq': 1.8, 'duty_factor': 0.65, 'type': GaitType.BOUNDING.value},
                                     'full_stance': {'step_freq': 2, 'duty_factor': 0.65, 'type': GaitType.FULL_STANCE.value},
                                    },
+    # If True, the robot will start and stop walking to save energy
+    'start_and_stop_activated':    False,
 
     # This is used to activate or deactivate the reflexes upon contact detection
     'reflex_trigger_mode':       'tracking', # 'tracking', 'geom_contact', False

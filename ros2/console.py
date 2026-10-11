@@ -80,12 +80,12 @@ class Console():
 
                 elif(input_string == "narrowStance"):
                     print("Narrow Stance")
-                    self.controller_node.wb_interface.frg.hip_offset -= 0.03 
+                    self.controller_node.wb_interface.frg.hip_offset_y -= 0.03
                 
 
                 elif(input_string == "wideStance"):
                     print("Wide Stance")
-                    self.controller_node.wb_interface.frg.hip_offset += 0.03 
+                    self.controller_node.wb_interface.frg.hip_offset_y += 0.03
 
 
                 elif(input_string == "setGaitTimer"):
