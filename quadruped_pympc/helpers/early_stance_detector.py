@@ -27,7 +27,8 @@ class EarlyStanceDetector:
 
         self.early_stance_time_threshold = 0.07
         self.relative_tracking_error_threshold = 0.3
-        self.absolute_min_distance_error_threshold = 0.1
+        # Scaled with the robot size, like the terrain, velocities and step heights (0.1 m on a2)
+        self.absolute_min_distance_error_threshold = 0.25 * cfg.hip_height
 
         self.gait_cycles_after_reflex_height_enanchement = -1
         self.use_reflex_next_steps_height_enhancement = cfg.simulation_params['reflex_next_steps_height_enhancement']
