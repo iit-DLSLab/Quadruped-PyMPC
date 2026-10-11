@@ -1,0 +1,13 @@
+# Keep the docker build context small and free of host build artifacts
+.git
+.pixi
+.claude
+.pytest_cache
+**/__pycache__
+gifs
+quadruped_pympc/acados/build
+quadruped_pympc/acados/lib
+quadruped_pympc/acados/include
+ros2/msgs_ws/build
+ros2/msgs_ws/install
+ros2/msgs_ws/log

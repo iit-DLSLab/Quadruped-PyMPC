@@ -1,8 +1,8 @@
 # Build from the repository root (with the acados submodule checked out), choosing the ROS 2 distro:
-#   docker build -f installation/docker/integrated_gpu/Dockerfile --build-arg ROS_DISTRO=humble  -t quadruped_pympc:humble .
-#   docker build -f installation/docker/integrated_gpu/Dockerfile --build-arg ROS_DISTRO=lyrical -t quadruped_pympc:lyrical .
+#   docker build -f installation/docker/integrated_gpu/dockerfile --build-arg ROS_DISTRO=humble  -t quadruped_pympc:humble .
+#   docker build -f installation/docker/integrated_gpu/dockerfile --build-arg ROS_DISTRO=lyrical -t quadruped_pympc:lyrical .
 # Run with X11:
-#   docker run -it --rm --network host -e DISPLAY -e LIBGL_ALWAYS_SOFTWARE=1 \
+#   docker run -it --rm --network host --ipc host -e DISPLAY -e LIBGL_ALWAYS_SOFTWARE=1 \
 #     -v /tmp/.X11-unix:/tmp/.X11-unix:rw -v $HOME/.Xauthority:/root/.Xauthority:ro quadruped_pympc:humble
 FROM ubuntu:24.04
 

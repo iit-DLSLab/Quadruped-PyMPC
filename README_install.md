@@ -102,11 +102,11 @@ docker build -f installation/docker/nvidia/dockerfile --build-arg ROS_DISTRO=hum
 
 ```bash
 # integrated gpu
-docker run -it --rm --network host -e DISPLAY -e LIBGL_ALWAYS_SOFTWARE=1 \
+docker run -it --rm --network host --ipc host -e DISPLAY -e LIBGL_ALWAYS_SOFTWARE=1 \
   -v /tmp/.X11-unix:/tmp/.X11-unix:rw -v $HOME/.Xauthority:/root/.Xauthority:ro quadruped_pympc:humble
 
 # nvidia
-docker run -it --rm --gpus all --network host -e DISPLAY \
+docker run -it --rm --gpus all --network host --ipc host -e DISPLAY \
   -v /tmp/.X11-unix:/tmp/.X11-unix:rw -v $HOME/.Xauthority:/root/.Xauthority:ro quadruped_pympc:humble-cuda
 ```
 
@@ -116,7 +116,7 @@ acados, Quadruped-PyMPC and the ROS 2 messages are already built inside the imag
 
 ### How to run - Simulation
 
-1. activate your pixi or conda environment
+1. activate your pixi, conda or docker environment
    
 
 2. go in the main Quadruped-PyMPC [folder](https://github.com/iit-DLSLab/Quadruped-PyMPC) and press
@@ -136,7 +136,7 @@ ctrl -> set zero all velocities
 
 ### How to run - ROS2
 
-1. activate your pixi or conda environment
+1. activate your pixi, conda or docker environment
    
 
 2. you can run now the script
