@@ -95,6 +95,7 @@ The first time you run the simulation with acados, in the terminal you will be a
 
 ```bash
 docker build -f installation/docker/integrated_gpu/dockerfile --build-arg ROS_DISTRO=humble -t quadruped_pympc:humble .         # integrated gpu
+
 docker build -f installation/docker/nvidia/dockerfile --build-arg ROS_DISTRO=humble -t quadruped_pympc:humble-cuda .           # nvidia
 ```
 
