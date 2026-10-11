@@ -13,11 +13,8 @@ dependencies:
 - casadi
 - numpy
 - matplotlib
-- jaxlib=*=*cuda*
-- jax
-- cuda-nvcc 
 - meshcat-python 
-- scipy==1.15.1  
+- scipy
 - pinocchio
 - adam-robotics[all]
 - ros-humble-desktop
@@ -33,6 +30,7 @@ dependencies:
 - tqdm
 - gymnasium
 - pip:
+  - jax[cuda12]
   - mujoco
   - readchar
   - liecasadi

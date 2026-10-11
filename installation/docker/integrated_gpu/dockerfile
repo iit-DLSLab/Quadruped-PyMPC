@@ -1,0 +1,104 @@
+# Build from the repository root (with the acados submodule checked out), choosing the ROS 2 distro:
+#   docker build -f installation/docker/integrated_gpu/Dockerfile --build-arg ROS_DISTRO=humble  -t quadruped_pympc:humble .
+#   docker build -f installation/docker/integrated_gpu/Dockerfile --build-arg ROS_DISTRO=lyrical -t quadruped_pympc:lyrical .
+# Run with X11:
+#   docker run -it --rm --network host -e DISPLAY -e LIBGL_ALWAYS_SOFTWARE=1 \
+#     -v /tmp/.X11-unix:/tmp/.X11-unix:rw -v $HOME/.Xauthority:/root/.Xauthority:ro quadruped_pympc:humble
+FROM ubuntu:24.04
+
+# -----------------------------
+# Basic configurations
+# -----------------------------
+# ROS 2 distro: humble or lyrical
+ARG ROS_DISTRO=humble
+ENV DEBIAN_FRONTEND=noninteractive \
+    PIXI_ENV=${ROS_DISTRO}-no-cuda
+
+SHELL ["/bin/bash", "-c"]
+
+RUN case "$ROS_DISTRO" in humble|lyrical) ;; \
+      *) echo "ERROR: ROS_DISTRO must be humble or lyrical, got '$ROS_DISTRO'" && exit 1 ;; esac
+
+# -----------------------------
+# System dependencies (compilers, cmake, python... come from pixi)
+# -----------------------------
+RUN apt-get update && apt-get install -y --no-install-recommends \
+      ca-certificates \
+      git \
+      gedit \
+      libgl1 \
+      libglx-mesa0 \
+      libgl1-mesa-dri \
+      mesa-utils \
+      libglib2.0-0t64 \
+      libxext6 \
+      libsm6 \
+      libxrender1 \
+      byobu \
+      vim \
+    && rm -rf /var/lib/apt/lists/*
+
+# -----------------------------
+# Pixi
+# -----------------------------
+COPY --from=ghcr.io/prefix-dev/pixi:0.63.2 /usr/local/bin/pixi /usr/local/bin/pixi
+
+# -----------------------------
+# Pixi env, installed before copying the whole repo so that it is cached across code changes
+# -----------------------------
+WORKDIR /workspace
+COPY pyproject.toml pixi.lock ./
+COPY quadruped_pympc/__init__.py quadruped_pympc/
+RUN pixi install --locked -e "$PIXI_ENV" \
+    && pixi clean cache --yes
+
+# -----------------------------
+# Copy local repo for build
+# -----------------------------
+COPY . /workspace
+RUN test -f quadruped_pympc/acados/CMakeLists.txt \
+    || (echo "ERROR: acados submodule missing, run 'git submodule update --init --recursive' first" \
+        && exit 1)
+
+# ---------------------------------------
+# Build acados + install template
+# ---------------------------------------
+ENV ACADOS_SOURCE_DIR=/workspace/quadruped_pympc/acados
+ENV LD_LIBRARY_PATH=/workspace/quadruped_pympc/acados/lib
+
+RUN pixi run --frozen -e "$PIXI_ENV" bash -c '\
+      set -euo pipefail && \
+      cd /workspace/quadruped_pympc/acados && \
+      mkdir -p build && \
+      cd build && \
+      cmake -DACADOS_WITH_SYSTEM_BLASFEO:BOOL=OFF -DCMAKE_POLICY_VERSION_MINIMUM=3.5 .. && \
+      make install -j$(nproc) && \
+      python -m pip install --no-cache-dir -e ../interfaces/acados_template \
+    '
+
+# -----------------------------
+# Build ROS2 messages workspace
+# -----------------------------
+RUN pixi run --frozen -e "$PIXI_ENV" bash -c '\
+      set -euo pipefail && \
+      cd /workspace/ros2/msgs_ws && \
+      colcon build --cmake-args \
+        -DPython_EXECUTABLE=$CONDA_PREFIX/bin/python3 \
+        -DPython_ROOT_DIR=$CONDA_PREFIX \
+    '
+
+# -----------------------------
+# Pixi environment ready in every new terminal
+# -----------------------------
+RUN cat >> /root/.bashrc <<'EOF'
+eval "$(pixi shell-hook --frozen -e "$PIXI_ENV" --manifest-path /workspace/pyproject.toml)"
+if [ -f /workspace/ros2/msgs_ws/install/setup.bash ]; then
+  source /workspace/ros2/msgs_ws/install/setup.bash
+fi
+export PS1="\[\e]0;\u@\h: \w\a\]\[\033[01;37m\]\u\[\033[00m\]@\[\033[01;32m\]\h\[\033[00m\]:\[\033[01;34m\]\w\[\033[00m\] "
+EOF
+
+# -----------------------------
+# Interactive shell
+# -----------------------------
+CMD ["bash"]

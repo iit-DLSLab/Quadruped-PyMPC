@@ -1,7 +1,7 @@
 ## Dependencies
 Gradient-based MPC: It uses [CasADI](https://web.casadi.org/) to define the model and [acados](https://github.com/acados/acados) to solve the optimal control problem. Sampling-based MPC: [jax](https://github.com/google/jax) for both. The simulation environment is based on [Mujoco](https://mujoco.org/).
 
-You can install this repo with Pixi (preferred) or Conda. 
+You can install this repo with Pixi (preferred), Conda or Docker. 
 
 ---
 
@@ -38,6 +38,7 @@ conda activate quadruped_pympc_env
 
 
 3. go to Common Steps section
+
 
 
 ### Common steps between Pixi and Conda
@@ -80,6 +81,37 @@ The first time you run the simulation with acados, in the terminal you will be a
     ```
     pip install -e .
     ```
+
+
+### Docker installation
+
+1. install [Docker](https://docs.docker.com/engine/install/) (and the [NVIDIA Container Toolkit](https://docs.nvidia.com/datacenter/cloud-native/container-toolkit/latest/install-guide.html) if you want the **nvidia** image)
+
+2. clone the submodules:
+
+    `git submodule update --init --recursive`
+
+3. from the Quadruped-PyMPC folder, build the image choosing between **integrated gpu or nvidia** and the ROS 2 distro (**lyrical** or **humble**):
+
+```bash
+docker build -f installation/docker/integrated_gpu/dockerfile --build-arg ROS_DISTRO=humble -t quadruped_pympc:humble .         # integrated gpu
+docker build -f installation/docker/nvidia/dockerfile --build-arg ROS_DISTRO=humble -t quadruped_pympc:humble-cuda .           # nvidia
+```
+
+4. run the container:
+
+```bash
+# integrated gpu
+docker run -it --rm --network host -e DISPLAY -e LIBGL_ALWAYS_SOFTWARE=1 \
+  -v /tmp/.X11-unix:/tmp/.X11-unix:rw -v $HOME/.Xauthority:/root/.Xauthority:ro quadruped_pympc:humble
+
+# nvidia
+docker run -it --rm --gpus all --network host -e DISPLAY \
+  -v /tmp/.X11-unix:/tmp/.X11-unix:rw -v $HOME/.Xauthority:/root/.Xauthority:ro quadruped_pympc:humble-cuda
+```
+
+acados, Quadruped-PyMPC and the ROS 2 messages are already built inside the image, and the pixi environment is activated in every new terminal, so you can skip the Common Steps section.
+
 
 
 ### How to run - Simulation

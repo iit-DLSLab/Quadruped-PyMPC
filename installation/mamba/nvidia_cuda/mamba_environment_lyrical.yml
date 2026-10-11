@@ -6,23 +6,21 @@ variables:
 channels:
 - conda-forge
 - nvidia
-- robostack-lyrical
+- https://prefix.dev/robostack-lyrical
 dependencies:
 - pip
 - python
 - casadi
 - numpy
 - matplotlib
-- jaxlib=*=*cuda*
-- jax
-- cuda-nvcc 
 - meshcat-python 
-- scipy==1.15.1  
+- scipy
 - pinocchio
 - adam-robotics[all]
 - ros-lyrical-desktop
 - ros-lyrical-plotjuggler-ros
 - ros-lyrical-rmw-cyclonedds-cpp
+- ros-lyrical-rosidl-generator-dds-idl
 - compilers 
 - cmake 
 - pkg-config 
@@ -32,6 +30,7 @@ dependencies:
 - tqdm
 - gymnasium
 - pip:
+  - jax[cuda12]
   - mujoco
   - readchar
   - liecasadi

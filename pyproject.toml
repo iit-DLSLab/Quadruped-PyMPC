@@ -18,7 +18,6 @@ python = "*"
 casadi = "*"
 numpy = "*"
 matplotlib = "*"
-jax = "*"
 meshcat-python = "*"
 scipy = "*"
 pinocchio = "*"
@@ -39,15 +38,16 @@ readchar = "*"
 liecasadi = "*"
 gym-quadruped = "*"
 
-[tool.pixi.feature.no-cuda.dependencies]
-jaxlib = "*"
+# jax comes from PyPI: the wheels bundle their own protobuf, so they don't clash
+# with the libprotobuf pinned by robostack (conda-forge jaxlib lags behind it)
+[tool.pixi.feature.no-cuda.pypi-dependencies]
+jax = "*"
 
 [tool.pixi.feature.cuda.system-requirements]
 cuda = "12"
 
-[tool.pixi.feature.cuda.dependencies]
-jaxlib = { version = "*", build = "*cuda*" }
-cuda-nvcc = "*"
+[tool.pixi.feature.cuda.pypi-dependencies]
+jax = { version = "*", extras = ["cuda12"] }
 
 [tool.pixi.feature.common.activation.env]
 ROS_LOCALHOST_ONLY = "1"
@@ -57,8 +57,9 @@ channels = ["https://prefix.dev/robostack-lyrical"]
 
 [tool.pixi.feature.lyrical.dependencies]
 ros-lyrical-desktop = "*"
-ros-lyrical-plotjuggler-ros = "*"
 ros-lyrical-rmw-cyclonedds-cpp = "*"
+ros-lyrical-rosidl-generator-dds-idl = "*"
+ros-lyrical-plotjuggler-ros = "*"
 
 [tool.pixi.feature.humble]
 channels = ["robostack-staging"]

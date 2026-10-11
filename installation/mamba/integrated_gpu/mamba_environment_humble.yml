@@ -13,10 +13,8 @@ dependencies:
 - casadi
 - numpy
 - matplotlib
-- jaxlib
-- jax
 - meshcat-python 
-- scipy==1.15.1  
+- scipy
 - pinocchio
 - adam-robotics[all]
 - ros-humble-desktop
@@ -32,6 +30,7 @@ dependencies:
 - tqdm
 - gymnasium
 - pip:
+  - jax
   - mujoco
   - readchar
   - liecasadi
