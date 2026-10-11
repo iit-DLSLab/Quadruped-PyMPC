@@ -835,7 +835,7 @@ environments:
       - pypi: https://files.pythonhosted.org/packages/a0/61/5c78b91c3143ed5c14207f463aecfc8f9dbb5092fb2869baf37c273b2705/gitdb-4.0.12-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/fa/48/f36d233ce749d1bb880cb5e6f8bb171dc2effabc7435c31da604d831b3ec/gitpython-3.2.0-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/69/84/1b98671314ea5f40397586b6cd14db913de3196333be558fdc177e61708f/glfw-2.10.2-py2.py3-none-manylinux_2_28_x86_64.whl
-      - pypi: https://files.pythonhosted.org/packages/9b/e6/d50961c3d84e233c286751338617cffd7621bf57a81907d7558149403417/gym_quadruped-1.1.7-py2.py3-none-any.whl
+      - pypi: https://files.pythonhosted.org/packages/23/c1/1cddb30337301e0434552753c81062bcf54c86fc75e95a3bcb3786ca89af/gym_quadruped-1.1.8-py2.py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/9e/e9/1a19e42cd43cc1365e127db6aae85e1c671da1d9a5d746f4d34a50edb577/h5py-3.16.0-cp312-cp312-manylinux_2_28_x86_64.whl
       - pypi: https://files.pythonhosted.org/packages/62/a1/3d680cbfd5f4b8f15abc1d571870c5fc3e594bb582bc3b64ea099db13e56/jinja2-3.1.6-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/37/98/29d815431b967554ac185739ef1da0dc9a8378a66809b65233d07b66d194/liecasadi-0.0.7-py3-none-any.whl
@@ -1749,7 +1749,7 @@ environments:
       - pypi: https://files.pythonhosted.org/packages/a0/61/5c78b91c3143ed5c14207f463aecfc8f9dbb5092fb2869baf37c273b2705/gitdb-4.0.12-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/fa/48/f36d233ce749d1bb880cb5e6f8bb171dc2effabc7435c31da604d831b3ec/gitpython-3.2.0-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/69/84/1b98671314ea5f40397586b6cd14db913de3196333be558fdc177e61708f/glfw-2.10.2-py2.py3-none-manylinux_2_28_x86_64.whl
-      - pypi: https://files.pythonhosted.org/packages/9b/e6/d50961c3d84e233c286751338617cffd7621bf57a81907d7558149403417/gym_quadruped-1.1.7-py2.py3-none-any.whl
+      - pypi: https://files.pythonhosted.org/packages/23/c1/1cddb30337301e0434552753c81062bcf54c86fc75e95a3bcb3786ca89af/gym_quadruped-1.1.8-py2.py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/9e/e9/1a19e42cd43cc1365e127db6aae85e1c671da1d9a5d746f4d34a50edb577/h5py-3.16.0-cp312-cp312-manylinux_2_28_x86_64.whl
       - pypi: https://files.pythonhosted.org/packages/62/a1/3d680cbfd5f4b8f15abc1d571870c5fc3e594bb582bc3b64ea099db13e56/jinja2-3.1.6-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/37/98/29d815431b967554ac185739ef1da0dc9a8378a66809b65233d07b66d194/liecasadi-0.0.7-py3-none-any.whl
@@ -2619,7 +2619,7 @@ environments:
       - pypi: https://files.pythonhosted.org/packages/a0/61/5c78b91c3143ed5c14207f463aecfc8f9dbb5092fb2869baf37c273b2705/gitdb-4.0.12-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/fa/48/f36d233ce749d1bb880cb5e6f8bb171dc2effabc7435c31da604d831b3ec/gitpython-3.2.0-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/69/84/1b98671314ea5f40397586b6cd14db913de3196333be558fdc177e61708f/glfw-2.10.2-py2.py3-none-manylinux_2_28_x86_64.whl
-      - pypi: https://files.pythonhosted.org/packages/9b/e6/d50961c3d84e233c286751338617cffd7621bf57a81907d7558149403417/gym_quadruped-1.1.7-py2.py3-none-any.whl
+      - pypi: https://files.pythonhosted.org/packages/23/c1/1cddb30337301e0434552753c81062bcf54c86fc75e95a3bcb3786ca89af/gym_quadruped-1.1.8-py2.py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/9e/e9/1a19e42cd43cc1365e127db6aae85e1c671da1d9a5d746f4d34a50edb577/h5py-3.16.0-cp312-cp312-manylinux_2_28_x86_64.whl
       - pypi: https://files.pythonhosted.org/packages/62/a1/3d680cbfd5f4b8f15abc1d571870c5fc3e594bb582bc3b64ea099db13e56/jinja2-3.1.6-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/37/98/29d815431b967554ac185739ef1da0dc9a8378a66809b65233d07b66d194/liecasadi-0.0.7-py3-none-any.whl
@@ -3568,7 +3568,7 @@ environments:
       - pypi: https://files.pythonhosted.org/packages/a0/61/5c78b91c3143ed5c14207f463aecfc8f9dbb5092fb2869baf37c273b2705/gitdb-4.0.12-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/fa/48/f36d233ce749d1bb880cb5e6f8bb171dc2effabc7435c31da604d831b3ec/gitpython-3.2.0-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/69/84/1b98671314ea5f40397586b6cd14db913de3196333be558fdc177e61708f/glfw-2.10.2-py2.py3-none-manylinux_2_28_x86_64.whl
-      - pypi: https://files.pythonhosted.org/packages/9b/e6/d50961c3d84e233c286751338617cffd7621bf57a81907d7558149403417/gym_quadruped-1.1.7-py2.py3-none-any.whl
+      - pypi: https://files.pythonhosted.org/packages/23/c1/1cddb30337301e0434552753c81062bcf54c86fc75e95a3bcb3786ca89af/gym_quadruped-1.1.8-py2.py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/f1/16/d905e7f53e661ce2c24686c38048d8e2b750ffc4350009d41c4e6c6c9826/h5py-3.16.0-cp314-cp314-manylinux_2_28_x86_64.whl
       - pypi: https://files.pythonhosted.org/packages/62/a1/3d680cbfd5f4b8f15abc1d571870c5fc3e594bb582bc3b64ea099db13e56/jinja2-3.1.6-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/37/98/29d815431b967554ac185739ef1da0dc9a8378a66809b65233d07b66d194/liecasadi-0.0.7-py3-none-any.whl
@@ -4473,7 +4473,7 @@ environments:
       - pypi: https://files.pythonhosted.org/packages/a0/61/5c78b91c3143ed5c14207f463aecfc8f9dbb5092fb2869baf37c273b2705/gitdb-4.0.12-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/fa/48/f36d233ce749d1bb880cb5e6f8bb171dc2effabc7435c31da604d831b3ec/gitpython-3.2.0-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/69/84/1b98671314ea5f40397586b6cd14db913de3196333be558fdc177e61708f/glfw-2.10.2-py2.py3-none-manylinux_2_28_x86_64.whl
-      - pypi: https://files.pythonhosted.org/packages/9b/e6/d50961c3d84e233c286751338617cffd7621bf57a81907d7558149403417/gym_quadruped-1.1.7-py2.py3-none-any.whl
+      - pypi: https://files.pythonhosted.org/packages/23/c1/1cddb30337301e0434552753c81062bcf54c86fc75e95a3bcb3786ca89af/gym_quadruped-1.1.8-py2.py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/f1/16/d905e7f53e661ce2c24686c38048d8e2b750ffc4350009d41c4e6c6c9826/h5py-3.16.0-cp314-cp314-manylinux_2_28_x86_64.whl
       - pypi: https://files.pythonhosted.org/packages/62/a1/3d680cbfd5f4b8f15abc1d571870c5fc3e594bb582bc3b64ea099db13e56/jinja2-3.1.6-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/37/98/29d815431b967554ac185739ef1da0dc9a8378a66809b65233d07b66d194/liecasadi-0.0.7-py3-none-any.whl
@@ -7941,10 +7941,10 @@ packages:
   purls: []
   size: 28787
   timestamp: 1789573412378
-- pypi: https://files.pythonhosted.org/packages/9b/e6/d50961c3d84e233c286751338617cffd7621bf57a81907d7558149403417/gym_quadruped-1.1.7-py2.py3-none-any.whl
+- pypi: https://files.pythonhosted.org/packages/23/c1/1cddb30337301e0434552753c81062bcf54c86fc75e95a3bcb3786ca89af/gym_quadruped-1.1.8-py2.py3-none-any.whl
   name: gym-quadruped
-  version: 1.1.7
-  sha256: 5ee0c1aaa3ee926f5dfb6831d1864c76d526ee0e631ad30e9d4eee922f1a7736
+  version: 1.1.8
+  sha256: 8e4d48788647b5e94319e79e6f9ab393df7e323a082e6541f0d1939cbf3f70d3
   requires_dist:
   - gymnasium
   - h5py

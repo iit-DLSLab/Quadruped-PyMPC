@@ -31,6 +31,18 @@ Real-world deployment via:
 - [muse](https://github.com/iit-DLSLab/muse/tree/unitree_sdk) for state estimation
 - [unitree-ros2-dls](https://github.com/iit-DLSLab/unitree-ros2-dls) for unitree robot communication
 
+
+Robot supported:
+- GO2
+- A2
+- B2
+- GO1
+- Aliengo
+- Spot
+- Mini-Cheetah
+- HyqReal1
+- HyqReal2
+
 ## Installation and Run
 
 See [here](https://github.com/iit-DLSLab/Quadruped-PyMPC/blob/main/README_install.md).
