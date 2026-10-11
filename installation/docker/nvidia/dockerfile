@@ -3,7 +3,8 @@
 #   docker build -f installation/docker/nvidia/dockerfile --build-arg ROS_DISTRO=lyrical -t quadruped_pympc:lyrical-cuda .
 # Run with the NVIDIA Container Toolkit and X11:
 #   docker run -it --rm --gpus all --network host --ipc host -e DISPLAY \
-#     -v /tmp/.X11-unix:/tmp/.X11-unix:rw -v $HOME/.Xauthority:/root/.Xauthority:ro quadruped_pympc:humble-cuda
+#     -e XAUTHORITY=/tmp/.Xauthority \
+#     -v /tmp/.X11-unix:/tmp/.X11-unix:rw -v ${XAUTHORITY:-$HOME/.Xauthority}:/tmp/.Xauthority:ro quadruped_pympc:humble-cuda
 # The CUDA libraries come from the jax[cuda12] wheels, so only the host driver is needed.
 FROM ubuntu:24.04
 

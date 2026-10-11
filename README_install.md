@@ -104,11 +104,13 @@ docker build -f installation/docker/nvidia/dockerfile --build-arg ROS_DISTRO=hum
 ```bash
 # integrated gpu
 docker run -it --rm --network host --ipc host -e DISPLAY -e LIBGL_ALWAYS_SOFTWARE=1 \
-  -v /tmp/.X11-unix:/tmp/.X11-unix:rw -v $HOME/.Xauthority:/root/.Xauthority:ro quadruped_pympc:humble
+  -e XAUTHORITY=/tmp/.Xauthority \
+  -v /tmp/.X11-unix:/tmp/.X11-unix:rw -v ${XAUTHORITY:-$HOME/.Xauthority}:/tmp/.Xauthority:ro quadruped_pympc:humble
 
 # nvidia
 docker run -it --rm --gpus all --network host --ipc host -e DISPLAY \
-  -v /tmp/.X11-unix:/tmp/.X11-unix:rw -v $HOME/.Xauthority:/root/.Xauthority:ro quadruped_pympc:humble-cuda
+  -e XAUTHORITY=/tmp/.Xauthority \
+  -v /tmp/.X11-unix:/tmp/.X11-unix:rw -v ${XAUTHORITY:-$HOME/.Xauthority}:/tmp/.Xauthority:ro quadruped_pympc:humble-cuda
 ```
 
 acados, Quadruped-PyMPC and the ROS 2 messages are already built inside the image, and the pixi environment is activated in every new terminal, so you can skip the Common Steps section.

@@ -3,7 +3,8 @@
 #   docker build -f installation/docker/integrated_gpu/dockerfile --build-arg ROS_DISTRO=lyrical -t quadruped_pympc:lyrical .
 # Run with X11:
 #   docker run -it --rm --network host --ipc host -e DISPLAY -e LIBGL_ALWAYS_SOFTWARE=1 \
-#     -v /tmp/.X11-unix:/tmp/.X11-unix:rw -v $HOME/.Xauthority:/root/.Xauthority:ro quadruped_pympc:humble
+#     -e XAUTHORITY=/tmp/.Xauthority \
+#     -v /tmp/.X11-unix:/tmp/.X11-unix:rw -v ${XAUTHORITY:-$HOME/.Xauthority}:/tmp/.Xauthority:ro quadruped_pympc:humble
 FROM ubuntu:24.04
 
 # -----------------------------
