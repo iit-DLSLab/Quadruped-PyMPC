@@ -1,11 +1,13 @@
 # Build from the repository root (with the acados submodule checked out), choosing the ROS 2 distro:
 #   docker build -f installation/docker/nvidia/dockerfile --build-arg ROS_DISTRO=humble  -t quadruped_pympc:humble-cuda .
 #   docker build -f installation/docker/nvidia/dockerfile --build-arg ROS_DISTRO=lyrical -t quadruped_pympc:lyrical-cuda .
-# Run with the NVIDIA Container Toolkit and X11:
+# Run from the repository root with the NVIDIA Container Toolkit and X11:
 #   docker run -it --rm --gpus all --network host --ipc host -e DISPLAY \
 #     -e XAUTHORITY=/tmp/.Xauthority \
-#     -v /tmp/.X11-unix:/tmp/.X11-unix:rw -v ${XAUTHORITY:-$HOME/.Xauthority}:/tmp/.Xauthority:ro quadruped_pympc:humble-cuda
+#     -v /tmp/.X11-unix:/tmp/.X11-unix:rw -v ${XAUTHORITY:-$HOME/.Xauthority}:/tmp/.Xauthority:ro \
+#     -v "$(pwd)":/workspace quadruped_pympc:humble-cuda
 # The CUDA libraries come from the jax[cuda12] wheels, so only the host driver is needed.
+# The pixi env and acados live in /opt, so mounting the repo in /workspace does not hide them.
 FROM ubuntu:24.04
 
 # -----------------------------
@@ -50,31 +52,32 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 COPY --from=ghcr.io/prefix-dev/pixi:0.63.2 /usr/local/bin/pixi /usr/local/bin/pixi
 
 # -----------------------------
-# Pixi env, installed before copying the whole repo so that it is cached across code changes
+# Pixi env, installed before copying the whole repo so that it is cached across code changes.
+# It goes in /opt/pixi (detached) and its activation is saved once, so that pixi never runs on the mounted repo
 # -----------------------------
 WORKDIR /workspace
 COPY pyproject.toml pixi.lock ./
 COPY quadruped_pympc/__init__.py quadruped_pympc/
-RUN pixi install --locked -e "$PIXI_ENV" \
-    && pixi clean cache --yes
+RUN mkdir -p /etc/pixi \
+    && echo 'detached-environments = "/opt/pixi"' > /etc/pixi/config.toml \
+    && pixi install -e "$PIXI_ENV" \
+    && pixi clean cache --yes \
+    && pixi shell-hook --frozen -e "$PIXI_ENV" > /opt/pixi/activate.sh
 
-# -----------------------------
-# Copy local repo for build
-# -----------------------------
-COPY . /workspace
-RUN test -f quadruped_pympc/acados/CMakeLists.txt \
+# ---------------------------------------
+# Build acados (at the submodule checkout) + install template, in /opt/acados
+# ---------------------------------------
+COPY quadruped_pympc/acados /opt/acados
+RUN test -f /opt/acados/CMakeLists.txt \
     || (echo "ERROR: acados submodule missing, run 'git submodule update --init --recursive' first" \
         && exit 1)
 
-# ---------------------------------------
-# Build acados + install template
-# ---------------------------------------
-ENV ACADOS_SOURCE_DIR=/workspace/quadruped_pympc/acados
-ENV LD_LIBRARY_PATH=/workspace/quadruped_pympc/acados/lib
+ENV ACADOS_SOURCE_DIR=/opt/acados
+ENV LD_LIBRARY_PATH=/opt/acados/lib
 
 RUN pixi run --frozen -e "$PIXI_ENV" bash -c '\
       set -euo pipefail && \
-      cd /workspace/quadruped_pympc/acados && \
+      cd /opt/acados && \
       mkdir -p build && \
       cd build && \
       cmake -DACADOS_WITH_SYSTEM_BLASFEO:BOOL=OFF -DCMAKE_POLICY_VERSION_MINIMUM=3.5 .. && \
@@ -83,24 +86,15 @@ RUN pixi run --frozen -e "$PIXI_ENV" bash -c '\
     '
 
 # -----------------------------
-# Build ROS2 messages workspace
+# Copy local repo, used when it is not mounted in /workspace
 # -----------------------------
-RUN pixi run --frozen -e "$PIXI_ENV" bash -c '\
-      set -euo pipefail && \
-      cd /workspace/ros2/msgs_ws && \
-      colcon build --cmake-args \
-        -DPython_EXECUTABLE=$CONDA_PREFIX/bin/python3 \
-        -DPython_ROOT_DIR=$CONDA_PREFIX \
-    '
+COPY . /workspace
 
 # -----------------------------
 # Pixi environment ready in every new terminal
 # -----------------------------
 RUN cat >> /root/.bashrc <<'EOF'
-eval "$(pixi shell-hook --frozen -e "$PIXI_ENV" --manifest-path /workspace/pyproject.toml)"
-if [ -f /workspace/ros2/msgs_ws/install/setup.bash ]; then
-  source /workspace/ros2/msgs_ws/install/setup.bash
-fi
+source /opt/pixi/activate.sh
 export PS1="\[\e]0;\u@\h: \w\a\]\[\033[01;37m\]\u\[\033[00m\]@\[\033[01;32m\]\h\[\033[00m\]:\[\033[01;34m\]\w\[\033[00m\] "
 EOF
 
