@@ -32,7 +32,7 @@ Real-world deployment via:
 - [unitree-ros2-dls](https://github.com/iit-DLSLab/unitree-ros2-dls) for unitree robot communication
 
 
-Robot supported:
+Supported robots:
 - GO2
 - A2
 - B2
