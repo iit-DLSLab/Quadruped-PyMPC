@@ -62,7 +62,7 @@ ros-lyrical-rosidl-generator-dds-idl = "*"
 ros-lyrical-plotjuggler-ros = "*"
 
 [tool.pixi.feature.humble]
-channels = ["robostack-staging"]
+channels = ["https://prefix.dev/robostack-humble"]
 
 [tool.pixi.feature.humble.dependencies]
 ros-humble-desktop = "*"

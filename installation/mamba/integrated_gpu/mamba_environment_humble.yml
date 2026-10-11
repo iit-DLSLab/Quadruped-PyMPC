@@ -6,7 +6,7 @@ variables:
 channels:
 - conda-forge
 - nvidia
-- robostack-staging
+- https://prefix.dev/robostack-humble
 dependencies:
 - pip
 - python
