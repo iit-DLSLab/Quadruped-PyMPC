@@ -15,12 +15,12 @@ class SwingTrajectoryGenerator:
         self.stepHeight = step_height
         self.reflex_next_steps_height_enhancement = False
 
-        if(cfg.simulation_params['visual_foothold_adaptation'] == 'blind'):
+        if(cfg.locomotion_params['visual_foothold_adaptation'] == 'blind'):
             self.blind_locomotion = True
         else:
             self.blind_locomotion = False
 
-        self.reflex_max_step_height = cfg.simulation_params['reflex_max_step_height']
+        self.reflex_max_step_height = cfg.locomotion_params['reflex_max_step_height']
 
     def createCurve(self, x0, xf, early_stance_hitmoment = -1):
 

@@ -119,6 +119,9 @@ mpc_params = {
     'horizon':                                 12,
     'dt':                                      0.02,
 
+    # if True, the SRBD inertia is recomputed at every step from the current joint configuration
+    'use_inertia_recomputation':               True,
+
     # GRF limits for each single leg
     "grf_max":                                 mass * gravity_constant,
     "grf_min":                                 0,
@@ -246,7 +249,7 @@ mpc_params = {
     }
 # -----------------------------------------------------------------------
 
-simulation_params = {
+locomotion_params = {
     'swing_generator':             'hermite',  # 'scipy', 'hermite', 'bezier'
     'swing_position_gain_fb':      500,
     'swing_velocity_gain_fb':      10,
@@ -264,10 +267,7 @@ simulation_params = {
     # Visual Foothold adapatation
     "visual_foothold_adaptation":  'blind', #'blind', 'height', 'vfa'
 
-    # this is the integration time used in the simulator
-    'dt':                          0.002,
-
-    'gait':                        'trot',  # 'trot', 'pace', 'crawl', 'bound', 'full_stance'
+    'gait':                       'trot',  # 'trot', 'pace', 'crawl', 'bound', 'full_stance'
     'gait_params':                 {'trot': {'step_freq': 1.4, 'duty_factor': 0.65, 'type': GaitType.TROT.value},
                                     'crawl': {'step_freq': 0.5, 'duty_factor': 0.8, 'type': GaitType.BACKDIAGONALCRAWL.value},
                                     'pace': {'step_freq': 1.4, 'duty_factor': 0.7, 'type': GaitType.PACE.value},
@@ -283,19 +283,18 @@ simulation_params = {
     'reflex_next_steps_height_enhancement': False,
     'velocity_modulator': True,
 
-    # velocity mode: human will give you the possibility to use the keyboard, the other are
-    # forward only random linear-velocity, random will give you random linear-velocity and yaw-velocity
-    'mode':                        'human',  # 'human', 'forward', 'random'
     'ref_z':                       hip_height,
+    }
+# -----------------------------------------------------------------------
 
+simulation_params = {
+    # this is the integration time used in the simulator
+    'dt':                          0.002,
 
-    # the MPC will be called every 1/(mpc_frequency*dt) timesteps
+    # the MPC in the simulation.py will be called every 1/(mpc_frequency*dt) timesteps
     # this helps to evaluate more realistically the performance of the controller
     'mpc_frequency':               100,
 
-    'use_inertia_recomputation':   True,
-
     'scene':                       'random_boxes',  # flat, random_boxes, random_pyramids, perlin
-
     }
 # -----------------------------------------------------------------------

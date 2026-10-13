@@ -214,8 +214,8 @@ if __name__ == "__main__":
     dt = 0.001
     # Use the gait selected for simulation and its corresponding parameters.
     # step_freq is in Hz; duty_factor is the fraction of each cycle in stance.
-    gait = config.simulation_params['gait']
-    gait_params = config.simulation_params['gait_params'][gait]
+    gait = config.locomotion_params['gait']
+    gait_params = config.locomotion_params['gait_params'][gait]
     horizon = int(round(duration / dt))
     generator = PeriodicGaitGenerator(
         duty_factor=gait_params['duty_factor'],

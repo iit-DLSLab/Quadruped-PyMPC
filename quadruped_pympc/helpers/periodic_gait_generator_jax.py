@@ -166,7 +166,7 @@ if __name__ == "__main__":
 
     mpc_dt = config.mpc_params['dt']
     horizon = config.mpc_params['horizon']
-    gait = config.simulation_params['gait']
+    gait = config.locomotion_params['gait']
     simulation_dt = config.simulation_params['dt']
     if gait == "trot":
         step_frequency = 2.65

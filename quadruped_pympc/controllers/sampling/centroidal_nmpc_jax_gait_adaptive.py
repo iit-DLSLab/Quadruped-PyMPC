@@ -658,17 +658,16 @@ class Sampling_MPC:
         return parameters.reshape((self.num_control_parameters,))
 
     def prepare_state_and_reference(
-        self, state_current, reference_state, current_contact, previous_contact, mpc_frequency=None
+        self, state_current, reference_state, current_contact, previous_contact, time_since_last_solve=None
     ):
         """
         This function jaxify the current state and reference for further processing.
+        time_since_last_solve [s] is used to shift the previous solution ahead, if None it is not shifted.
         """
 
-        # Shift the previous solution ahead
-        if config.mpc_params['shift_solution']:
-            if mpc_frequency is None:
-                mpc_frequency = config.simulation_params['mpc_frequency']
-            index_shift = (1.0 / mpc_frequency) / self.dt
+        # Shift the previous solution ahead of the time elapsed since it was computed
+        if config.mpc_params['shift_solution'] and time_since_last_solve is not None:
+            index_shift = time_since_last_solve / self.dt
             self.best_control_parameters = self.shift_solution(self.best_control_parameters, index_shift)
 
         state_current_jax = np.concatenate(

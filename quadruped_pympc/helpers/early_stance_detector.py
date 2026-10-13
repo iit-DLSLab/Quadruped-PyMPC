@@ -14,7 +14,7 @@ class EarlyStanceDetector:
         self.hitpoints = LegsAttr(FL=None, FR=None, RR=None, RL=None)
 
 
-        self.trigger_mode = cfg.simulation_params['reflex_trigger_mode']
+        self.trigger_mode = cfg.locomotion_params['reflex_trigger_mode']
         if(self.trigger_mode == False):
             self.activated = False
         else:
@@ -31,7 +31,7 @@ class EarlyStanceDetector:
         self.absolute_min_distance_error_threshold = 0.25 * cfg.hip_height
 
         self.gait_cycles_after_reflex_height_enanchement = -1
-        self.use_reflex_next_steps_height_enhancement = cfg.simulation_params['reflex_next_steps_height_enhancement']
+        self.use_reflex_next_steps_height_enhancement = cfg.locomotion_params['reflex_next_steps_height_enhancement']
         self.max_gait_cycles_height_enhancement = 6
 
 

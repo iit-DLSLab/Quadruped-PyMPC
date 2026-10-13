@@ -31,11 +31,11 @@ class SwingTrajectoryGenerator:
 
         # Reflexes: set by the early stance detector for the steps after an early contact
         self.reflex_next_steps_height_enhancement = False
-        self.reflex_max_step_height = cfg.simulation_params['reflex_max_step_height']
+        self.reflex_max_step_height = cfg.locomotion_params['reflex_max_step_height']
 
         # When blind, the obstacle that caused the early contact is higher than
         # expected, so the reflex touchdown is placed above the planned foothold
-        self.blind_locomotion = cfg.simulation_params['visual_foothold_adaptation'] == 'blind'
+        self.blind_locomotion = cfg.locomotion_params['visual_foothold_adaptation'] == 'blind'
 
     def plot_trajectory_3d(self, curve_points: np.ndarray) -> None:
         """Display sampled Cartesian positions supplied as an (N, 3) array."""

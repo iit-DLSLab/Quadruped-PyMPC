@@ -19,13 +19,13 @@ class Console():
 
         # Go Up and Go Down motion
         self.isDown = True
-        self.height_delta = -cfg.simulation_params['ref_z']
+        self.height_delta = -cfg.locomotion_params['ref_z']
 
         # Pitch Up and Pitch Down
         self.pitch_delta = 0
 
         # Step Height holder to keep track of the step height
-        self.step_height_holder = cfg.simulation_params['step_height']
+        self.step_height_holder = cfg.locomotion_params['step_height']
 
         # Autocomplete setup
         self.commands = [
@@ -123,7 +123,7 @@ class Console():
 
 
                     if(gait_type >= 0 and gait_type <= 7):
-                        gait_params = cfg.simulation_params['gait_params'][gait_name]
+                        gait_params = cfg.locomotion_params['gait_params'][gait_name]
                         gait_type, duty_factor, step_frequency = gait_params['type'], gait_params['duty_factor'], gait_params['step_freq']
                         
                         
@@ -195,10 +195,10 @@ class Console():
 
                 elif(input_string == "setupGeneral"):
                     
-                    print("Current Base Height: ", cfg.simulation_params['ref_z'] + self.height_delta)
+                    print("Current Base Height: ", cfg.locomotion_params['ref_z'] + self.height_delta)
                     height_temp = input("CoM Height: >>> ")
                     if(height_temp != ""):
-                        height_delta_temp = float(height_temp) - cfg.simulation_params['ref_z']
+                        height_delta_temp = float(height_temp) - cfg.locomotion_params['ref_z']
                         min_value = -0.1
                         max_value = 0.1
                         self.height_delta = max(min_value, min(height_delta_temp, max_value))
@@ -286,7 +286,7 @@ class Console():
                     
                     start_time = time.time()
                     time_motion = 5.
-                    initial_height = -cfg.simulation_params['ref_z']
+                    initial_height = -cfg.locomotion_params['ref_z']
 
                     temp = copy.deepcopy(self.controller_node.joint_positions)
                     initial_joint_positions = LegsAttr(*[np.zeros((1, int(self.controller_node.env.mjModel.nu/4))) for _ in range(4)])
@@ -317,7 +317,7 @@ class Console():
                         self.controller_node.stand_up_and_down_actions.RL = interpolated_positions[2]
                         self.controller_node.stand_up_and_down_actions.RR = interpolated_positions[3]
 
-                        self.height_delta = initial_height + (cfg.simulation_params['ref_z'] * time_diff / time_motion)
+                        self.height_delta = initial_height + (cfg.locomotion_params['ref_z'] * time_diff / time_motion)
                         time.sleep(0.01)
                         
                     self.height_delta = 0
@@ -338,10 +338,10 @@ class Console():
                     initial_height = 0
                     while(time.time() - start_time < time_motion):
                         time_diff = time.time() - start_time
-                        self.height_delta = initial_height - cfg.simulation_params['ref_z']*time_diff/time_motion
+                        self.height_delta = initial_height - cfg.locomotion_params['ref_z']*time_diff/time_motion
                         time.sleep(0.01)
 
-                    self.height_delta = -cfg.simulation_params['ref_z']
+                    self.height_delta = -cfg.locomotion_params['ref_z']
                     self.isDown = True
                 
                 

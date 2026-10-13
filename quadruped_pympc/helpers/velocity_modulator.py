@@ -6,7 +6,7 @@ from quadruped_pympc import config as cfg
 class VelocityModulator:
     def __init__(self):
         
-        self.activated = cfg.simulation_params['velocity_modulator']
+        self.activated = cfg.locomotion_params['velocity_modulator']
         self.hip_offset_x = cfg.hip_offset_x
         self.hip_offset_y = cfg.hip_offset_y
 

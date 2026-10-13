@@ -15,7 +15,7 @@ from quadruped_pympc.helpers.terrain_estimator import TerrainEstimator
 from quadruped_pympc.helpers.velocity_modulator import VelocityModulator
 from quadruped_pympc.helpers.early_stance_detector import EarlyStanceDetector
 
-if cfg.simulation_params['visual_foothold_adaptation'] != 'blind':
+if cfg.locomotion_params['visual_foothold_adaptation'] != 'blind':
     from quadruped_pympc.helpers.visual_foothold_adaptation import VisualFootholdAdaptation
 
 
@@ -42,8 +42,8 @@ class WBInterface:
         self.legs_order = legs_order
 
         # Periodic gait generator --------------------------------------------------------------
-        gait_name = cfg.simulation_params['gait']
-        gait_params = cfg.simulation_params['gait_params'][gait_name]
+        gait_name = cfg.locomotion_params['gait']
+        gait_params = cfg.locomotion_params['gait_params'][gait_name]
         gait_type, duty_factor, step_frequency = (
             gait_params['type'],
             gait_params['duty_factor'],
@@ -54,7 +54,7 @@ class WBInterface:
         self.pgg = PeriodicGaitGenerator(
             duty_factor=duty_factor, step_freq=step_frequency, gait_type=gait_type, horizon=horizon
         )
-        self.pgg.start_and_stop_activated = cfg.simulation_params['start_and_stop_activated']
+        self.pgg.start_and_stop_activated = cfg.locomotion_params['start_and_stop_activated']
         # in the case of nonuniform discretization, we create a list of dts and horizons for each nonuniform discretization
         if cfg.mpc_params['use_nonuniform_discretization']:
             self.contact_sequence_dts = [cfg.mpc_params['dt_fine_grained'], mpc_dt]
@@ -70,11 +70,11 @@ class WBInterface:
         )
 
         # Create swing trajectory generator ------------------------------------------------------
-        self.step_height = cfg.simulation_params['step_height']
+        self.step_height = cfg.locomotion_params['step_height']
         swing_period = (1 - self.pgg.duty_factor) * (1 / self.pgg.step_freq)
-        position_gain_fb = cfg.simulation_params['swing_position_gain_fb']
-        velocity_gain_fb = cfg.simulation_params['swing_velocity_gain_fb']
-        swing_generator = cfg.simulation_params['swing_generator']
+        position_gain_fb = cfg.locomotion_params['swing_position_gain_fb']
+        velocity_gain_fb = cfg.locomotion_params['swing_velocity_gain_fb']
+        swing_generator = cfg.locomotion_params['swing_generator']
         self.stc = SwingTrajectoryController(
             step_height=self.step_height,
             swing_period=swing_period,
@@ -96,15 +96,15 @@ class WBInterface:
         self.legs_frictionloss = LegsAttr(**{
             leg: self.ik.env.mjModel.dof_frictionloss[self.ik.env.legs_qvel_idx[leg]].copy() for leg in self.legs_order
         })
-        self.use_friction_compensation = cfg.simulation_params['use_friction_compensation']
-        self.friction_compensation_vel_eps = cfg.simulation_params['friction_compensation_vel_eps']
-        self.friction_compensation_vel_deadband = cfg.simulation_params['friction_compensation_vel_deadband']
-        self.friction_compensation_ratio = cfg.simulation_params['friction_compensation_ratio']
+        self.use_friction_compensation = cfg.locomotion_params['use_friction_compensation']
+        self.friction_compensation_vel_eps = cfg.locomotion_params['friction_compensation_vel_eps']
+        self.friction_compensation_vel_deadband = cfg.locomotion_params['friction_compensation_vel_deadband']
+        self.friction_compensation_ratio = cfg.locomotion_params['friction_compensation_ratio']
 
-        if cfg.simulation_params['visual_foothold_adaptation'] != 'blind':
+        if cfg.locomotion_params['visual_foothold_adaptation'] != 'blind':
             # Visual foothold adaptation -------------------------------------------------------------
             self.vfa = VisualFootholdAdaptation(
-                legs_order=self.legs_order, adaptation_strategy=cfg.simulation_params['visual_foothold_adaptation']
+                legs_order=self.legs_order, adaptation_strategy=cfg.locomotion_params['visual_foothold_adaptation']
             )
 
         # Velocity modulator ---------------------------------------------------------------------
@@ -246,11 +246,11 @@ class WBInterface:
             base_xy_lin_vel=base_lin_vel[0:2],
             ref_base_xy_lin_vel=ref_base_lin_vel[0:2],
             hips_position=hip_pos,
-            com_height_nominal=cfg.simulation_params['ref_z'],
+            com_height_nominal=cfg.locomotion_params['ref_z'],
         )
 
         # Adjust the footholds given the terrain -----------------------------------------------------
-        if cfg.simulation_params['visual_foothold_adaptation'] != 'blind':
+        if cfg.locomotion_params['visual_foothold_adaptation'] != 'blind':
             time_adaptation = time.time()
             if self.stc.check_apex_condition(self.current_contact, interval=0.01) and self.vfa.initialized == False:
                 for leg_id, leg_name in enumerate(legs_order):
@@ -281,7 +281,7 @@ class WBInterface:
 
         
         ref_pos = np.array([0, 0, cfg.hip_height])
-        ref_pos[2] = cfg.simulation_params["ref_z"] + terrain_height
+        ref_pos[2] = cfg.locomotion_params["ref_z"] + terrain_height
         # Since the MPC close in CoM position, but usually we have desired height for the base,
         # we modify the reference to bring the base at the desired height and not the CoM
         ref_pos[2] -= base_pos[2] - (com_pos[2] + self.frg.com_pos_offset_w[2])
@@ -409,7 +409,6 @@ class WBInterface:
                         touch_down=nmpc_footholds[leg_name],
                         foot_pos=feet_pos[leg_name],
                         foot_vel=feet_vel[leg_name],
-                        passive_force=legs_qfrc_passive[leg_name],
                         h=legs_qfrc_bias[leg_name],
                         mass_matrix=legs_mass_matrix[leg_name],
                         early_stance_hitmoments=self.esd.hitmoments[leg_name],
@@ -506,7 +505,7 @@ class WBInterface:
         # self.stc.reset()
         # self.terrain_computation.reset()
         self.frg.lift_off_positions = initial_feet_pos
-        if cfg.simulation_params['visual_foothold_adaptation'] != 'blind':
+        if cfg.locomotion_params['visual_foothold_adaptation'] != 'blind':
             self.vfa.reset()
         self.current_contact = np.array([1, 1, 1, 1])
         return

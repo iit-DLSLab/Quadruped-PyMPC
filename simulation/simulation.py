@@ -92,7 +92,7 @@ def run_simulation(
     legs_order = ["FL", "FR", "RL", "RR"]
 
     # Create HeightMap -----------------------------------------------------------------------
-    if qpympc_cfg.simulation_params["visual_foothold_adaptation"] != "blind":
+    if qpympc_cfg.locomotion_params["visual_foothold_adaptation"] != "blind":
         from gym_quadruped.sensors.heightmap import HeightMap
 
         resolution_heightmap = 0.04
@@ -182,7 +182,7 @@ def run_simulation(
             ref_base_lin_vel, ref_base_ang_vel = env.target_base_vel()
 
             # Get the inertia matrix
-            if qpympc_cfg.simulation_params["use_inertia_recomputation"]:
+            if qpympc_cfg.mpc_params["use_inertia_recomputation"]:
                 inertia = env.get_base_inertia().flatten()  # SRBD inertia about the CoM at qpos, in base frame
             else:
                 inertia = qpympc_cfg.inertia.flatten()
@@ -283,7 +283,7 @@ def run_simulation(
                 )
 
                 # Update and Plot the heightmap
-                if qpympc_cfg.simulation_params["visual_foothold_adaptation"] != "blind":
+                if qpympc_cfg.locomotion_params["visual_foothold_adaptation"] != "blind":
                     # if(stc.check_apex_condition(current_contact, interval=0.01)):
                     for leg_id, leg_name in enumerate(legs_order):
                         data = heightmaps[

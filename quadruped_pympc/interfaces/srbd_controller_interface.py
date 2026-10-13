@@ -97,6 +97,7 @@ class SRBDControllerInterface:
         pgg_step_freq: float,
         optimize_swing: int,
         external_wrenches: np.ndarray = np.zeros((6,)),
+        time_since_last_solve: float = None,
     ) -> [LegsAttr, LegsAttr, LegsAttr, LegsAttr, LegsAttr, float]:
         """Compute the control using the SRBD method
 
@@ -109,6 +110,8 @@ class SRBDControllerInterface:
             pgg_step_freq (float): The step frequency of the periodic gait generator
             optimize_swing (int): The flag to optimize the swing
             external_wrenches (np.ndarray): The external wrench applied to the robot to compensate
+            time_since_last_solve (float): The time [s] elapsed since the previous call, used by the
+                sampling controller to shift its previous solution ahead. None if there is no previous call
 
         Returns:
             tuple: The GRFs and the feet positions in world frame,
@@ -123,7 +126,7 @@ class SRBDControllerInterface:
         if self.type == 'sampling':
             # Convert data to jax and shift previous solution
             state_current_jax, reference_state_jax = self.controller.prepare_state_and_reference(
-                state_current, ref_state, current_contact, self.previous_contact_mpc
+                state_current, ref_state, current_contact, self.previous_contact_mpc, time_since_last_solve
             )
             self.previous_contact_mpc = current_contact
 

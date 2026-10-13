@@ -29,6 +29,8 @@ class QuadrupedPyMPC_Wrapper:
         """
 
         self.mpc_frequency = cfg.simulation_params["mpc_frequency"]
+        # Simulation step of the last MPC call, None if the MPC has not been called yet
+        self.last_mpc_step_num = None
 
         self.srbd_controller_interface = SRBDControllerInterface()
 
@@ -133,6 +135,11 @@ class QuadrupedPyMPC_Wrapper:
 
         # Solve OCP ---------------------------------------------------------------------------------------
         if step_num % round(1 / (self.mpc_frequency * simulation_dt)) == 0:
+            if self.last_mpc_step_num is None:
+                time_since_last_solve = None
+            else:
+                time_since_last_solve = (step_num - self.last_mpc_step_num) * simulation_dt
+            self.last_mpc_step_num = step_num
             (
                 self.nmpc_GRFs,
                 self.nmpc_footholds,
@@ -149,6 +156,7 @@ class QuadrupedPyMPC_Wrapper:
                 self.wb_interface.pgg.phase_signal,
                 self.wb_interface.pgg.step_freq,
                 optimize_swing,
+                time_since_last_solve=time_since_last_solve,
             )
 
             if cfg.mpc_params['type'] != 'sampling' and cfg.mpc_params['use_RTI']:
@@ -213,8 +221,8 @@ class QuadrupedPyMPC_Wrapper:
 
         # Do some PD control over the joints (these values are normally passed
         # to a low-level motor controller, here we can try to simulate it)
-        kp_joint_motor = cfg.simulation_params['impedence_joint_position_gain']
-        kd_joint_motor = cfg.simulation_params['impedence_joint_velocity_gain']
+        kp_joint_motor = cfg.locomotion_params['impedence_joint_position_gain']
+        kd_joint_motor = cfg.locomotion_params['impedence_joint_velocity_gain']
         # for leg in legs_order:
         #    tau[leg] += kp_joint_motor * (des_joints_pos[leg] - qpos[legs_qpos_idx[leg]]) + \
         #                kd_joint_motor * (des_joints_vel[leg] - qvel[legs_qvel_idx[leg]])
@@ -274,3 +282,4 @@ class QuadrupedPyMPC_Wrapper:
 
         self.wb_interface.reset(initial_feet_pos)
         self.srbd_controller_interface.controller.reset()
+        self.last_mpc_step_num = None

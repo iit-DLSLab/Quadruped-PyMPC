@@ -45,7 +45,7 @@ class SwingTrajectoryController:
         self.swing_period = swing_period
 
     def compute_swing_control_cartesian_space(
-        self, leg_id, q_dot, J, J_dot, lift_off, touch_down, foot_pos, foot_vel, passive_force, h, mass_matrix, early_stance_hitmoments, early_stance_hitpoints
+        self, leg_id, q_dot, J, J_dot, lift_off, touch_down, foot_pos, foot_vel, h, mass_matrix, early_stance_hitmoments, early_stance_hitpoints
     ):
         """TODO: Docstring.
 
@@ -93,7 +93,7 @@ class SwingTrajectoryController:
         return tau_swing, des_foot_pos, des_foot_vel
 
     def compute_swing_control_joint_space(
-        self, nmpc_joints_pos, nmpc_joints_vel, nmpc_joints_acc, qpos, qvel, legs_mass_matrix, legs_qfrc_bias, legs_qfrc_passive
+        self, nmpc_joints_pos, nmpc_joints_vel, nmpc_joints_acc, qpos, qvel, legs_mass_matrix, legs_qfrc_bias
     ):
         error_position = nmpc_joints_pos - qpos
         error_position = error_position.reshape((3,))
@@ -270,7 +270,7 @@ if __name__ == "__main__":
                     leg_id=0, q_dot=data.qvel[dofs], J=J, J_dot=J_dot,
                     lift_off=start, touch_down=end,
                     foot_pos=data.geom_xpos[foot_id] - foot_origin,
-                    foot_vel=jacobian @ data.qvel, passive_force=data.qfrc_passive[dofs],
+                    foot_vel=jacobian @ data.qvel,
                     h=data.qfrc_bias[dofs], mass_matrix=mass[np.ix_(dofs, dofs)],
                     early_stance_hitmoments=-1, early_stance_hitpoints=None,
                 )

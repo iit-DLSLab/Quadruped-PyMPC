@@ -166,8 +166,8 @@ class Quadruped_PyMPC_Node(Node):
         self.joint_velocities = np.zeros(12)
         self.feet_contact = np.zeros(4)
         # Desired PD gain
-        self.impedence_joint_position_gain = np.ones(12)*cfg.simulation_params['impedence_joint_position_gain']
-        self.impedence_joint_velocity_gain = np.ones(12)*cfg.simulation_params['impedence_joint_velocity_gain']
+        self.impedence_joint_position_gain = np.ones(12)*cfg.locomotion_params['impedence_joint_position_gain']
+        self.impedence_joint_velocity_gain = np.ones(12)*cfg.locomotion_params['impedence_joint_velocity_gain']
 
 
         # Mujoco env
@@ -183,6 +183,7 @@ class Quadruped_PyMPC_Node(Node):
         self.legs_order = ["FL", "FR", "RL", "RR"]
         self.env.reset(random=False)
         self.last_mpc_time = time.time()
+        self.last_mpc_solve_time = None
         self.last_render_time = time.time()
 
         if RENDER_MUJOCO_VIEWER:
@@ -286,9 +287,14 @@ class Quadruped_PyMPC_Node(Node):
     def compute_mpc_thread_callback(self):
         # This thread runs forever!
         last_mpc_thread_time = time.time()
+        last_mpc_solve_time = None
         while True:
             if time.time() - last_mpc_thread_time > 1.0 / MPC_FREQ:
                 if(self.state_current is not None):
+                    # Time elapsed since the previous solve, used to shift the previous solution ahead
+                    mpc_solve_time = time.time()
+                    time_since_last_solve = None if last_mpc_solve_time is None else mpc_solve_time - last_mpc_solve_time
+                    last_mpc_solve_time = mpc_solve_time
                     self.nmpc_GRFs,  \
                     self.nmpc_footholds, \
                     self.nmpc_joints_pos, \
@@ -301,7 +307,8 @@ class Quadruped_PyMPC_Node(Node):
                                                                             self.inertia,
                                                                             self.wb_interface.pgg.phase_signal,
                                                                             self.wb_interface.pgg.step_freq,
-                                                                            self.optimize_swing)
+                                                                            self.optimize_swing,
+                                                                            time_since_last_solve=time_since_last_solve)
                     self.riccati_feedback = self.srbd_controller_interface.get_riccati_feedback()
                     
                     if(cfg.mpc_params['type'] != 'sampling' and cfg.mpc_params['use_RTI']):
@@ -320,6 +327,7 @@ class Quadruped_PyMPC_Node(Node):
         
         # This process runs forever!
         last_mpc_process_time = time.time()
+        last_mpc_solve_time = None
         while True:
             #if time.time() - last_mpc_process_time > 1.0 / MPC_FREQ:
             if(not input_data_process.empty()):
@@ -332,6 +340,10 @@ class Quadruped_PyMPC_Node(Node):
                 phase_signal = data[5]
                 step_freq = data[6]
                 
+                # Time elapsed since the previous solve, used to shift the previous solution ahead
+                mpc_solve_time = time.time()
+                time_since_last_solve = None if last_mpc_solve_time is None else mpc_solve_time - last_mpc_solve_time
+                last_mpc_solve_time = mpc_solve_time
                 nmpc_GRFs,  \
                 nmpc_footholds, \
                 nmpc_joints_pos, \
@@ -344,7 +356,8 @@ class Quadruped_PyMPC_Node(Node):
                                                                         inertia,
                                                                         phase_signal,
                                                                         step_freq,
-                                                                        optimize_swing)
+                                                                        optimize_swing,
+                                                                        time_since_last_solve=time_since_last_solve)
                 
                 
                 last_mpc_loop_time = time.time() - last_mpc_process_time
@@ -370,6 +383,7 @@ class Quadruped_PyMPC_Node(Node):
         arr = np.ndarray((N_DBL,), dtype=np.float64, buffer=shm.buf)
 
         last_mpc_process_time = time.time()
+        last_mpc_solve_time = None
         while True:
             #if time.time() - last_mpc_process_time > 1.0 / MPC_FREQ:
             if(not input_data_process.empty()):
@@ -382,6 +396,10 @@ class Quadruped_PyMPC_Node(Node):
                 phase_signal = data[5]
                 step_freq = data[6]
                 
+                # Time elapsed since the previous solve, used to shift the previous solution ahead
+                mpc_solve_time = time.time()
+                time_since_last_solve = None if last_mpc_solve_time is None else mpc_solve_time - last_mpc_solve_time
+                last_mpc_solve_time = mpc_solve_time
                 nmpc_GRFs,  \
                 nmpc_footholds, \
                 nmpc_joints_pos, \
@@ -394,7 +412,8 @@ class Quadruped_PyMPC_Node(Node):
                                                                         inertia,
                                                                         phase_signal,
                                                                         step_freq,
-                                                                        optimize_swing)
+                                                                        optimize_swing,
+                                                                        time_since_last_solve=time_since_last_solve)
                 last_mpc_loop_time = time.time() - last_mpc_process_time
 
                 # Publish to SHM with seqlock: odd=writing, even=stable
@@ -538,7 +557,7 @@ class Quadruped_PyMPC_Node(Node):
         ref_base_lin_vel, ref_base_ang_vel = self.env.target_base_vel()
         
         # Get the inertia matrix
-        if(cfg.simulation_params['use_inertia_recomputation']):
+        if(cfg.mpc_params['use_inertia_recomputation']):
             inertia = self.env.get_base_inertia().flatten()  # SRBD inertia about the CoM at qpos, in base frame
         else:
             inertia = cfg.inertia.flatten()
@@ -647,6 +666,10 @@ class Quadruped_PyMPC_Node(Node):
                         
         else:
             if time.time() - self.last_mpc_time > 1.0 / MPC_FREQ:
+                # Time elapsed since the previous solve, used to shift the previous solution ahead
+                mpc_solve_time = time.time()
+                time_since_last_solve = None if self.last_mpc_solve_time is None else mpc_solve_time - self.last_mpc_solve_time
+                self.last_mpc_solve_time = mpc_solve_time
                 self.nmpc_GRFs,  \
                 self.nmpc_footholds, \
                 self.nmpc_joints_pos, \
@@ -659,7 +682,8 @@ class Quadruped_PyMPC_Node(Node):
                                                                         inertia,
                                                                         self.wb_interface.pgg.phase_signal,
                                                                         self.wb_interface.pgg.step_freq,
-                                                                        optimize_swing)
+                                                                        optimize_swing,
+                                                                        time_since_last_solve=time_since_last_solve)
                 self.riccati_feedback = self.srbd_controller_interface.get_riccati_feedback()
                 
                 if(cfg.mpc_params['type'] != 'sampling' and cfg.mpc_params['use_RTI']):
