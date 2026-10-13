@@ -239,29 +239,38 @@ class Quadruped_PyMPC_Node(Node):
 
         # Let's start in FULL STANCE in any case
         self.wb_interface.pgg.gait_type = 7 
-
         # Threaded MPC
         if(USE_THREADED_MPC):
             thread_mpc = threading.Thread(target=self.compute_mpc_thread_callback)
             thread_mpc.daemon = True
             thread_mpc.start()
+        
         if(USE_PROCESS_QUEUE_MPC):
-            self.input_data_process = multiprocessing.Queue(maxsize=1)
-            self.output_data_process = multiprocessing.Queue(maxsize=1)
-            process_mpc = multiprocessing.Process(target=self.compute_mpc_process_queue_callback, args=(self.input_data_process, self.output_data_process))
+            # The MPC process must be forked so that it inherits this node. From Python 3.14 the default
+            # start method is forkserver, which would instead try to pickle the node (and fail)
+            mp_context = multiprocessing.get_context('fork')
+
+            self.input_data_process = mp_context.Queue(maxsize=1)
+            self.output_data_process = mp_context.Queue(maxsize=1)
+            process_mpc = mp_context.Process(target=self.compute_mpc_process_queue_callback, args=(self.input_data_process, self.output_data_process))
             process_mpc.daemon = True
             process_mpc.start()
+        
         if(USE_PROCESS_SHARED_MEMORY_MPC):
+            # The MPC process must be forked so that it inherits this node. From Python 3.14 the default
+            # start method is forkserver, which would instead try to pickle the node (and fail)
+            mp_context = multiprocessing.get_context('fork')
+
             # WBC → MPC: keep a latest-only queue for complex inputs
-            self.input_data_process = multiprocessing.Queue(maxsize=1)
+            self.input_data_process = mp_context.Queue(maxsize=1)
 
             # MPC → WBC: shared-memory SPSC with seqlock
             self.shm_out = shared_memory.SharedMemory(create=True, size=N_DBL * 8)
             self.shm_out_name = self.shm_out.name
             np.ndarray((N_DBL,), dtype=np.float64, buffer=self.shm_out.buf)[:] = 0.0
-            self.seq_out = Value('Q', 0, lock=False)  # 64-bit sequence, even=stable
+            self.seq_out = mp_context.Value('Q', 0, lock=False)  # 64-bit sequence, even=stable
 
-            process_mpc = multiprocessing.Process(
+            process_mpc = mp_context.Process(
                 target=self.compute_mpc_process_shared_memory_callback,
                 args=(self.input_data_process, self.shm_out_name, self.seq_out),
             )
