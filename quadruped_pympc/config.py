@@ -257,7 +257,7 @@ locomotion_params = {
     'impedence_joint_velocity_gain':  2.0,
 
     # Joint friction compensation: viscous damping (qfrc_passive) and Coulomb friction (model frictionloss)
-    'use_friction_compensation':   True,
+    'use_friction_compensation':   False,
     'friction_compensation_vel_eps': 0.1,  # [rad/s] velocity (above the deadband) at which the smoothed Coulomb sign saturates
     'friction_compensation_vel_deadband': 0.4,  # [rad/s] no Coulomb compensation below this velocity, set above the joint velocity noise
     'friction_compensation_ratio': 0.8,  # fraction of the friction (viscous and Coulomb) that is compensated, in [0, 1]
