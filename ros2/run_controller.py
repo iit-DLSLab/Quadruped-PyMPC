@@ -120,6 +120,9 @@ if(USE_PROCESS_SHARED_MEMORY_MPC):
     
 
 MPC_FREQ = 100 
+# No control signal is sent until the MPC has computed this number of solutions, since the first
+# ones come from a cold-started solver and from state estimates that are still settling, and they give a torque spike
+MPC_SOLUTIONS_TO_DISCARD = 10
 RENDER_MUJOCO_VIEWER = False
 RENDER_FREQ = 30
 
@@ -155,6 +158,7 @@ class Quadruped_PyMPC_Node(Node):
         self.loop_time = 0.002
         self.last_start_time = None
         self.last_mpc_loop_time = 0.0
+        self.num_mpc_solutions = 0 # see MPC_SOLUTIONS_TO_DISCARD
 
         # Base State
         self.position = np.zeros(3)
@@ -319,6 +323,7 @@ class Quadruped_PyMPC_Node(Node):
                                                                             self.optimize_swing,
                                                                             time_since_last_solve=time_since_last_solve)
                     self.riccati_feedback = self.srbd_controller_interface.get_riccati_feedback()
+                    self.num_mpc_solutions += 1
                     
                     if(cfg.mpc_params['type'] != 'sampling' and cfg.mpc_params['use_RTI']):
                         # If the controller is gradient and is using RTI, we need to linearize the mpc after its computation
@@ -646,6 +651,7 @@ class Quadruped_PyMPC_Node(Node):
                 self.nmpc_predicted_state = data[6]
                 self.last_mpc_loop_time = data[7]
                 self.riccati_feedback = data[8]
+                self.num_mpc_solutions += 1
         
         elif(USE_PROCESS_SHARED_MEMORY_MPC):
             if(not self.input_data_process.full()):
@@ -668,6 +674,8 @@ class Quadruped_PyMPC_Node(Node):
                         self.best_sample_freq  = float(tmp[IDX_BSF])
                         self.last_mpc_loop_time = float(tmp[IDX_LAST])
                         self.last_mpc_update_mono = float(tmp[IDX_STAMP])
+                        # The sequence grows by 2 at every solution written by the MPC process
+                        self.num_mpc_solutions = s2 // 2
                         if tmp[IDX_RIC_VALID] > 0.5:
                             self.riccati_feedback = (tmp[IDX_RIC_K].reshape(12, 24), tmp[IDX_RIC_X].copy())
                         else:
@@ -694,6 +702,7 @@ class Quadruped_PyMPC_Node(Node):
                                                                         optimize_swing,
                                                                         time_since_last_solve=time_since_last_solve)
                 self.riccati_feedback = self.srbd_controller_interface.get_riccati_feedback()
+                self.num_mpc_solutions += 1
                 
                 if(cfg.mpc_params['type'] != 'sampling' and cfg.mpc_params['use_RTI']):
                     # If the controller is gradient and is using RTI, we need to linearize the mpc after its computation
@@ -705,6 +714,10 @@ class Quadruped_PyMPC_Node(Node):
                 
         
         
+        # Do not send anything until the MPC is warmed up, see MPC_SOLUTIONS_TO_DISCARD
+        if self.num_mpc_solutions <= MPC_SOLUTIONS_TO_DISCARD:
+            return
+
         # Close the loop on the GRFs at every step with the Riccati gain of the last MPC solution
         grfs = self.nmpc_GRFs
         riccati_K, riccati_x = self.riccati_feedback
