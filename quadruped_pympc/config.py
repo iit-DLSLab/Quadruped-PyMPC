@@ -256,10 +256,11 @@ locomotion_params = {
     'impedence_joint_position_gain':  10.0,
     'impedence_joint_velocity_gain':  2.0,
 
-    # Joint friction compensation: viscous damping (qfrc_passive) and Coulomb friction (model frictionloss)
-    'use_friction_compensation':   False,
-    'friction_compensation_vel_eps': 0.1,  # [rad/s] velocity (above the deadband) at which the smoothed Coulomb sign saturates
-    'friction_compensation_vel_deadband': 0.4,  # [rad/s] no Coulomb compensation below this velocity, set above the joint velocity noise
+    # Joint friction compensation on swing legs: viscous damping (model damping) and Coulomb friction (model frictionloss),
+    # evaluated on the reference joint velocity
+    'use_friction_compensation':   True,
+    'friction_compensation_vel_eps': 0.3,  # [rad/s] reference velocity at which the smoothed Coulomb sign saturates
+    'friction_compensation_max_vel': 5.0,  # [rad/s] saturation of the reference velocity (spikes near singular poses), bounds the viscous term
     'friction_compensation_ratio': 0.8,  # fraction of the friction (viscous and Coulomb) that is compensated, in [0, 1]
 
     'step_height':                 0.2 * hip_height,  
