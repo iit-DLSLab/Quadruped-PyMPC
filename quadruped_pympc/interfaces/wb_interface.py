@@ -91,14 +91,16 @@ class WBInterface:
         # Inverse Kinematics ---------------------------------------------------------------------
         self.ik = InverseKinematicsNumeric()
 
-        # Joint Coulomb friction from the robot model. MuJoCo solves it as a constraint, so it is not part of
-        # qfrc_passive and has to be compensated explicitly.
+        # Joint friction from the robot model: viscous damping and Coulomb friction (frictionloss)
+        self.legs_damping = LegsAttr(**{
+            leg: self.ik.env.mjModel.dof_damping[self.ik.env.legs_qvel_idx[leg]].copy() for leg in self.legs_order
+        })
         self.legs_frictionloss = LegsAttr(**{
             leg: self.ik.env.mjModel.dof_frictionloss[self.ik.env.legs_qvel_idx[leg]].copy() for leg in self.legs_order
         })
         self.use_friction_compensation = cfg.locomotion_params['use_friction_compensation']
         self.friction_compensation_vel_eps = cfg.locomotion_params['friction_compensation_vel_eps']
-        self.friction_compensation_vel_deadband = cfg.locomotion_params['friction_compensation_vel_deadband']
+        self.friction_compensation_max_vel = cfg.locomotion_params['friction_compensation_max_vel']
         self.friction_compensation_ratio = cfg.locomotion_params['friction_compensation_ratio']
 
         if cfg.locomotion_params['visual_foothold_adaptation'] != 'blind':
@@ -424,16 +426,23 @@ class WBInterface:
         self.last_des_foot_pos = des_foot_pos
 
         # Compensate for friction -------------------------------------------------------------
+        # The friction is evaluated on the reference joint velocity, not on the measured one. A Coulomb term
+        # driven by the measured velocity is a negative damping of slope frictionloss/eps, much larger than the
+        # joint PD damping, and makes the joints vibrate on the real robot. Only swing legs are compensated,
+        # in stance the friction helps holding the posture.
         if self.use_friction_compensation:
-            for leg_name in self.legs_order:
-                # Below the deadband the velocity cannot be told apart from the measurement noise, so the
-                # Coulomb compensation is zero there instead of a torque with a random sign
-                leg_qvel = qvel[legs_qvel_idx[leg_name]]
-                leg_qvel = np.sign(leg_qvel) * np.maximum(np.abs(leg_qvel) - self.friction_compensation_vel_deadband, 0.0)
+            for leg_id, leg_name in enumerate(self.legs_order):
+                if self.current_contact[leg_id] == 1:
+                    continue
 
-                # Viscous damping (qfrc_passive) and Coulomb friction (a solver constraint, not in qfrc_passive)
-                friction = -legs_qfrc_passive[leg_name] + self.legs_frictionloss[leg_name] * np.tanh(
-                    leg_qvel / self.friction_compensation_vel_eps
+                # The swing reference is in world frame, so remove the foot velocity due to the base motion
+                base_foot_vel = feet_jac[leg_name][:, 0:6] @ qvel[0:6]
+                ref_leg_qvel = np.linalg.pinv(joint_jacobians[leg_name]) @ (des_foot_vel[leg_name] - base_foot_vel)
+                # pinv blows up near singular poses (knee stretched), the saturation bounds the viscous term
+                ref_leg_qvel = np.clip(ref_leg_qvel, -self.friction_compensation_max_vel, self.friction_compensation_max_vel)
+
+                friction = self.legs_damping[leg_name] * ref_leg_qvel + self.legs_frictionloss[leg_name] * np.tanh(
+                    ref_leg_qvel / self.friction_compensation_vel_eps
                 )
                 tau[leg_name] += self.friction_compensation_ratio * friction
 

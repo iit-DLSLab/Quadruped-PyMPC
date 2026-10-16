@@ -234,10 +234,15 @@ class Console():
                     if(temp != ""):
                         self.controller_node.wb_interface.friction_compensation_ratio = max(0.0, min(float(temp), 1.0))
 
-                    print("Friction Compensation Velocity Deadband: ", self.controller_node.wb_interface.friction_compensation_vel_deadband)
-                    temp = input("Friction Compensation Velocity Deadband: >>> ")
+                    print("Friction Compensation Velocity Eps: ", self.controller_node.wb_interface.friction_compensation_vel_eps)
+                    temp = input("Friction Compensation Velocity Eps: >>> ")
                     if(temp != ""):
-                        self.controller_node.wb_interface.friction_compensation_vel_deadband = max(0.0, float(temp))
+                        self.controller_node.wb_interface.friction_compensation_vel_eps = max(0.01, float(temp))
+
+                    print("Friction Compensation Max Velocity: ", self.controller_node.wb_interface.friction_compensation_max_vel)
+                    temp = input("Friction Compensation Max Velocity: >>> ")
+                    if(temp != ""):
+                        self.controller_node.wb_interface.friction_compensation_max_vel = max(0.0, float(temp))
 
                     
 
