@@ -119,6 +119,11 @@ mpc_params = {
     'horizon':                                 12,
     'dt':                                      0.02,
 
+    # frequency [Hz] at which the MPC is solved, both in simulation.py (every round(1/(frequency*dt))
+    # simulation timesteps) and in the ROS 2 controller. A lower frequency than the controller loop helps
+    # to evaluate more realistically the performance of the controller
+    'frequency':                               200,
+
     # if True, the SRBD inertia is recomputed at every step from the current joint configuration
     'use_inertia_recomputation':               True,
 
@@ -291,10 +296,6 @@ locomotion_params = {
 simulation_params = {
     # this is the integration time used in the simulator
     'dt':                          0.002,
-
-    # the MPC in the simulation.py will be called every 1/(mpc_frequency*dt) timesteps
-    # this helps to evaluate more realistically the performance of the controller
-    'mpc_frequency':               100,
 
     'scene':                       'random_boxes',  # flat, random_boxes, random_pyramids, perlin
     }

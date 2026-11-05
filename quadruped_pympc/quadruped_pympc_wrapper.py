@@ -28,7 +28,7 @@ class QuadrupedPyMPC_Wrapper:
             quadrupedpympc_observables_names (tuple[str, ...], optional): list of observable to save. Defaults to _DEFAULT_OBS.
         """
 
-        self.mpc_frequency = cfg.simulation_params["mpc_frequency"]
+        self.mpc_frequency = cfg.mpc_params["frequency"]
         # Simulation step of the last MPC call, None if the MPC has not been called yet
         self.last_mpc_step_num = None
 
