@@ -210,13 +210,26 @@ class Simulator_Node(Node):
             self.last_render_time = time.time()
 
 
+def create_executor():
+    # EventsExecutor dispatches the callbacks in C++ (rclpy >= Kilted), with much less overhead than the
+    # default SingleThreadedExecutor. It does not exist on Humble, where we fall back to SingleThreadedExecutor
+    try:
+        from rclpy.experimental import EventsExecutor
+        print("Using EventsExecutor")
+        return EventsExecutor()
+    except ImportError:
+        from rclpy.executors import SingleThreadedExecutor
+        print("EventsExecutor not available in this ROS 2 distro, using SingleThreadedExecutor")
+        return SingleThreadedExecutor()
+
+
 def main():
     print('Hello from the gym_quadruped simulator.')
     rclpy.init()
 
     simulator_node = Simulator_Node()
 
-    rclpy.spin(simulator_node)
+    rclpy.spin(simulator_node, create_executor())
     simulator_node.destroy_node()
     rclpy.shutdown()
 
