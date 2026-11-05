@@ -119,7 +119,6 @@ if(USE_PROCESS_SHARED_MEMORY_MPC):
         return LegsAttr(FL=v[0].copy(), FR=v[1].copy(), RL=v[2].copy(), RR=v[3].copy())
     
 
-MPC_FREQ = 200
 # No control signal is sent until compute_control_callback has run this number of times, since the first
 # solutions come from a cold-started controller and from state estimates that are still settling, and they give a torque spike
 CONTROLLER_SOLUTIONS_TO_DISCARD = 100
@@ -303,7 +302,7 @@ class Quadruped_PyMPC_Node(Node):
         last_mpc_thread_time = time.time()
         last_mpc_solve_time = None
         while True:
-            if time.time() - last_mpc_thread_time > 1.0 / MPC_FREQ:
+            if time.time() - last_mpc_thread_time > 1.0 / cfg.mpc_params['frequency']:
                 if(self.state_current is not None):
                     # Time elapsed since the previous solve, used to shift the previous solution ahead
                     mpc_solve_time = time.time()
@@ -343,11 +342,12 @@ class Quadruped_PyMPC_Node(Node):
         last_mpc_process_time = time.time()
         last_mpc_solve_time = None
         while True:
-            #if time.time() - last_mpc_process_time > 1.0 / MPC_FREQ:
+            #if time.time() - last_mpc_process_time > 1.0 / cfg.mpc_params['frequency']:
             if(input_data_process.empty()):
                 # No new state from the WBC yet: sleep 0.1 ms instead of busy-polling, it frees the core and adds
-                # ~0.1 ms of latency. The rate is set by the WBC, which sends a state at MPC_FREQ: don't rate limit
-                # here with the check above, the queue keeps the oldest state and the MPC would solve on an old one
+                # ~0.1 ms of latency. The rate is set by the WBC, which sends a state at mpc_params['frequency']:
+                # don't rate limit here with the check above, the queue keeps the oldest state and the MPC would
+                # solve on an old one
                 time.sleep(0.0001)
                 continue
             data = input_data_process.get()
@@ -404,11 +404,12 @@ class Quadruped_PyMPC_Node(Node):
         last_mpc_process_time = time.time()
         last_mpc_solve_time = None
         while True:
-            #if time.time() - last_mpc_process_time > 1.0 / MPC_FREQ:
+            #if time.time() - last_mpc_process_time > 1.0 / cfg.mpc_params['frequency']:
             if(input_data_process.empty()):
                 # No new state from the WBC yet: sleep 0.1 ms instead of busy-polling, it frees the core and adds
-                # ~0.1 ms of latency. The rate is set by the WBC, which sends a state at MPC_FREQ: don't rate limit
-                # here with the check above, the queue keeps the oldest state and the MPC would solve on an old one
+                # ~0.1 ms of latency. The rate is set by the WBC, which sends a state at mpc_params['frequency']:
+                # don't rate limit here with the check above, the queue keeps the oldest state and the MPC would
+                # solve on an old one
                 time.sleep(0.0001)
                 continue
             data = input_data_process.get()
@@ -648,14 +649,14 @@ class Quadruped_PyMPC_Node(Node):
             self.optimize_swing = optimize_swing
 
         elif(USE_PROCESS_QUEUE_MPC):
-            # Send the state to the MPC process at MPC_FREQ: it solves as soon as it gets it, so on a fresh state.
-            # If the MPC is still solving the queue is full, and we retry at the next cycle
+            # Send the state to the MPC process at mpc_params['frequency']: it solves as soon as it gets it, so on
+            # a fresh state. If the MPC is still solving the queue is full, and we retry at the next cycle
             now = time.time()
             if(now >= self.next_mpc_time and not self.input_data_process.full()):
                 self.input_data_process.put_nowait([state_current, ref_state, contact_sequence, inertia, optimize_swing, self.wb_interface.pgg.phase_signal, self.wb_interface.pgg.step_freq])
-                # Fixed schedule, so MPC_FREQ is kept on average even when it is not a divisor of the WBC rate
+                # Fixed schedule, so the MPC frequency is kept on average even when it is not a divisor of the WBC rate
                 # (200 Hz with a 500 Hz WBC alternates 4 and 6 ms). When late, the schedule restarts from now
-                self.next_mpc_time = max(self.next_mpc_time + 1.0 / MPC_FREQ, now)
+                self.next_mpc_time = max(self.next_mpc_time + 1.0 / cfg.mpc_params['frequency'], now)
 
             if(not self.output_data_process.empty()):
                 data = self.output_data_process.get_nowait()
@@ -670,14 +671,14 @@ class Quadruped_PyMPC_Node(Node):
                 self.riccati_feedback = data[8]
         
         elif(USE_PROCESS_SHARED_MEMORY_MPC):
-            # Send the state to the MPC process at MPC_FREQ: it solves as soon as it gets it, so on a fresh state.
-            # If the MPC is still solving the queue is full, and we retry at the next cycle
+            # Send the state to the MPC process at mpc_params['frequency']: it solves as soon as it gets it, so on
+            # a fresh state. If the MPC is still solving the queue is full, and we retry at the next cycle
             now = time.time()
             if(now >= self.next_mpc_time and not self.input_data_process.full()):
                 self.input_data_process.put_nowait([state_current, ref_state, contact_sequence, inertia, optimize_swing, self.wb_interface.pgg.phase_signal, self.wb_interface.pgg.step_freq])
-                # Fixed schedule, so MPC_FREQ is kept on average even when it is not a divisor of the WBC rate
+                # Fixed schedule, so the MPC frequency is kept on average even when it is not a divisor of the WBC rate
                 # (200 Hz with a 500 Hz WBC alternates 4 and 6 ms). When late, the schedule restarts from now
-                self.next_mpc_time = max(self.next_mpc_time + 1.0 / MPC_FREQ, now)
+                self.next_mpc_time = max(self.next_mpc_time + 1.0 / cfg.mpc_params['frequency'], now)
             
             # Read MPC output from shared memory with seqlock and stale-data guard
             if self.shm_out is not None and self.seq_out is not None:
@@ -702,7 +703,7 @@ class Quadruped_PyMPC_Node(Node):
                             self.riccati_feedback = (None, None)
                         
         else:
-            if time.time() - self.last_mpc_time > 1.0 / MPC_FREQ:
+            if time.time() - self.last_mpc_time > 1.0 / cfg.mpc_params['frequency']:
                 # Time elapsed since the previous solve, used to shift the previous solution ahead
                 mpc_solve_time = time.time()
                 time_since_last_solve = None if self.last_mpc_solve_time is None else mpc_solve_time - self.last_mpc_solve_time
