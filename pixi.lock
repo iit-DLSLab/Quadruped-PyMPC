@@ -4,7 +4,7 @@ environments:
     channels:
     - url: https://conda.anaconda.org/conda-forge/
     - url: https://conda.anaconda.org/nvidia/
-    - url: https://prefix.dev/robostack-humble/
+    - url: https://prefix.dev/robostack-lyrical/
     indexes:
     - https://pypi.org/simple
     options:
@@ -16,20 +16,23 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/noarch/_x86_64-microarch-level-1-5_level1.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/adwaita-icon-theme-51.0-unix_0.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/aiohappyeyeballs-2.7.1-pyhd8ed1ab_0.conda
-      - conda: https://conda.anaconda.org/conda-forge/linux-64/aiohttp-3.14.4-py314h93e9acf_0.conda
+      - conda: https://conda.anaconda.org/conda-forge/noarch/aiohttp-3.14.3-pyhf64b827_0.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/aiosignal-1.4.0-pyhd8ed1ab_0.conda
       - conda: https://conda.anaconda.org/conda-forge/linux-64/alsa-lib-1.2.16.1-h7cc23a3_1.conda
       - conda: https://conda.anaconda.org/conda-forge/linux-64/ampl-asl-1.0.0-h5888daf_2.conda
+      - conda: https://conda.anaconda.org/conda-forge/noarch/annotated-types-0.8.0-pyhd8ed1ab_0.conda
       - conda: https://conda.anaconda.org/conda-forge/linux-64/aom-3.14.1-pl5321h57e6904_2.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/argcomplete-3.7.2-pyhcf101f3_0.conda
       - conda: https://conda.anaconda.org/conda-forge/linux-64/assimp-6.0.5-ha0daef8_2.conda
+      - conda: https://conda.anaconda.org/conda-forge/linux-64/ast-serialize-0.11.2-py311hf77984d_0.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/asttokens-3.0.2-pyhd8ed1ab_0.conda
+      - conda: https://conda.anaconda.org/conda-forge/noarch/async-timeout-5.0.1-pyhcf101f3_2.conda
       - conda: https://conda.anaconda.org/conda-forge/linux-64/at-spi2-atk-2.38.0-h0630a04_3.tar.bz2
       - conda: https://conda.anaconda.org/conda-forge/linux-64/at-spi2-core-2.40.3-h0630a04_0.tar.bz2
       - conda: https://conda.anaconda.org/conda-forge/linux-64/atk-1.0-2.38.0-h04ea711_2.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/attrs-26.1.0-pyhcf101f3_0.conda
-      - conda: https://conda.anaconda.org/conda-forge/linux-64/binutils-2.46.1-default_h4852527_103.conda
-      - conda: https://conda.anaconda.org/conda-forge/linux-64/binutils_impl_linux-64-2.46.1-default_hfdba357_103.conda
+      - conda: https://conda.anaconda.org/conda-forge/linux-64/binutils-2.46.1-default_h4852527_102.conda
+      - conda: https://conda.anaconda.org/conda-forge/linux-64/binutils_impl_linux-64-2.46.1-default_hfdba357_102.conda
       - conda: https://conda.anaconda.org/conda-forge/linux-64/blis-2.0-pthreads_h64f13e8_4.conda
       - conda: https://conda.anaconda.org/conda-forge/linux-64/blosc-1.21.6-he440d0b_1.conda
       - conda: https://conda.anaconda.org/conda-forge/linux-64/brotli-1.2.0-h505cf86_4.conda
@@ -46,8 +49,8 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/linux-64/cffi-2.1.1-py314h8d76f0c_3.conda
       - conda: https://conda.anaconda.org/conda-forge/linux-64/cli11-2.7.2-h54a6638_1.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/cloudpickle-3.1.2-pyhcf101f3_1.conda
-      - conda: https://conda.anaconda.org/conda-forge/linux-64/cmake-4.4.4-hff7ac6b_0.conda
-      - conda: https://conda.anaconda.org/conda-forge/linux-64/coal-python-3.0.4-np2py314h96201a9_2.conda
+      - conda: https://conda.anaconda.org/conda-forge/linux-64/cmake-4.4.3-hff7ac6b_0.conda
+      - conda: https://conda.anaconda.org/conda-forge/linux-64/coal-python-3.0.4-np2py314h3cc4ffd_1.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/colcon-argcomplete-0.3.3-pyhd8ed1ab_1.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/colcon-bash-0.5.0-pyhd8ed1ab_1.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/colcon-cd-0.1.1-pyhd8ed1ab_1.conda
@@ -78,13 +81,14 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/linux-64/coverage-7.16.2-py314h93e9acf_0.conda
       - conda: https://conda.anaconda.org/conda-forge/linux-64/cppcheck-2.22.0-py314h79bcd83_1.conda
       - conda: https://conda.anaconda.org/conda-forge/linux-64/cppzmq-4.11.0-hbe92c44_0.conda
-      - conda: https://conda.anaconda.org/conda-forge/noarch/cpython-3.14.8-py314hd8ed1ab_101.conda
-      - conda: https://conda.anaconda.org/conda-forge/linux-64/cryptography-50.0.2-py311hc91d8b8_0.conda
+      - conda: https://conda.anaconda.org/conda-forge/noarch/cpython-3.14.7-py314hd8ed1ab_106.conda
+      - conda: https://conda.anaconda.org/conda-forge/linux-64/cryptography-50.0.1-py311hc91d8b8_1.conda
       - conda: https://conda.anaconda.org/conda-forge/linux-64/cxx-compiler-2.0.0-hdab9b82_0.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/cycler-0.12.1-pyhcf101f3_2.conda
-      - conda: https://conda.anaconda.org/conda-forge/linux-64/cyclonedds-0.10.5-h9a70dda_0.conda
+      - conda: https://conda.anaconda.org/conda-forge/linux-64/cyclonedds-11.0.1-h9a70dda_2.conda
       - conda: https://conda.anaconda.org/conda-forge/linux-64/cyrus-sasl-2.1.28-hac629b4_1.conda
       - conda: https://conda.anaconda.org/conda-forge/linux-64/dbus-1.16.2-he8c428d_2.conda
+      - conda: https://conda.anaconda.org/conda-forge/noarch/deprecated-3.0.0-pyhc364b38_0.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/distlib-0.4.3-pyhcf101f3_0.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/distro-1.9.0-pyhd8ed1ab_1.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/docutils-0.23-pyhcf101f3_0.conda
@@ -93,15 +97,19 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/linux-64/eigen-abi-5.0.1.80-hf414acd_3.conda
       - conda: https://conda.anaconda.org/conda-forge/linux-64/eigen-abi-devel-5.0.1.100-h2fbfb1f_3.conda
       - conda: https://conda.anaconda.org/conda-forge/linux-64/eigenpy-3.13.0-np2py314h74dac6b_1.conda
-      - conda: https://conda.anaconda.org/conda-forge/linux-64/elfutils-0.194-h849f50c_0.conda
+      - conda: https://conda.anaconda.org/conda-forge/linux-64/elfutils-0.196-h03e2bf6_0.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/empy-4.2.1-pyhcf101f3_0.conda
       - conda: https://conda.anaconda.org/conda-forge/linux-64/epoxy-1.5.10-hb03c661_2.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/exceptiongroup-1.3.1-pyhd8ed1ab_0.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/executing-2.2.1-pyhd8ed1ab_0.conda
       - conda: https://conda.anaconda.org/conda-forge/linux-64/expat-2.8.5-hd2095e1_0.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/farama-notifications-0.0.4-pyhd8ed1ab_0.conda
-      - conda: https://conda.anaconda.org/conda-forge/linux-64/ffmpeg-9.0.2-gpl_h2f7cf13_903.conda
+      - conda: https://conda.anaconda.org/conda-forge/linux-64/ffmpeg-9.0.2-gpl_h853261a_901.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/flake8-7.4.1-pyhd8ed1ab_0.conda
+      - conda: https://conda.anaconda.org/conda-forge/noarch/flake8-builtins-3.1.0-pyhd8ed1ab_0.conda
+      - conda: https://conda.anaconda.org/conda-forge/noarch/flake8-comprehensions-3.17.0-pyhd8ed1ab_0.conda
+      - conda: https://conda.anaconda.org/conda-forge/noarch/flake8-import-order-0.19.2-pyhd8ed1ab_0.conda
+      - conda: https://conda.anaconda.org/conda-forge/noarch/flake8-quotes-3.4.0-pyhd8ed1ab_1.conda
       - conda: https://conda.anaconda.org/conda-forge/linux-64/flann-1.9.2-he1b7b50_6.conda
       - conda: https://conda.anaconda.org/conda-forge/linux-64/fmt-12.1.0-h76c4fd7_1.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/font-ttf-dejavu-sans-mono-2.37-hab24e00_0.tar.bz2
@@ -134,7 +142,6 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/linux-64/glslang-16.6.0-h980caa0_0.conda
       - conda: https://conda.anaconda.org/conda-forge/linux-64/gmock-1.18.0-h48ecd08_1.conda
       - conda: https://conda.anaconda.org/conda-forge/linux-64/gmp-6.3.0-hfd2156b_3.conda
-      - conda: https://conda.anaconda.org/conda-forge/linux-64/gnutls-3.8.13-h18acefa_0.conda
       - conda: https://conda.anaconda.org/conda-forge/linux-64/graphite2-1.3.15-h54a6638_1.conda
       - conda: https://conda.anaconda.org/conda-forge/linux-64/graphviz-14.1.2-h8b86629_0.conda
       - conda: https://conda.anaconda.org/conda-forge/linux-64/gst-plugins-base-1.26.11-h6d08254_0.conda
@@ -145,7 +152,12 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/linux-64/gxx-15.3.0-hc6a0c74_7.conda
       - conda: https://conda.anaconda.org/conda-forge/linux-64/gxx_impl_linux-64-15.3.0-h90d9265_7.conda
       - conda: https://conda.anaconda.org/conda-forge/linux-64/gymnasium-1.3.0-np2py314h42e2bb5_1.conda
-      - conda: https://conda.anaconda.org/conda-forge/linux-64/harfbuzz-14.6.0-ha770c72_1.conda
+      - conda: https://conda.anaconda.org/conda-forge/linux-64/gz-cmake-5.1.1-h5a30140_1.conda
+      - conda: https://conda.anaconda.org/conda-forge/linux-64/gz-math-8.4.0-h2ce44f7_0.conda
+      - conda: https://conda.anaconda.org/conda-forge/linux-64/gz-math8-8.4.0-h43fa40a_0.conda
+      - conda: https://conda.anaconda.org/conda-forge/linux-64/gz-math8-python-8.4.0-py314hf730db1_0.conda
+      - conda: https://conda.anaconda.org/conda-forge/linux-64/gz-utils-4.0.0-h24db3b5_3.conda
+      - conda: https://conda.anaconda.org/conda-forge/linux-64/harfbuzz-14.5.0-ha770c72_0.conda
       - conda: https://conda.anaconda.org/conda-forge/linux-64/hdf4-4.2.15-h2a13503_7.conda
       - conda: https://conda.anaconda.org/conda-forge/linux-64/hdf5-1.14.6-nompi_h19486de_110.conda
       - conda: https://conda.anaconda.org/conda-forge/linux-64/hicolor-icon-theme-0.17-ha770c72_3.conda
@@ -153,9 +165,7 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/linux-64/icu-78.3-py310h44b86e0_2.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/idna-3.20-pyh5ded981_0.conda
       - conda: https://conda.anaconda.org/conda-forge/linux-64/imath-3.2.2-hde8ca8f_0.conda
-      - conda: https://conda.anaconda.org/conda-forge/noarch/importlib-metadata-9.0.1-pyhcf101f3_0.conda
-      - conda: https://conda.anaconda.org/conda-forge/noarch/importlib_resources-7.1.0-pyhd8ed1ab_0.conda
-      - conda: https://conda.anaconda.org/conda-forge/noarch/iniconfig-2.3.1-pyhd8ed1ab_0.conda
+      - conda: https://conda.anaconda.org/conda-forge/noarch/iniconfig-2.3.0-pyhd8ed1ab_0.conda
       - conda: https://conda.anaconda.org/conda-forge/linux-64/intel-gmmlib-22.10.2-h7148c6a_0.conda
       - conda: https://conda.anaconda.org/conda-forge/linux-64/intel-media-driver-26.1.6-hecca717_0.conda
       - conda: https://conda.anaconda.org/conda-forge/linux-64/ipopt-3.14.19-he45328a_2.conda
@@ -173,7 +183,7 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/linux-64/lame-4.0-h770b6ad_1.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/lark-parser-0.12.0-pyhd8ed1ab_1.conda
       - conda: https://conda.anaconda.org/conda-forge/linux-64/lcms2-2.19.1-h9073bf1_3.conda
-      - conda: https://conda.anaconda.org/conda-forge/linux-64/ld_impl_linux-64-2.46.1-default_hbd61a6d_103.conda
+      - conda: https://conda.anaconda.org/conda-forge/linux-64/ld_impl_linux-64-2.46.1-default_hbd61a6d_102.conda
       - conda: https://conda.anaconda.org/conda-forge/linux-64/lerc-4.2.0-hdb68285_0.conda
       - conda: https://conda.anaconda.org/conda-forge/linux-64/level-zero-1.33.1-h7148c6a_0.conda
       - conda: https://conda.anaconda.org/conda-forge/linux-64/libabseil-20260526.0-cxx17_h0dc7533_3.conda
@@ -198,16 +208,16 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/linux-64/libcap-2.78-h084b8d7_1.conda
       - conda: https://conda.anaconda.org/conda-forge/linux-64/libcblas-3.11.0-11_h3c44731_blis.conda
       - conda: https://conda.anaconda.org/conda-forge/linux-64/libclang-cpp22.1-22.1.8-default_h0acdd01_10.conda
-      - conda: https://conda.anaconda.org/conda-forge/linux-64/libclang-cpp23.1-23.1.3-default_h0acdd01_0.conda
-      - conda: https://conda.anaconda.org/conda-forge/linux-64/libclang13-23.1.3-default_h72567ca_0.conda
-      - conda: https://conda.anaconda.org/conda-forge/linux-64/libcoal-3.0.4-hd41af16_2.conda
+      - conda: https://conda.anaconda.org/conda-forge/linux-64/libclang-cpp23.1-23.1.2-default_h0acdd01_0.conda
+      - conda: https://conda.anaconda.org/conda-forge/linux-64/libclang13-23.1.2-default_hfab3205_0.conda
+      - conda: https://conda.anaconda.org/conda-forge/linux-64/libcoal-3.0.4-hd41af16_1.conda
       - conda: https://conda.anaconda.org/conda-forge/linux-64/libcups-2.3.3-h7a8fb5f_6.conda
       - conda: https://conda.anaconda.org/conda-forge/linux-64/libcurl-8.22.0-ha042cf0_0.conda
       - conda: https://conda.anaconda.org/conda-forge/linux-64/libdav1d7-1.5.4-hebe6cf0_4.conda
       - conda: https://conda.anaconda.org/conda-forge/linux-64/libdeflate-1.25-hd45a770_1.conda
       - conda: https://conda.anaconda.org/conda-forge/linux-64/libdovi-3.4.0-h39d0f39_1.conda
       - conda: https://conda.anaconda.org/conda-forge/linux-64/libdrm-2.4.129-h7cc23a3_0.conda
-      - conda: https://conda.anaconda.org/conda-forge/linux-64/libedit-3.1.20260512-pl5321h373387f_0.conda
+      - conda: https://conda.anaconda.org/conda-forge/linux-64/libedit-3.1.20250104-pl5321h373387f_1.conda
       - conda: https://conda.anaconda.org/conda-forge/linux-64/libegl-1.7.0-ha4b6fd6_5.conda
       - conda: https://conda.anaconda.org/conda-forge/linux-64/libegl-devel-1.7.0-ha4b6fd6_5.conda
       - conda: https://conda.anaconda.org/conda-forge/linux-64/libev-4.33-h280c20c_3.conda
@@ -235,30 +245,30 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/linux-64/libglx-devel-1.7.0-ha4b6fd6_5.conda
       - conda: https://conda.anaconda.org/conda-forge/linux-64/libgomp-16.2.0-he0feb66_7.conda
       - conda: https://conda.anaconda.org/conda-forge/linux-64/libgz-cmake-5.1.1-hee9eb32_1.conda
+      - conda: https://conda.anaconda.org/conda-forge/linux-64/libgz-cmake4-4.2.0-h54a6638_1.conda
       - conda: https://conda.anaconda.org/conda-forge/linux-64/libgz-math-9.3.0-hb7873b0_2.conda
+      - conda: https://conda.anaconda.org/conda-forge/linux-64/libgz-math8-8.4.0-hee9eb32_0.conda
       - conda: https://conda.anaconda.org/conda-forge/linux-64/libgz-tools-2.0.3-h54a6638_1.conda
       - conda: https://conda.anaconda.org/conda-forge/linux-64/libgz-utils-4.0.0-h9de27cc_3.conda
-      - conda: https://conda.anaconda.org/conda-forge/linux-64/libharfbuzz-14.6.0-h23af247_1.conda
-      - conda: https://conda.anaconda.org/conda-forge/linux-64/libharfbuzz-devel-14.6.0-h23af247_1.conda
+      - conda: https://conda.anaconda.org/conda-forge/linux-64/libgz-utils3-3.1.1-h6ea797e_4.conda
+      - conda: https://conda.anaconda.org/conda-forge/linux-64/libharfbuzz-14.5.0-h23af247_0.conda
+      - conda: https://conda.anaconda.org/conda-forge/linux-64/libharfbuzz-devel-14.5.0-h23af247_0.conda
       - conda: https://conda.anaconda.org/conda-forge/linux-64/libhwloc-2.13.0-default_he001693_1000.conda
-      - conda: https://conda.anaconda.org/conda-forge/linux-64/libhwy-1.4.0-h57c4cff_2.conda
+      - conda: https://conda.anaconda.org/conda-forge/linux-64/libhwy-1.4.0-h57c4cff_1.conda
       - conda: https://conda.anaconda.org/conda-forge/linux-64/libiceoryx-binding-c-2.95.8-h1059693_5.conda
       - conda: https://conda.anaconda.org/conda-forge/linux-64/libiceoryx-hoofs-2.95.8-hfe315d3_5.conda
       - conda: https://conda.anaconda.org/conda-forge/linux-64/libiceoryx-platform-2.95.8-hf91fcae_5.conda
       - conda: https://conda.anaconda.org/conda-forge/linux-64/libiceoryx-posh-2.95.8-hb5873e6_5.conda
       - conda: https://conda.anaconda.org/conda-forge/linux-64/libiconv-1.18-h0cb94f2_3.conda
-      - conda: https://conda.anaconda.org/conda-forge/linux-64/libidn2-2.3.8-hfac485b_1.conda
-      - conda: https://conda.anaconda.org/conda-forge/linux-64/libignition-cmake2-2.19.0-hecca717_0.conda
-      - conda: https://conda.anaconda.org/conda-forge/linux-64/libignition-math6-6.16.0-py314h35b1e26_1.conda
       - conda: https://conda.anaconda.org/conda-forge/linux-64/libjpeg-turbo-3.2.0-hb03c661_1.conda
       - conda: https://conda.anaconda.org/conda-forge/linux-64/libjxl-0.12.0-heb2dce7_4.conda
       - conda: https://conda.anaconda.org/conda-forge/linux-64/liblapack-3.11.0-10_he2a6e96_netlib.conda
       - conda: https://conda.anaconda.org/conda-forge/linux-64/liblapacke-3.11.0-10_h9c7f530_netlib.conda
+      - conda: https://conda.anaconda.org/conda-forge/linux-64/libllvm21-21.1.8-h474f4eb_1.conda
       - conda: https://conda.anaconda.org/conda-forge/linux-64/libllvm22-22.1.8-h474f4eb_3.conda
-      - conda: https://conda.anaconda.org/conda-forge/linux-64/libllvm23-23.1.3-h474f4eb_0.conda
+      - conda: https://conda.anaconda.org/conda-forge/linux-64/libllvm23-23.1.2-h474f4eb_0.conda
       - conda: https://conda.anaconda.org/conda-forge/linux-64/liblzma-5.8.3-hb03c661_1.conda
       - conda: https://conda.anaconda.org/conda-forge/linux-64/liblzma-devel-5.8.3-hb03c661_1.conda
-      - conda: https://conda.anaconda.org/conda-forge/linux-64/libmicrohttpd-1.0.10-hc2fc477_0.conda
       - conda: https://conda.anaconda.org/conda-forge/linux-64/libmpdec-4.0.0-hb03c661_2.conda
       - conda: https://conda.anaconda.org/conda-forge/linux-64/libnetcdf-4.10.1-nompi_h3fa17b5_201.conda
       - conda: https://conda.anaconda.org/conda-forge/linux-64/libnghttp2-1.68.1-h74cf4be_1.conda
@@ -285,12 +295,12 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/linux-64/libosqp-1.0.0-np2py312h1a77e3e_2.conda
       - conda: https://conda.anaconda.org/conda-forge/linux-64/libpciaccess-0.19-hb03c661_1.conda
       - conda: https://conda.anaconda.org/conda-forge/linux-64/libpinocchio-4.1.0-h4bcdf98_1.conda
-      - conda: https://conda.anaconda.org/conda-forge/linux-64/libplacebo-7.360.1-hc50b9dd_1.conda
-      - conda: https://conda.anaconda.org/conda-forge/linux-64/libpng-1.6.59-h922cc85_0.conda
-      - conda: https://conda.anaconda.org/conda-forge/linux-64/libpq-18.6-h3883810_3.conda
+      - conda: https://conda.anaconda.org/conda-forge/linux-64/libplacebo-7.360.1-h9eeb4b2_0.conda
+      - conda: https://conda.anaconda.org/conda-forge/linux-64/libpng-1.6.58-h922cc85_1.conda
+      - conda: https://conda.anaconda.org/conda-forge/linux-64/libpq-18.6-h3883810_2.conda
       - conda: https://conda.anaconda.org/conda-forge/linux-64/libprotobuf-7.35.1-h622638d_3.conda
       - conda: https://conda.anaconda.org/conda-forge/linux-64/libpsl-0.23.1-hd9e3e90_1.conda
-      - conda: https://conda.anaconda.org/conda-forge/linux-64/libpython-3.14.8-hdc7f604_101_cp314.conda
+      - conda: https://conda.anaconda.org/conda-forge/linux-64/libpython-3.14.7-hdc7f604_106_cp314.conda
       - conda: https://conda.anaconda.org/conda-forge/linux-64/libqdldl-0.1.8-h3f2d84a_1.conda
       - conda: https://conda.anaconda.org/conda-forge/linux-64/libraqm-0.11.0-h6406941_0.conda
       - conda: https://conda.anaconda.org/conda-forge/linux-64/libraw-0.22.2-h074291d_0.conda
@@ -301,18 +311,17 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/linux-64/libsndfile-1.2.2-hbc6d301_3.conda
       - conda: https://conda.anaconda.org/conda-forge/linux-64/libsodium-1.0.22-hebe6cf0_3.conda
       - conda: https://conda.anaconda.org/conda-forge/linux-64/libspral-2025.09.18-h74cae3c_2.conda
-      - conda: https://conda.anaconda.org/conda-forge/linux-64/libsqlite-3.54.0-h13e7031_1.conda
+      - conda: https://conda.anaconda.org/conda-forge/linux-64/libsqlite-3.53.4-h13e7031_1.conda
       - conda: https://conda.anaconda.org/conda-forge/linux-64/libssh2-1.11.1-h6154650_1.conda
       - conda: https://conda.anaconda.org/conda-forge/linux-64/libstdcxx-16.2.0-h934c35e_7.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/libstdcxx-devel_linux-64-15.3.0-hb2c5482_107.conda
       - conda: https://conda.anaconda.org/conda-forge/linux-64/libstdcxx-ng-16.2.0-hdf11a46_7.conda
-      - conda: https://conda.anaconda.org/conda-forge/linux-64/libsystemd0-262-h26e0ef7_2.conda
-      - conda: https://conda.anaconda.org/conda-forge/linux-64/libtasn1-4.21.0-hb03c661_1.conda
+      - conda: https://conda.anaconda.org/conda-forge/linux-64/libsystemd0-262-h26e0ef7_1.conda
       - conda: https://conda.anaconda.org/conda-forge/linux-64/libtheora-1.2.0-h85c0a6d_0.conda
       - conda: https://conda.anaconda.org/conda-forge/linux-64/libtiff-4.7.2-hcc2c06a_1.conda
-      - conda: https://conda.anaconda.org/conda-forge/linux-64/libudev1-262-h26e0ef7_2.conda
-      - conda: https://conda.anaconda.org/conda-forge/linux-64/libunistring-0.9.10-h7f98852_0.tar.bz2
+      - conda: https://conda.anaconda.org/conda-forge/linux-64/libudev1-262-h26e0ef7_1.conda
       - conda: https://conda.anaconda.org/conda-forge/linux-64/libunwind-1.8.3-h65a8314_0.conda
+      - conda: https://conda.anaconda.org/conda-forge/linux-64/liburcu-0.14.0-hac33072_0.conda
       - conda: https://conda.anaconda.org/conda-forge/linux-64/liburing-2.14-hb700be7_0.conda
       - conda: https://conda.anaconda.org/conda-forge/linux-64/libusb-1.0.30-h0d1bbbc_0.conda
       - conda: https://conda.anaconda.org/conda-forge/linux-64/libuuid-2.42.4-hcfc3c73_0.conda
@@ -327,11 +336,13 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/linux-64/libxcrypt-4.4.38-h280c20c_0.conda
       - conda: https://conda.anaconda.org/conda-forge/linux-64/libxkbcommon-1.13.2-h51789e4_1.conda
       - conda: https://conda.anaconda.org/conda-forge/linux-64/libxkbfile-1.2.0-hb03c661_0.conda
-      - conda: https://conda.anaconda.org/conda-forge/linux-64/libxml2-16-2.15.4-hf3af7cc_1.conda
-      - conda: https://conda.anaconda.org/conda-forge/linux-64/libxml2-2.15.4-h7df9aa5_1.conda
+      - conda: https://conda.anaconda.org/conda-forge/linux-64/libxml2-16-2.15.4-hf3af7cc_0.conda
+      - conda: https://conda.anaconda.org/conda-forge/linux-64/libxml2-2.15.4-h7df9aa5_0.conda
       - conda: https://conda.anaconda.org/conda-forge/linux-64/libxslt-1.1.45-h8e12856_1.conda
+      - conda: https://conda.anaconda.org/conda-forge/linux-64/libzenohc-1.10.1-h7ca0754_0.conda
       - conda: https://conda.anaconda.org/conda-forge/linux-64/libzip-1.11.4-h6008cf6_0.conda
       - conda: https://conda.anaconda.org/conda-forge/linux-64/libzlib-1.3.2-h25fd6f3_3.conda
+      - conda: https://conda.anaconda.org/conda-forge/linux-64/lttng-ust-2.13.9-hf5eda4c_0.conda
       - conda: https://conda.anaconda.org/conda-forge/linux-64/lxml-6.1.3-py314h52646a4_0.conda
       - conda: https://conda.anaconda.org/conda-forge/linux-64/lz4-4.4.5-py314ha0fddcf_2.conda
       - conda: https://conda.anaconda.org/conda-forge/linux-64/lz4-c-1.10.0-hee9eb32_2.conda
@@ -349,15 +360,15 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/linux-64/mumps-include-5.8.2-h5a610fb_3.conda
       - conda: https://conda.anaconda.org/conda-forge/linux-64/mumps-seq-5.8.2-gfortran_hfb83c00_3.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/munkres-1.1.4-pyhd8ed1ab_1.conda
+      - conda: https://conda.anaconda.org/conda-forge/linux-64/mypy-2.3.1-py314hfe1a184_2.conda
+      - conda: https://conda.anaconda.org/conda-forge/noarch/mypy_extensions-1.1.0-pyha770c72_0.conda
       - conda: https://conda.anaconda.org/conda-forge/linux-64/nanoflann-1.6.1-hff21bea_0.conda
       - conda: https://conda.anaconda.org/conda-forge/linux-64/ncurses-6.6-hdb14827_1.conda
-      - conda: https://conda.anaconda.org/conda-forge/linux-64/netifaces-0.11.0-py314h5bd0f2a_4.conda
-      - conda: https://conda.anaconda.org/conda-forge/linux-64/nettle-3.10.1-h5ef0d04_1.conda
       - conda: https://conda.anaconda.org/conda-forge/linux-64/ninja-1.13.2-h171cf75_1.conda
       - conda: https://conda.anaconda.org/conda-forge/linux-64/nlohmann_json-3.12.0-h54a6638_2.conda
       - conda: https://conda.anaconda.org/conda-forge/linux-64/nspr-4.40-h29cc59b_0.conda
       - conda: https://conda.anaconda.org/conda-forge/linux-64/nss-3.118-h445c969_0.conda
-      - conda: https://conda.anaconda.org/conda-forge/linux-64/numpy-2.5.4-py314hd3a7d6b_0.conda
+      - conda: https://conda.anaconda.org/conda-forge/linux-64/numpy-2.5.3-py314hd3a7d6b_0.conda
       - conda: https://conda.anaconda.org/conda-forge/linux-64/ocl-icd-2.3.4-hb03c661_1.conda
       - conda: https://conda.anaconda.org/conda-forge/linux-64/octomap-1.10.1-h4dbf13b_1.conda
       - conda: https://conda.anaconda.org/conda-forge/linux-64/opencl-headers-2025.06.13-hecca717_0.conda
@@ -366,16 +377,16 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/linux-64/openjpeg-2.5.4-heb1ab33_2.conda
       - conda: https://conda.anaconda.org/conda-forge/linux-64/openjph-0.31.0-h8d634f6_0.conda
       - conda: https://conda.anaconda.org/conda-forge/linux-64/openldap-2.6.13-hbde042b_0.conda
-      - conda: https://conda.anaconda.org/conda-forge/linux-64/openssl-3.6.5-h781a0a9_0.conda
+      - conda: https://conda.anaconda.org/conda-forge/linux-64/openssl-3.6.4-h781a0a9_0.conda
       - conda: https://conda.anaconda.org/conda-forge/linux-64/orocos-kdl-1.5.4-h761dd02_0.conda
-      - conda: https://conda.anaconda.org/conda-forge/linux-64/p11-kit-0.26.5-h8d769aa_2.conda
+      - conda: https://conda.anaconda.org/conda-forge/noarch/osrf_pycommon-0.2.1-pyhd8ed1ab_0.tar.bz2
       - conda: https://conda.anaconda.org/conda-forge/noarch/packaging-26.3-pyhc364b38_0.conda
       - conda: https://conda.anaconda.org/conda-forge/linux-64/pango-1.58.2-h7bb47b9_1.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/parso-0.8.7-pyhcf101f3_0.conda
+      - conda: https://conda.anaconda.org/conda-forge/noarch/pathspec-1.1.1-pyhd8ed1ab_0.conda
       - conda: https://conda.anaconda.org/conda-forge/linux-64/pcl-1.15.1-hc424fa7_15.conda
       - conda: https://conda.anaconda.org/conda-forge/linux-64/pcre-8.45-h9c3ff4c_0.tar.bz2
       - conda: https://conda.anaconda.org/conda-forge/linux-64/pcre2-10.47-h8b3dc9c_1.conda
-      - conda: https://conda.anaconda.org/conda-forge/noarch/pep517-0.13.0-pyhd8ed1ab_0.tar.bz2
       - conda: https://conda.anaconda.org/conda-forge/noarch/pexpect-4.9.0-pyhd8ed1ab_1.conda
       - conda: https://conda.anaconda.org/conda-forge/linux-64/pillow-12.3.0-py314h50bfbbb_4.conda
       - conda: https://conda.anaconda.org/conda-forge/linux-64/pinocchio-4.1.0-py314h4fcf905_1.conda
@@ -387,40 +398,43 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/noarch/ply-3.11-pyhd8ed1ab_3.conda
       - conda: https://conda.anaconda.org/conda-forge/linux-64/proj-9.9.0-h3767062_0.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/prompt-toolkit-3.0.53-pyha770c72_0.conda
-      - conda: https://conda.anaconda.org/conda-forge/linux-64/propcache-0.5.4-py314hd42368d_0.conda
+      - conda: https://conda.anaconda.org/conda-forge/noarch/propcache-0.5.2-pyh7db6752_0.conda
       - conda: https://conda.anaconda.org/conda-forge/linux-64/protobuf-7.35.1-py314h0469dc4_3.conda
       - conda: https://conda.anaconda.org/conda-forge/linux-64/psutil-7.2.2-py314hfe1a184_3.conda
       - conda: https://conda.anaconda.org/conda-forge/linux-64/pthread-stubs-0.4-h7cc23a3_1004.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/ptyprocess-0.7.0-pyhd8ed1ab_1.conda
       - conda: https://conda.anaconda.org/conda-forge/linux-64/pugixml-1.15-h3f63f65_0.conda
-      - conda: https://conda.anaconda.org/conda-forge/linux-64/pulseaudio-client-17.0-hb10c1b2_4.conda
+      - conda: https://conda.anaconda.org/conda-forge/linux-64/pulseaudio-client-17.0-h9a6aba3_3.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/pure_eval-0.2.4-pyhd8ed1ab_0.conda
       - conda: https://conda.anaconda.org/conda-forge/linux-64/py-opencv-5.0.0-qt6_h06c354c_607.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/pybind11-3.0.4-pyh293190f_0.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/pybind11-abi-11-hc364b38_1.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/pybind11-global-3.0.4-pyh648e204_0.conda
       - conda: https://conda.anaconda.org/conda-forge/linux-64/pybullet-3.25-py314h61d0147_5.conda
-      - conda: https://conda.anaconda.org/conda-forge/linux-64/pycairo-1.29.2-py314hb1bbd57_0.conda
+      - conda: https://conda.anaconda.org/conda-forge/linux-64/pycairo-1.29.1-py314hb1bbd57_2.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/pycodestyle-2.15.0-pyh5ded981_0.conda
-      - conda: https://conda.anaconda.org/conda-forge/noarch/pycparser-3.11-pyh5ded981_0.conda
+      - conda: https://conda.anaconda.org/conda-forge/noarch/pycparser-3.0-pyhcf101f3_0.conda
+      - conda: https://conda.anaconda.org/conda-forge/noarch/pydantic-2.13.5-pyhcf101f3_0.conda
+      - conda: https://conda.anaconda.org/conda-forge/linux-64/pydantic-core-2.46.5-py314h7e8cd81_2.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/pydocstyle-6.3.0-pyhd8ed1ab_1.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/pydot-4.0.1-pyhcf101f3_2.conda
-      - conda: https://conda.anaconda.org/conda-forge/noarch/pyflakes-4.0.3-pyhd8ed1ab_0.conda
+      - conda: https://conda.anaconda.org/conda-forge/noarch/pyflakes-4.0.0-pyhd8ed1ab_0.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/pygments-2.21.0-pyhcf101f3_0.conda
+      - conda: https://conda.anaconda.org/conda-forge/linux-64/pygraphviz-2.0.2-py314h232d59a_0.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/pyngrok-8.1.2-pyhd8ed1ab_0.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/pyparsing-3.3.3-pyh5ded981_0.conda
-      - conda: https://conda.anaconda.org/conda-forge/noarch/pyqt-builder-1.20.0-pyhd8ed1ab_0.conda
-      - conda: https://conda.anaconda.org/conda-forge/linux-64/pyqt6-6.11.0-py314h0534870_5.conda
-      - conda: https://conda.anaconda.org/conda-forge/linux-64/pyqt6-sip-13.13.0-py314hc75f4c6_5.conda
+      - conda: https://conda.anaconda.org/conda-forge/noarch/pyqt-builder-1.18.2-pyhd8ed1ab_1.conda
+      - conda: https://conda.anaconda.org/conda-forge/linux-64/pyqt6-6.11.0-py314ha160325_1.conda
+      - conda: https://conda.anaconda.org/conda-forge/linux-64/pyqt6-sip-13.10.0-py314ha160325_1.conda
       - conda: https://conda.anaconda.org/conda-forge/linux-64/pyside6-6.11.2-py314h574d94f_1.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/pytest-9.1.1-pyhc364b38_2.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/pytest-cov-7.1.0-pyhcf101f3_0.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/pytest-repeat-0.9.4-pyhd8ed1ab_0.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/pytest-rerunfailures-16.6.1-pyhd8ed1ab_0.conda
-      - conda: https://conda.anaconda.org/conda-forge/linux-64/python-3.14.8-hcd007b5_101_cp314.conda
-      - conda: https://conda.anaconda.org/conda-forge/noarch/python-abi3-3.14-hab9af60_3.conda
+      - conda: https://conda.anaconda.org/conda-forge/linux-64/python-3.14.7-hcd007b5_106_cp314.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/python-dateutil-2.9.0.post0-pyhe01879c_2.conda
-      - conda: https://conda.anaconda.org/conda-forge/noarch/python-gil-3.14.8-h4df99d1_101.conda
+      - conda: https://conda.anaconda.org/conda-forge/noarch/python-gil-3.14.7-h4df99d1_106.conda
+      - conda: https://conda.anaconda.org/conda-forge/linux-64/python-librt-0.16.0-py314hfe1a184_0.conda
       - conda: https://conda.anaconda.org/conda-forge/linux-64/python-orocos-kdl-1.5.4-py314hc75f4c6_0.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/python_abi-3.14-9_cp314.conda
       - conda: https://conda.anaconda.org/conda-forge/linux-64/pyyaml-6.0.3-py314h67df5f8_1.conda
@@ -429,344 +443,354 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/linux-64/qhull-static-2020.2-h434a139_5.conda
       - conda: https://conda.anaconda.org/conda-forge/linux-64/qt-main-5.15.15-h0c412b5_8.conda
       - conda: https://conda.anaconda.org/conda-forge/linux-64/qt6-main-6.11.2-pl5321h9df5c37_0.conda
-      - conda: https://conda.anaconda.org/conda-forge/linux-64/qt6-multimedia-6.11.2-pl5321hff42307_0.conda
-      - conda: https://conda.anaconda.org/conda-forge/linux-64/qt6-positioning-6.11.2-h4c98fd0_0.conda
-      - conda: https://conda.anaconda.org/conda-forge/linux-64/qt6-serialport-6.11.2-h5a06e86_0.conda
       - conda: https://conda.anaconda.org/conda-forge/linux-64/rav1e-0.8.1-h1fbca29_0.conda
       - conda: https://conda.anaconda.org/conda-forge/linux-64/readline-8.3-hd6e31c0_1.conda
       - conda: https://conda.anaconda.org/conda-forge/linux-64/rhash-1.4.6-hb03c661_2.conda
-      - conda: https://prefix.dev/robostack-humble/linux-64/ros-humble-desktop-0.10.0-hb0f4dca_20.conda
-      - conda: https://prefix.dev/robostack-humble/linux-64/ros-humble-plotjuggler-ros-2.3.1-hb0f4dca_20.conda
-      - conda: https://prefix.dev/robostack-humble/linux-64/ros-humble-rmw-cyclonedds-cpp-1.3.4-hb0f4dca_20.conda
-      - conda: https://prefix.dev/robostack-humble/linux-64/ros-humble-rosidl-generator-dds-idl-0.8.1-hb0f4dca_20.conda
-      - conda: https://prefix.dev/robostack-humble/linux-64/ros2-action-msgs-1.2.2-np2py314h53a0733_20.conda
-      - conda: https://prefix.dev/robostack-humble/linux-64/ros2-action-tutorials-cpp-0.20.9-np2py314h53a0733_20.conda
-      - conda: https://prefix.dev/robostack-humble/linux-64/ros2-action-tutorials-interfaces-0.20.9-np2py314h53a0733_20.conda
-      - conda: https://prefix.dev/robostack-humble/linux-64/ros2-action-tutorials-py-0.20.9-np2py314h53a0733_20.conda
-      - conda: https://prefix.dev/robostack-humble/linux-64/ros2-actionlib-msgs-4.9.1-np2py314h53a0733_20.conda
-      - conda: https://prefix.dev/robostack-humble/linux-64/ros2-ament-cmake-1.3.14-np2py314h53a0733_20.conda
-      - conda: https://prefix.dev/robostack-humble/linux-64/ros2-ament-cmake-auto-1.3.14-np2py314h53a0733_20.conda
-      - conda: https://prefix.dev/robostack-humble/linux-64/ros2-ament-cmake-copyright-0.12.15-np2py314h53a0733_20.conda
-      - conda: https://prefix.dev/robostack-humble/linux-64/ros2-ament-cmake-core-1.3.14-np2py314h53a0733_20.conda
-      - conda: https://prefix.dev/robostack-humble/linux-64/ros2-ament-cmake-cppcheck-0.12.15-np2py314h53a0733_20.conda
-      - conda: https://prefix.dev/robostack-humble/linux-64/ros2-ament-cmake-cpplint-0.12.15-np2py314h53a0733_20.conda
-      - conda: https://prefix.dev/robostack-humble/linux-64/ros2-ament-cmake-export-definitions-1.3.14-np2py314h53a0733_20.conda
-      - conda: https://prefix.dev/robostack-humble/linux-64/ros2-ament-cmake-export-dependencies-1.3.14-np2py314h53a0733_20.conda
-      - conda: https://prefix.dev/robostack-humble/linux-64/ros2-ament-cmake-export-include-directories-1.3.14-np2py314h53a0733_20.conda
-      - conda: https://prefix.dev/robostack-humble/linux-64/ros2-ament-cmake-export-interfaces-1.3.14-np2py314h53a0733_20.conda
-      - conda: https://prefix.dev/robostack-humble/linux-64/ros2-ament-cmake-export-libraries-1.3.14-np2py314h53a0733_20.conda
-      - conda: https://prefix.dev/robostack-humble/linux-64/ros2-ament-cmake-export-link-flags-1.3.14-np2py314h53a0733_20.conda
-      - conda: https://prefix.dev/robostack-humble/linux-64/ros2-ament-cmake-export-targets-1.3.14-np2py314h53a0733_20.conda
-      - conda: https://prefix.dev/robostack-humble/linux-64/ros2-ament-cmake-flake8-0.12.15-np2py314h53a0733_20.conda
-      - conda: https://prefix.dev/robostack-humble/linux-64/ros2-ament-cmake-gen-version-h-1.3.14-np2py314h53a0733_20.conda
-      - conda: https://prefix.dev/robostack-humble/linux-64/ros2-ament-cmake-gmock-1.3.14-np2py314h53a0733_20.conda
-      - conda: https://prefix.dev/robostack-humble/linux-64/ros2-ament-cmake-gtest-1.3.14-np2py314h53a0733_20.conda
-      - conda: https://prefix.dev/robostack-humble/linux-64/ros2-ament-cmake-include-directories-1.3.14-np2py314h53a0733_20.conda
-      - conda: https://prefix.dev/robostack-humble/linux-64/ros2-ament-cmake-libraries-1.3.14-np2py314h53a0733_20.conda
-      - conda: https://prefix.dev/robostack-humble/linux-64/ros2-ament-cmake-lint-cmake-0.12.15-np2py314h53a0733_20.conda
-      - conda: https://prefix.dev/robostack-humble/linux-64/ros2-ament-cmake-pep257-0.12.15-np2py314h53a0733_20.conda
-      - conda: https://prefix.dev/robostack-humble/linux-64/ros2-ament-cmake-pytest-1.3.14-np2py314h53a0733_20.conda
-      - conda: https://prefix.dev/robostack-humble/linux-64/ros2-ament-cmake-python-1.3.14-np2py314h53a0733_20.conda
-      - conda: https://prefix.dev/robostack-humble/linux-64/ros2-ament-cmake-ros-0.10.0-np2py314h53a0733_20.conda
-      - conda: https://prefix.dev/robostack-humble/linux-64/ros2-ament-cmake-target-dependencies-1.3.14-np2py314h53a0733_20.conda
-      - conda: https://prefix.dev/robostack-humble/linux-64/ros2-ament-cmake-test-1.3.14-np2py314h53a0733_20.conda
-      - conda: https://prefix.dev/robostack-humble/linux-64/ros2-ament-cmake-uncrustify-0.12.15-np2py314h53a0733_20.conda
-      - conda: https://prefix.dev/robostack-humble/linux-64/ros2-ament-cmake-version-1.3.14-np2py314h53a0733_20.conda
-      - conda: https://prefix.dev/robostack-humble/linux-64/ros2-ament-cmake-xmllint-0.12.15-np2py314h53a0733_20.conda
-      - conda: https://prefix.dev/robostack-humble/linux-64/ros2-ament-copyright-0.12.15-np2py314h53a0733_20.conda
-      - conda: https://prefix.dev/robostack-humble/linux-64/ros2-ament-cppcheck-0.12.15-np2py314h53a0733_20.conda
-      - conda: https://prefix.dev/robostack-humble/linux-64/ros2-ament-cpplint-0.12.15-np2py314h53a0733_20.conda
-      - conda: https://prefix.dev/robostack-humble/linux-64/ros2-ament-flake8-0.12.15-np2py314h53a0733_20.conda
-      - conda: https://prefix.dev/robostack-humble/linux-64/ros2-ament-index-cpp-1.4.1-np2py314h53a0733_20.conda
-      - conda: https://prefix.dev/robostack-humble/linux-64/ros2-ament-index-python-1.4.1-np2py314h53a0733_20.conda
-      - conda: https://prefix.dev/robostack-humble/linux-64/ros2-ament-lint-0.12.15-np2py314h53a0733_20.conda
-      - conda: https://prefix.dev/robostack-humble/linux-64/ros2-ament-lint-auto-0.12.15-np2py314h53a0733_20.conda
-      - conda: https://prefix.dev/robostack-humble/linux-64/ros2-ament-lint-cmake-0.12.15-np2py314h53a0733_20.conda
-      - conda: https://prefix.dev/robostack-humble/linux-64/ros2-ament-lint-common-0.12.15-np2py314h53a0733_20.conda
-      - conda: https://prefix.dev/robostack-humble/linux-64/ros2-ament-package-0.14.2-np2py314h53a0733_20.conda
-      - conda: https://prefix.dev/robostack-humble/linux-64/ros2-ament-pep257-0.12.15-np2py314h53a0733_20.conda
-      - conda: https://prefix.dev/robostack-humble/linux-64/ros2-ament-uncrustify-0.12.15-np2py314h53a0733_20.conda
-      - conda: https://prefix.dev/robostack-humble/linux-64/ros2-ament-xmllint-0.12.15-np2py314h53a0733_20.conda
-      - conda: https://prefix.dev/robostack-humble/linux-64/ros2-angles-1.15.0-np2py314h53a0733_20.conda
-      - conda: https://prefix.dev/robostack-humble/linux-64/ros2-builtin-interfaces-1.2.2-np2py314h53a0733_20.conda
-      - conda: https://prefix.dev/robostack-humble/linux-64/ros2-class-loader-2.2.0-np2py314hac0c0d2_20.conda
-      - conda: https://prefix.dev/robostack-humble/linux-64/ros2-common-interfaces-4.9.1-np2py314h53a0733_20.conda
-      - conda: https://prefix.dev/robostack-humble/linux-64/ros2-composition-0.20.9-np2py314h53a0733_20.conda
-      - conda: https://prefix.dev/robostack-humble/linux-64/ros2-composition-interfaces-1.2.2-np2py314h53a0733_20.conda
-      - conda: https://prefix.dev/robostack-humble/linux-64/ros2-console-bridge-vendor-1.4.1-np2py314hac0c0d2_20.conda
-      - conda: https://prefix.dev/robostack-humble/linux-64/ros2-cv-bridge-3.2.1-np2py314hcb5d97e_20.conda
-      - conda: https://prefix.dev/robostack-humble/linux-64/ros2-cyclonedds-0.10.5-py314hd7f02ef_20.conda
-      - conda: https://prefix.dev/robostack-humble/linux-64/ros2-data-tamer-cpp-0.9.3-np2py314h53a0733_20.conda
-      - conda: https://prefix.dev/robostack-humble/linux-64/ros2-data-tamer-msgs-0.9.3-np2py314h53a0733_20.conda
-      - conda: https://prefix.dev/robostack-humble/linux-64/ros2-demo-nodes-cpp-0.20.9-np2py314h53a0733_20.conda
-      - conda: https://prefix.dev/robostack-humble/linux-64/ros2-demo-nodes-cpp-native-0.20.9-np2py314h53a0733_20.conda
-      - conda: https://prefix.dev/robostack-humble/linux-64/ros2-demo-nodes-py-0.20.9-np2py314h53a0733_20.conda
-      - conda: https://prefix.dev/robostack-humble/linux-64/ros2-depthimage-to-laserscan-2.5.1-np2py314hb935b5b_20.conda
-      - conda: https://prefix.dev/robostack-humble/linux-64/ros2-desktop-0.10.0-np2py314h53a0733_20.conda
-      - conda: https://prefix.dev/robostack-humble/linux-64/ros2-diagnostic-msgs-4.9.1-np2py314h53a0733_20.conda
-      - conda: https://prefix.dev/robostack-humble/linux-64/ros2-distro-mutex-0.10.0-humble_20.conda
-      - conda: https://prefix.dev/robostack-humble/linux-64/ros2-domain-coordinator-0.10.0-np2py314h53a0733_20.conda
-      - conda: https://prefix.dev/robostack-humble/linux-64/ros2-dummy-map-server-0.20.9-np2py314h53a0733_20.conda
-      - conda: https://prefix.dev/robostack-humble/linux-64/ros2-dummy-robot-bringup-0.20.9-np2py314h53a0733_20.conda
-      - conda: https://prefix.dev/robostack-humble/linux-64/ros2-dummy-sensors-0.20.9-np2py314h53a0733_20.conda
-      - conda: https://prefix.dev/robostack-humble/linux-64/ros2-eigen3-cmake-module-0.1.1-np2py314h53a0733_20.conda
-      - conda: https://prefix.dev/robostack-humble/linux-64/ros2-example-interfaces-0.9.3-np2py314h53a0733_20.conda
-      - conda: https://prefix.dev/robostack-humble/linux-64/ros2-examples-rclcpp-minimal-action-client-0.15.5-np2py314h53a0733_20.conda
-      - conda: https://prefix.dev/robostack-humble/linux-64/ros2-examples-rclcpp-minimal-action-server-0.15.5-np2py314h53a0733_20.conda
-      - conda: https://prefix.dev/robostack-humble/linux-64/ros2-examples-rclcpp-minimal-client-0.15.5-np2py314h53a0733_20.conda
-      - conda: https://prefix.dev/robostack-humble/linux-64/ros2-examples-rclcpp-minimal-composition-0.15.5-np2py314h53a0733_20.conda
-      - conda: https://prefix.dev/robostack-humble/linux-64/ros2-examples-rclcpp-minimal-publisher-0.15.5-np2py314h53a0733_20.conda
-      - conda: https://prefix.dev/robostack-humble/linux-64/ros2-examples-rclcpp-minimal-service-0.15.5-np2py314h53a0733_20.conda
-      - conda: https://prefix.dev/robostack-humble/linux-64/ros2-examples-rclcpp-minimal-subscriber-0.15.5-np2py314h53a0733_20.conda
-      - conda: https://prefix.dev/robostack-humble/linux-64/ros2-examples-rclcpp-minimal-timer-0.15.5-np2py314h53a0733_20.conda
-      - conda: https://prefix.dev/robostack-humble/linux-64/ros2-examples-rclcpp-multithreaded-executor-0.15.5-np2py314h53a0733_20.conda
-      - conda: https://prefix.dev/robostack-humble/linux-64/ros2-examples-rclpy-executors-0.15.5-np2py314h53a0733_20.conda
-      - conda: https://prefix.dev/robostack-humble/linux-64/ros2-examples-rclpy-minimal-action-client-0.15.5-np2py314h53a0733_20.conda
-      - conda: https://prefix.dev/robostack-humble/linux-64/ros2-examples-rclpy-minimal-action-server-0.15.5-np2py314h53a0733_20.conda
-      - conda: https://prefix.dev/robostack-humble/linux-64/ros2-examples-rclpy-minimal-client-0.15.5-np2py314h53a0733_20.conda
-      - conda: https://prefix.dev/robostack-humble/linux-64/ros2-examples-rclpy-minimal-publisher-0.15.5-np2py314h53a0733_20.conda
-      - conda: https://prefix.dev/robostack-humble/linux-64/ros2-examples-rclpy-minimal-service-0.15.5-np2py314h53a0733_20.conda
-      - conda: https://prefix.dev/robostack-humble/linux-64/ros2-examples-rclpy-minimal-subscriber-0.15.5-np2py314h53a0733_20.conda
-      - conda: https://prefix.dev/robostack-humble/linux-64/ros2-fastcdr-1.0.29-np2py314h53a0733_20.conda
-      - conda: https://prefix.dev/robostack-humble/linux-64/ros2-fastrtps-2.6.11-np2py314h0ed7e73_20.conda
-      - conda: https://prefix.dev/robostack-humble/linux-64/ros2-fastrtps-cmake-module-2.2.4-np2py314h53a0733_20.conda
-      - conda: https://prefix.dev/robostack-humble/linux-64/ros2-foonathan-memory-vendor-1.2.0-np2py314h53a0733_20.conda
-      - conda: https://prefix.dev/robostack-humble/linux-64/ros2-geometry-msgs-4.9.1-np2py314h53a0733_20.conda
-      - conda: https://prefix.dev/robostack-humble/linux-64/ros2-geometry2-0.25.20-np2py314h53a0733_20.conda
-      - conda: https://prefix.dev/robostack-humble/linux-64/ros2-gmock-vendor-1.10.9006-np2py314h53a0733_20.conda
-      - conda: https://prefix.dev/robostack-humble/linux-64/ros2-gtest-vendor-1.10.9006-np2py314h53a0733_20.conda
-      - conda: https://prefix.dev/robostack-humble/linux-64/ros2-iceoryx-binding-c-2.95.8-py314h02e3bbf_20.conda
-      - conda: https://prefix.dev/robostack-humble/linux-64/ros2-iceoryx-hoofs-2.95.8-py314h02e3bbf_20.conda
-      - conda: https://prefix.dev/robostack-humble/linux-64/ros2-iceoryx-posh-2.95.8-py314h02e3bbf_20.conda
-      - conda: https://prefix.dev/robostack-humble/linux-64/ros2-ignition-cmake2-vendor-0.0.2-np2py314h1fa3bc9_20.conda
-      - conda: https://prefix.dev/robostack-humble/linux-64/ros2-ignition-math6-vendor-0.0.2-np2py314habcfd04_20.conda
-      - conda: https://prefix.dev/robostack-humble/linux-64/ros2-image-geometry-3.2.1-np2py314hb935b5b_20.conda
-      - conda: https://prefix.dev/robostack-humble/linux-64/ros2-image-tools-0.20.9-np2py314hb935b5b_20.conda
-      - conda: https://prefix.dev/robostack-humble/linux-64/ros2-image-transport-3.1.12-np2py314h53a0733_20.conda
-      - conda: https://prefix.dev/robostack-humble/linux-64/ros2-interactive-markers-2.3.2-np2py314h53a0733_20.conda
-      - conda: https://prefix.dev/robostack-humble/linux-64/ros2-intra-process-demo-0.20.9-np2py314hb935b5b_20.conda
-      - conda: https://prefix.dev/robostack-humble/linux-64/ros2-joy-3.3.0-np2py314h53a0733_20.conda
-      - conda: https://prefix.dev/robostack-humble/linux-64/ros2-kdl-parser-2.6.4-np2py314h53a0733_20.conda
-      - conda: https://prefix.dev/robostack-humble/linux-64/ros2-keyboard-handler-0.0.5-np2py314h53a0733_20.conda
-      - conda: https://prefix.dev/robostack-humble/linux-64/ros2-laser-geometry-2.4.1-np2py314habcfd04_20.conda
-      - conda: https://prefix.dev/robostack-humble/linux-64/ros2-launch-1.0.14-np2py314h53a0733_20.conda
-      - conda: https://prefix.dev/robostack-humble/linux-64/ros2-launch-ros-0.19.13-np2py314h53a0733_20.conda
-      - conda: https://prefix.dev/robostack-humble/linux-64/ros2-launch-testing-1.0.14-np2py314h53a0733_20.conda
-      - conda: https://prefix.dev/robostack-humble/linux-64/ros2-launch-testing-ament-cmake-1.0.14-np2py314h53a0733_20.conda
-      - conda: https://prefix.dev/robostack-humble/linux-64/ros2-launch-testing-ros-0.19.13-np2py314h53a0733_20.conda
-      - conda: https://prefix.dev/robostack-humble/linux-64/ros2-launch-xml-1.0.14-np2py314h53a0733_20.conda
-      - conda: https://prefix.dev/robostack-humble/linux-64/ros2-launch-yaml-1.0.14-np2py314h53a0733_20.conda
-      - conda: https://prefix.dev/robostack-humble/linux-64/ros2-libcurl-vendor-3.1.3-np2py314h3ce6a4a_20.conda
-      - conda: https://prefix.dev/robostack-humble/linux-64/ros2-libstatistics-collector-1.3.4-np2py314h53a0733_20.conda
-      - conda: https://prefix.dev/robostack-humble/linux-64/ros2-libyaml-vendor-1.2.2-np2py314h53a0733_20.conda
-      - conda: https://prefix.dev/robostack-humble/linux-64/ros2-lifecycle-0.20.9-np2py314h53a0733_20.conda
-      - conda: https://prefix.dev/robostack-humble/linux-64/ros2-lifecycle-msgs-1.2.2-np2py314h53a0733_20.conda
-      - conda: https://prefix.dev/robostack-humble/linux-64/ros2-logging-demo-0.20.9-np2py314h53a0733_20.conda
-      - conda: https://prefix.dev/robostack-humble/linux-64/ros2-map-msgs-2.1.0-np2py314h53a0733_20.conda
-      - conda: https://prefix.dev/robostack-humble/linux-64/ros2-mcap-vendor-0.15.16-np2py314h53a0733_20.conda
-      - conda: https://prefix.dev/robostack-humble/linux-64/ros2-message-filters-4.3.16-np2py314h53a0733_20.conda
-      - conda: https://prefix.dev/robostack-humble/linux-64/ros2-nav-msgs-4.9.1-np2py314h53a0733_20.conda
-      - conda: https://prefix.dev/robostack-humble/linux-64/ros2-orocos-kdl-vendor-0.2.5-np2py314habcfd04_20.conda
-      - conda: https://prefix.dev/robostack-humble/linux-64/ros2-osrf-pycommon-2.1.6-np2py314h53a0733_20.conda
-      - conda: https://prefix.dev/robostack-humble/linux-64/ros2-pcl-conversions-2.4.5-np2py314h11ce379_20.conda
-      - conda: https://prefix.dev/robostack-humble/linux-64/ros2-pcl-msgs-1.0.0-np2py314h53a0733_20.conda
-      - conda: https://prefix.dev/robostack-humble/linux-64/ros2-pendulum-control-0.20.9-np2py314h53a0733_20.conda
-      - conda: https://prefix.dev/robostack-humble/linux-64/ros2-pendulum-msgs-0.20.9-np2py314h53a0733_20.conda
-      - conda: https://prefix.dev/robostack-humble/linux-64/ros2-plotjuggler-3.15.0-np2py314h485af8f_20.conda
-      - conda: https://prefix.dev/robostack-humble/linux-64/ros2-plotjuggler-msgs-0.2.3-np2py314h53a0733_20.conda
-      - conda: https://prefix.dev/robostack-humble/linux-64/ros2-plotjuggler-ros-2.3.1-np2py314h41ff008_20.conda
-      - conda: https://prefix.dev/robostack-humble/linux-64/ros2-pluginlib-5.1.4-np2py314h53a0733_20.conda
-      - conda: https://prefix.dev/robostack-humble/linux-64/ros2-pybind11-vendor-2.4.2-np2py314h53a0733_20.conda
-      - conda: https://prefix.dev/robostack-humble/linux-64/ros2-python-cmake-module-0.10.0-np2py314h53a0733_20.conda
-      - conda: https://prefix.dev/robostack-humble/linux-64/ros2-python-orocos-kdl-vendor-0.2.5-np2py314h53a0733_20.conda
-      - conda: https://prefix.dev/robostack-humble/linux-64/ros2-python-qt-binding-1.1.3-np2py314h1b8acf9_20.conda
-      - conda: https://prefix.dev/robostack-humble/linux-64/ros2-qt-dotgraph-2.2.5-np2py314h53a0733_20.conda
-      - conda: https://prefix.dev/robostack-humble/linux-64/ros2-qt-gui-2.2.5-np2py314h1b8acf9_20.conda
-      - conda: https://prefix.dev/robostack-humble/linux-64/ros2-qt-gui-cpp-2.2.5-np2py314h1b8acf9_20.conda
-      - conda: https://prefix.dev/robostack-humble/linux-64/ros2-qt-gui-py-common-2.2.5-np2py314h53a0733_20.conda
-      - conda: https://prefix.dev/robostack-humble/linux-64/ros2-quality-of-service-demo-cpp-0.20.9-np2py314h53a0733_20.conda
-      - conda: https://prefix.dev/robostack-humble/linux-64/ros2-quality-of-service-demo-py-0.20.9-np2py314h53a0733_20.conda
-      - conda: https://prefix.dev/robostack-humble/linux-64/ros2-rcl-5.3.13-np2py314h53a0733_20.conda
-      - conda: https://prefix.dev/robostack-humble/linux-64/ros2-rcl-action-5.3.13-np2py314h53a0733_20.conda
-      - conda: https://prefix.dev/robostack-humble/linux-64/ros2-rcl-interfaces-1.2.2-np2py314h53a0733_20.conda
-      - conda: https://prefix.dev/robostack-humble/linux-64/ros2-rcl-lifecycle-5.3.13-np2py314h53a0733_20.conda
-      - conda: https://prefix.dev/robostack-humble/linux-64/ros2-rcl-logging-interface-2.3.2-np2py314h53a0733_20.conda
-      - conda: https://prefix.dev/robostack-humble/linux-64/ros2-rcl-logging-spdlog-2.3.2-np2py314h1781256_20.conda
-      - conda: https://prefix.dev/robostack-humble/linux-64/ros2-rcl-yaml-param-parser-5.3.13-np2py314h53a0733_20.conda
-      - conda: https://prefix.dev/robostack-humble/linux-64/ros2-rclcpp-16.0.19-np2py314h53a0733_20.conda
-      - conda: https://prefix.dev/robostack-humble/linux-64/ros2-rclcpp-action-16.0.19-np2py314h53a0733_20.conda
-      - conda: https://prefix.dev/robostack-humble/linux-64/ros2-rclcpp-components-16.0.19-np2py314h53a0733_20.conda
-      - conda: https://prefix.dev/robostack-humble/linux-64/ros2-rclcpp-lifecycle-16.0.19-np2py314h53a0733_20.conda
-      - conda: https://prefix.dev/robostack-humble/linux-64/ros2-rclpy-3.3.21-np2py314h53a0733_20.conda
-      - conda: https://prefix.dev/robostack-humble/linux-64/ros2-rcpputils-2.4.6-np2py314h53a0733_20.conda
-      - conda: https://prefix.dev/robostack-humble/linux-64/ros2-rcutils-5.1.8-np2py314h53a0733_20.conda
-      - conda: https://prefix.dev/robostack-humble/linux-64/ros2-resource-retriever-3.1.3-np2py314h53a0733_20.conda
-      - conda: https://prefix.dev/robostack-humble/linux-64/ros2-rmw-6.1.2-np2py314h53a0733_20.conda
-      - conda: https://prefix.dev/robostack-humble/linux-64/ros2-rmw-connextdds-0.11.6-np2py314h53a0733_20.conda
-      - conda: https://prefix.dev/robostack-humble/linux-64/ros2-rmw-connextdds-common-0.11.6-np2py314h53a0733_20.conda
-      - conda: https://prefix.dev/robostack-humble/linux-64/ros2-rmw-cyclonedds-cpp-1.3.4-np2py314h53a0733_20.conda
-      - conda: https://prefix.dev/robostack-humble/linux-64/ros2-rmw-dds-common-1.6.0-np2py314h53a0733_20.conda
-      - conda: https://prefix.dev/robostack-humble/linux-64/ros2-rmw-fastrtps-cpp-6.2.10-np2py314h53a0733_20.conda
-      - conda: https://prefix.dev/robostack-humble/linux-64/ros2-rmw-fastrtps-dynamic-cpp-6.2.10-np2py314h53a0733_20.conda
-      - conda: https://prefix.dev/robostack-humble/linux-64/ros2-rmw-fastrtps-shared-cpp-6.2.10-np2py314h53a0733_20.conda
-      - conda: https://prefix.dev/robostack-humble/linux-64/ros2-rmw-implementation-2.8.5-np2py314hc0fd5b4_20.conda
-      - conda: https://prefix.dev/robostack-humble/linux-64/ros2-rmw-implementation-cmake-6.1.2-np2py314h53a0733_20.conda
-      - conda: https://prefix.dev/robostack-humble/linux-64/ros2-robot-state-publisher-3.0.3-np2py314h53a0733_20.conda
-      - conda: https://prefix.dev/robostack-humble/linux-64/ros2-ros-base-0.10.0-np2py314h53a0733_20.conda
-      - conda: https://prefix.dev/robostack-humble/linux-64/ros2-ros-core-0.10.0-np2py314h53a0733_20.conda
-      - conda: https://prefix.dev/robostack-humble/linux-64/ros2-ros-environment-3.2.2-np2py314h53a0733_20.conda
-      - conda: https://prefix.dev/robostack-humble/linux-64/ros2-ros-workspace-1.0.2-np2py314h53a0733_20.conda
-      - conda: https://prefix.dev/robostack-humble/linux-64/ros2-ros2action-0.18.18-np2py314h53a0733_20.conda
-      - conda: https://prefix.dev/robostack-humble/linux-64/ros2-ros2bag-0.15.16-np2py314h53a0733_20.conda
-      - conda: https://prefix.dev/robostack-humble/linux-64/ros2-ros2cli-0.18.18-np2py314h53a0733_20.conda
-      - conda: https://prefix.dev/robostack-humble/linux-64/ros2-ros2cli-common-extensions-0.1.2-np2py314h53a0733_20.conda
-      - conda: https://prefix.dev/robostack-humble/linux-64/ros2-ros2component-0.18.18-np2py314h53a0733_20.conda
-      - conda: https://prefix.dev/robostack-humble/linux-64/ros2-ros2doctor-0.18.18-np2py314h53a0733_20.conda
-      - conda: https://prefix.dev/robostack-humble/linux-64/ros2-ros2interface-0.18.18-np2py314h53a0733_20.conda
-      - conda: https://prefix.dev/robostack-humble/linux-64/ros2-ros2launch-0.19.13-np2py314h53a0733_20.conda
-      - conda: https://prefix.dev/robostack-humble/linux-64/ros2-ros2lifecycle-0.18.18-np2py314h53a0733_20.conda
-      - conda: https://prefix.dev/robostack-humble/linux-64/ros2-ros2multicast-0.18.18-np2py314h53a0733_20.conda
-      - conda: https://prefix.dev/robostack-humble/linux-64/ros2-ros2node-0.18.18-np2py314h53a0733_20.conda
-      - conda: https://prefix.dev/robostack-humble/linux-64/ros2-ros2param-0.18.18-np2py314h53a0733_20.conda
-      - conda: https://prefix.dev/robostack-humble/linux-64/ros2-ros2pkg-0.18.18-np2py314h53a0733_20.conda
-      - conda: https://prefix.dev/robostack-humble/linux-64/ros2-ros2plugin-5.1.4-np2py314h53a0733_20.conda
-      - conda: https://prefix.dev/robostack-humble/linux-64/ros2-ros2run-0.18.18-np2py314h53a0733_20.conda
-      - conda: https://prefix.dev/robostack-humble/linux-64/ros2-ros2service-0.18.18-np2py314h53a0733_20.conda
-      - conda: https://prefix.dev/robostack-humble/linux-64/ros2-ros2topic-0.18.18-np2py314h53a0733_20.conda
-      - conda: https://prefix.dev/robostack-humble/linux-64/ros2-rosbag2-0.15.16-np2py314h53a0733_20.conda
-      - conda: https://prefix.dev/robostack-humble/linux-64/ros2-rosbag2-compression-0.15.16-np2py314h53a0733_20.conda
-      - conda: https://prefix.dev/robostack-humble/linux-64/ros2-rosbag2-compression-zstd-0.15.16-np2py314h53a0733_20.conda
-      - conda: https://prefix.dev/robostack-humble/linux-64/ros2-rosbag2-cpp-0.15.16-np2py314h53a0733_20.conda
-      - conda: https://prefix.dev/robostack-humble/linux-64/ros2-rosbag2-interfaces-0.15.16-np2py314h53a0733_20.conda
-      - conda: https://prefix.dev/robostack-humble/linux-64/ros2-rosbag2-py-0.15.16-np2py314h53a0733_20.conda
-      - conda: https://prefix.dev/robostack-humble/linux-64/ros2-rosbag2-storage-0.15.16-np2py314h53a0733_20.conda
-      - conda: https://prefix.dev/robostack-humble/linux-64/ros2-rosbag2-storage-default-plugins-0.15.16-np2py314h53a0733_20.conda
-      - conda: https://prefix.dev/robostack-humble/linux-64/ros2-rosbag2-transport-0.15.16-np2py314h53a0733_20.conda
-      - conda: https://prefix.dev/robostack-humble/linux-64/ros2-rosgraph-msgs-1.2.2-np2py314h53a0733_20.conda
-      - conda: https://prefix.dev/robostack-humble/linux-64/ros2-rosidl-adapter-3.1.8-np2py314h53a0733_20.conda
-      - conda: https://prefix.dev/robostack-humble/linux-64/ros2-rosidl-cli-3.1.8-np2py314h53a0733_20.conda
-      - conda: https://prefix.dev/robostack-humble/linux-64/ros2-rosidl-cmake-3.1.8-np2py314h53a0733_20.conda
-      - conda: https://prefix.dev/robostack-humble/linux-64/ros2-rosidl-default-generators-1.2.1-np2py314h53a0733_20.conda
-      - conda: https://prefix.dev/robostack-humble/linux-64/ros2-rosidl-default-runtime-1.2.1-np2py314h53a0733_20.conda
-      - conda: https://prefix.dev/robostack-humble/linux-64/ros2-rosidl-generator-c-3.1.8-np2py314h53a0733_20.conda
-      - conda: https://prefix.dev/robostack-humble/linux-64/ros2-rosidl-generator-cpp-3.1.8-np2py314h53a0733_20.conda
-      - conda: https://prefix.dev/robostack-humble/linux-64/ros2-rosidl-generator-dds-idl-0.8.1-np2py314h53a0733_20.conda
-      - conda: https://prefix.dev/robostack-humble/linux-64/ros2-rosidl-generator-py-0.14.6-np2py314h53a0733_20.conda
-      - conda: https://prefix.dev/robostack-humble/linux-64/ros2-rosidl-generator-rs-0.4.12-np2py314h53a0733_20.conda
-      - conda: https://prefix.dev/robostack-humble/linux-64/ros2-rosidl-parser-3.1.8-np2py314h53a0733_20.conda
-      - conda: https://prefix.dev/robostack-humble/linux-64/ros2-rosidl-runtime-c-3.1.8-np2py314h53a0733_20.conda
-      - conda: https://prefix.dev/robostack-humble/linux-64/ros2-rosidl-runtime-cpp-3.1.8-np2py314h53a0733_20.conda
-      - conda: https://prefix.dev/robostack-humble/linux-64/ros2-rosidl-runtime-py-0.9.3-np2py314h53a0733_20.conda
-      - conda: https://prefix.dev/robostack-humble/linux-64/ros2-rosidl-typesupport-c-2.0.2-np2py314h53a0733_20.conda
-      - conda: https://prefix.dev/robostack-humble/linux-64/ros2-rosidl-typesupport-cpp-2.0.2-np2py314h53a0733_20.conda
-      - conda: https://prefix.dev/robostack-humble/linux-64/ros2-rosidl-typesupport-fastrtps-c-2.2.4-np2py314h53a0733_20.conda
-      - conda: https://prefix.dev/robostack-humble/linux-64/ros2-rosidl-typesupport-fastrtps-cpp-2.2.4-np2py314h53a0733_20.conda
-      - conda: https://prefix.dev/robostack-humble/linux-64/ros2-rosidl-typesupport-interface-3.1.8-np2py314h53a0733_20.conda
-      - conda: https://prefix.dev/robostack-humble/linux-64/ros2-rosidl-typesupport-introspection-c-3.1.8-np2py314h53a0733_20.conda
-      - conda: https://prefix.dev/robostack-humble/linux-64/ros2-rosidl-typesupport-introspection-cpp-3.1.8-np2py314h53a0733_20.conda
-      - conda: https://prefix.dev/robostack-humble/linux-64/ros2-rpyutils-0.2.2-np2py314h53a0733_20.conda
-      - conda: https://prefix.dev/robostack-humble/linux-64/ros2-rqt-action-2.0.1-np2py314h53a0733_20.conda
-      - conda: https://prefix.dev/robostack-humble/linux-64/ros2-rqt-bag-1.1.6-np2py314h53a0733_20.conda
-      - conda: https://prefix.dev/robostack-humble/linux-64/ros2-rqt-bag-plugins-1.1.6-np2py314h53a0733_20.conda
-      - conda: https://prefix.dev/robostack-humble/linux-64/ros2-rqt-common-plugins-1.2.0-np2py314h53a0733_20.conda
-      - conda: https://prefix.dev/robostack-humble/linux-64/ros2-rqt-console-2.0.3-np2py314h53a0733_20.conda
-      - conda: https://prefix.dev/robostack-humble/linux-64/ros2-rqt-graph-1.3.2-np2py314h53a0733_20.conda
-      - conda: https://prefix.dev/robostack-humble/linux-64/ros2-rqt-gui-1.1.9-np2py314h53a0733_20.conda
-      - conda: https://prefix.dev/robostack-humble/linux-64/ros2-rqt-gui-cpp-1.1.9-np2py314h1b8acf9_20.conda
-      - conda: https://prefix.dev/robostack-humble/linux-64/ros2-rqt-gui-py-1.1.9-np2py314h53a0733_20.conda
-      - conda: https://prefix.dev/robostack-humble/linux-64/ros2-rqt-image-view-1.2.0-np2py314h1b8acf9_20.conda
-      - conda: https://prefix.dev/robostack-humble/linux-64/ros2-rqt-msg-1.2.0-np2py314h53a0733_20.conda
-      - conda: https://prefix.dev/robostack-humble/linux-64/ros2-rqt-plot-1.1.5-np2py314h53a0733_20.conda
-      - conda: https://prefix.dev/robostack-humble/linux-64/ros2-rqt-publisher-1.5.0-np2py314h53a0733_20.conda
-      - conda: https://prefix.dev/robostack-humble/linux-64/ros2-rqt-py-common-1.1.9-np2py314h1b8acf9_20.conda
-      - conda: https://prefix.dev/robostack-humble/linux-64/ros2-rqt-py-console-1.0.2-np2py314h53a0733_20.conda
-      - conda: https://prefix.dev/robostack-humble/linux-64/ros2-rqt-reconfigure-1.1.4-np2py314h53a0733_20.conda
-      - conda: https://prefix.dev/robostack-humble/linux-64/ros2-rqt-service-caller-1.0.5-np2py314h53a0733_20.conda
-      - conda: https://prefix.dev/robostack-humble/linux-64/ros2-rqt-shell-1.0.2-np2py314h53a0733_20.conda
-      - conda: https://prefix.dev/robostack-humble/linux-64/ros2-rqt-srv-1.0.3-np2py314h53a0733_20.conda
-      - conda: https://prefix.dev/robostack-humble/linux-64/ros2-rqt-topic-1.5.1-np2py314h53a0733_20.conda
-      - conda: https://prefix.dev/robostack-humble/linux-64/ros2-rti-connext-dds-cmake-module-0.11.6-np2py314h53a0733_20.conda
-      - conda: https://prefix.dev/robostack-humble/linux-64/ros2-rttest-0.13.0-np2py314h53a0733_20.conda
-      - conda: https://prefix.dev/robostack-humble/linux-64/ros2-rviz-assimp-vendor-11.2.26-np2py314h6820428_20.conda
-      - conda: https://prefix.dev/robostack-humble/linux-64/ros2-rviz-common-11.2.26-np2py314h580689a_20.conda
-      - conda: https://prefix.dev/robostack-humble/linux-64/ros2-rviz-default-plugins-11.2.26-np2py314h580689a_20.conda
-      - conda: https://prefix.dev/robostack-humble/linux-64/ros2-rviz-ogre-vendor-11.2.26-np2py314h8771833_20.conda
-      - conda: https://prefix.dev/robostack-humble/linux-64/ros2-rviz-rendering-11.2.26-np2py314h1015f9c_20.conda
-      - conda: https://prefix.dev/robostack-humble/linux-64/ros2-rviz2-11.2.26-np2py314h580689a_20.conda
-      - conda: https://prefix.dev/robostack-humble/linux-64/ros2-sdl2-vendor-3.3.0-np2py314h1f34c7c_20.conda
-      - conda: https://prefix.dev/robostack-humble/linux-64/ros2-sensor-msgs-4.9.1-np2py314h53a0733_20.conda
-      - conda: https://prefix.dev/robostack-humble/linux-64/ros2-sensor-msgs-py-4.9.1-np2py314h53a0733_20.conda
-      - conda: https://prefix.dev/robostack-humble/linux-64/ros2-shape-msgs-4.9.1-np2py314h53a0733_20.conda
-      - conda: https://prefix.dev/robostack-humble/linux-64/ros2-shared-queues-vendor-0.15.16-np2py314h53a0733_20.conda
-      - conda: https://prefix.dev/robostack-humble/linux-64/ros2-spdlog-vendor-1.3.1-np2py314h1781256_20.conda
-      - conda: https://prefix.dev/robostack-humble/linux-64/ros2-sqlite3-vendor-0.15.16-np2py314ha64fe42_20.conda
-      - conda: https://prefix.dev/robostack-humble/linux-64/ros2-sros2-0.10.9-np2py314h53a0733_20.conda
-      - conda: https://prefix.dev/robostack-humble/linux-64/ros2-sros2-cmake-0.10.9-np2py314h53a0733_20.conda
-      - conda: https://prefix.dev/robostack-humble/linux-64/ros2-statistics-msgs-1.2.2-np2py314h53a0733_20.conda
-      - conda: https://prefix.dev/robostack-humble/linux-64/ros2-std-msgs-4.9.1-np2py314h53a0733_20.conda
-      - conda: https://prefix.dev/robostack-humble/linux-64/ros2-std-srvs-4.9.1-np2py314h53a0733_20.conda
-      - conda: https://prefix.dev/robostack-humble/linux-64/ros2-stereo-msgs-4.9.1-np2py314h53a0733_20.conda
-      - conda: https://prefix.dev/robostack-humble/linux-64/ros2-tango-icons-vendor-0.1.1-np2py314h53a0733_20.conda
-      - conda: https://prefix.dev/robostack-humble/linux-64/ros2-teleop-twist-joy-2.4.8-np2py314h53a0733_20.conda
-      - conda: https://prefix.dev/robostack-humble/linux-64/ros2-teleop-twist-keyboard-2.4.1-np2py314h53a0733_20.conda
-      - conda: https://prefix.dev/robostack-humble/linux-64/ros2-tf2-0.25.20-np2py314hac0c0d2_20.conda
-      - conda: https://prefix.dev/robostack-humble/linux-64/ros2-tf2-bullet-0.25.20-np2py314h53a0733_20.conda
-      - conda: https://prefix.dev/robostack-humble/linux-64/ros2-tf2-eigen-0.25.20-np2py314habcfd04_20.conda
-      - conda: https://prefix.dev/robostack-humble/linux-64/ros2-tf2-eigen-kdl-0.25.20-np2py314habcfd04_20.conda
-      - conda: https://prefix.dev/robostack-humble/linux-64/ros2-tf2-geometry-msgs-0.25.20-np2py314h53a0733_20.conda
-      - conda: https://prefix.dev/robostack-humble/linux-64/ros2-tf2-kdl-0.25.20-np2py314h53a0733_20.conda
-      - conda: https://prefix.dev/robostack-humble/linux-64/ros2-tf2-msgs-0.25.20-np2py314h53a0733_20.conda
-      - conda: https://prefix.dev/robostack-humble/linux-64/ros2-tf2-py-0.25.20-np2py314h53a0733_20.conda
-      - conda: https://prefix.dev/robostack-humble/linux-64/ros2-tf2-ros-0.25.20-np2py314h53a0733_20.conda
-      - conda: https://prefix.dev/robostack-humble/linux-64/ros2-tf2-ros-py-0.25.20-np2py314h53a0733_20.conda
-      - conda: https://prefix.dev/robostack-humble/linux-64/ros2-tf2-sensor-msgs-0.25.20-np2py314habcfd04_20.conda
-      - conda: https://prefix.dev/robostack-humble/linux-64/ros2-tf2-tools-0.25.20-np2py314h53a0733_20.conda
-      - conda: https://prefix.dev/robostack-humble/linux-64/ros2-tinyxml-vendor-0.8.3-np2py314h53a0733_20.conda
-      - conda: https://prefix.dev/robostack-humble/linux-64/ros2-tinyxml2-vendor-0.7.7-np2py314hc703c99_20.conda
-      - conda: https://prefix.dev/robostack-humble/linux-64/ros2-tlsf-0.7.0-np2py314h53a0733_20.conda
-      - conda: https://prefix.dev/robostack-humble/linux-64/ros2-tlsf-cpp-0.13.0-np2py314h53a0733_20.conda
-      - conda: https://prefix.dev/robostack-humble/linux-64/ros2-topic-monitor-0.20.9-np2py314h53a0733_20.conda
-      - conda: https://prefix.dev/robostack-humble/linux-64/ros2-tracetools-4.1.2-np2py314h53a0733_20.conda
-      - conda: https://prefix.dev/robostack-humble/linux-64/ros2-trajectory-msgs-4.9.1-np2py314h53a0733_20.conda
-      - conda: https://prefix.dev/robostack-humble/linux-64/ros2-turtlesim-1.4.3-np2py314h580689a_20.conda
-      - conda: https://prefix.dev/robostack-humble/linux-64/ros2-uncrustify-vendor-2.0.2-np2py314h53a0733_20.conda
-      - conda: https://prefix.dev/robostack-humble/linux-64/ros2-unique-identifier-msgs-2.2.1-np2py314h53a0733_20.conda
-      - conda: https://prefix.dev/robostack-humble/linux-64/ros2-urdf-2.6.1-np2py314h53a0733_20.conda
-      - conda: https://prefix.dev/robostack-humble/linux-64/ros2-urdf-parser-plugin-2.6.1-np2py314h53a0733_20.conda
-      - conda: https://prefix.dev/robostack-humble/linux-64/ros2-urdfdom-6.0.0-py314h0732957_20.conda
-      - conda: https://prefix.dev/robostack-humble/linux-64/ros2-urdfdom-headers-3.0.0-py314h02e3bbf_20.conda
-      - conda: https://prefix.dev/robostack-humble/linux-64/ros2-visualization-msgs-4.9.1-np2py314h53a0733_20.conda
-      - conda: https://prefix.dev/robostack-humble/linux-64/ros2-yaml-cpp-vendor-8.0.2-np2py314h53a0733_20.conda
-      - conda: https://prefix.dev/robostack-humble/linux-64/ros2-zstd-vendor-0.15.16-np2py314hb9510b1_20.conda
+      - conda: https://prefix.dev/robostack-lyrical/linux-64/ros-lyrical-desktop-0.13.0-hb0f4dca_27.conda
+      - conda: https://prefix.dev/robostack-lyrical/linux-64/ros-lyrical-plotjuggler-ros-2.3.1-hb0f4dca_27.conda
+      - conda: https://prefix.dev/robostack-lyrical/linux-64/ros-lyrical-rmw-cyclonedds-cpp-4.1.5-hb0f4dca_27.conda
+      - conda: https://prefix.dev/robostack-lyrical/linux-64/ros-lyrical-rosidl-generator-dds-idl-0.13.0-hb0f4dca_27.conda
+      - conda: https://prefix.dev/robostack-lyrical/linux-64/ros2-action-msgs-2.4.5-np2py314h53a0733_27.conda
+      - conda: https://prefix.dev/robostack-lyrical/linux-64/ros2-action-tutorials-cpp-0.37.9-np2py314h53a0733_27.conda
+      - conda: https://prefix.dev/robostack-lyrical/linux-64/ros2-action-tutorials-py-0.37.9-np2py314h53a0733_27.conda
+      - conda: https://prefix.dev/robostack-lyrical/linux-64/ros2-ament-cmake-2.8.8-np2py314h53a0733_27.conda
+      - conda: https://prefix.dev/robostack-lyrical/linux-64/ros2-ament-cmake-auto-2.8.8-np2py314h53a0733_27.conda
+      - conda: https://prefix.dev/robostack-lyrical/linux-64/ros2-ament-cmake-copyright-0.20.6-np2py314h53a0733_27.conda
+      - conda: https://prefix.dev/robostack-lyrical/linux-64/ros2-ament-cmake-core-2.8.8-np2py314h53a0733_27.conda
+      - conda: https://prefix.dev/robostack-lyrical/linux-64/ros2-ament-cmake-cppcheck-0.20.6-np2py314h53a0733_27.conda
+      - conda: https://prefix.dev/robostack-lyrical/linux-64/ros2-ament-cmake-cpplint-0.20.6-np2py314h53a0733_27.conda
+      - conda: https://prefix.dev/robostack-lyrical/linux-64/ros2-ament-cmake-export-definitions-2.8.8-np2py314h53a0733_27.conda
+      - conda: https://prefix.dev/robostack-lyrical/linux-64/ros2-ament-cmake-export-dependencies-2.8.8-np2py314h53a0733_27.conda
+      - conda: https://prefix.dev/robostack-lyrical/linux-64/ros2-ament-cmake-export-include-directories-2.8.8-np2py314h53a0733_27.conda
+      - conda: https://prefix.dev/robostack-lyrical/linux-64/ros2-ament-cmake-export-libraries-2.8.8-np2py314h53a0733_27.conda
+      - conda: https://prefix.dev/robostack-lyrical/linux-64/ros2-ament-cmake-export-link-flags-2.8.8-np2py314h53a0733_27.conda
+      - conda: https://prefix.dev/robostack-lyrical/linux-64/ros2-ament-cmake-export-targets-2.8.8-np2py314h53a0733_27.conda
+      - conda: https://prefix.dev/robostack-lyrical/linux-64/ros2-ament-cmake-flake8-0.20.6-np2py314h53a0733_27.conda
+      - conda: https://prefix.dev/robostack-lyrical/linux-64/ros2-ament-cmake-gen-version-h-2.8.8-np2py314h53a0733_27.conda
+      - conda: https://prefix.dev/robostack-lyrical/linux-64/ros2-ament-cmake-gmock-2.8.8-np2py314h53a0733_27.conda
+      - conda: https://prefix.dev/robostack-lyrical/linux-64/ros2-ament-cmake-gtest-2.8.8-np2py314h53a0733_27.conda
+      - conda: https://prefix.dev/robostack-lyrical/linux-64/ros2-ament-cmake-include-directories-2.8.8-np2py314h53a0733_27.conda
+      - conda: https://prefix.dev/robostack-lyrical/linux-64/ros2-ament-cmake-libraries-2.8.8-np2py314h53a0733_27.conda
+      - conda: https://prefix.dev/robostack-lyrical/linux-64/ros2-ament-cmake-lint-cmake-0.20.6-np2py314h53a0733_27.conda
+      - conda: https://prefix.dev/robostack-lyrical/linux-64/ros2-ament-cmake-mypy-0.20.6-np2py314h53a0733_27.conda
+      - conda: https://prefix.dev/robostack-lyrical/linux-64/ros2-ament-cmake-pep257-0.20.6-np2py314h53a0733_27.conda
+      - conda: https://prefix.dev/robostack-lyrical/linux-64/ros2-ament-cmake-pytest-2.8.8-np2py314h53a0733_27.conda
+      - conda: https://prefix.dev/robostack-lyrical/linux-64/ros2-ament-cmake-python-2.8.8-np2py314h53a0733_27.conda
+      - conda: https://prefix.dev/robostack-lyrical/linux-64/ros2-ament-cmake-ros-0.15.8-np2py314h53a0733_27.conda
+      - conda: https://prefix.dev/robostack-lyrical/linux-64/ros2-ament-cmake-ros-core-0.15.8-np2py314h53a0733_27.conda
+      - conda: https://prefix.dev/robostack-lyrical/linux-64/ros2-ament-cmake-target-dependencies-2.8.8-np2py314h53a0733_27.conda
+      - conda: https://prefix.dev/robostack-lyrical/linux-64/ros2-ament-cmake-test-2.8.8-np2py314h53a0733_27.conda
+      - conda: https://prefix.dev/robostack-lyrical/linux-64/ros2-ament-cmake-uncrustify-0.20.6-np2py314h53a0733_27.conda
+      - conda: https://prefix.dev/robostack-lyrical/linux-64/ros2-ament-cmake-version-2.8.8-np2py314h53a0733_27.conda
+      - conda: https://prefix.dev/robostack-lyrical/linux-64/ros2-ament-cmake-xmllint-0.20.6-np2py314h53a0733_27.conda
+      - conda: https://prefix.dev/robostack-lyrical/linux-64/ros2-ament-copyright-0.20.6-np2py314h53a0733_27.conda
+      - conda: https://prefix.dev/robostack-lyrical/linux-64/ros2-ament-cppcheck-0.20.6-np2py314h53a0733_27.conda
+      - conda: https://prefix.dev/robostack-lyrical/linux-64/ros2-ament-cpplint-0.20.6-np2py314h53a0733_27.conda
+      - conda: https://prefix.dev/robostack-lyrical/linux-64/ros2-ament-flake8-0.20.6-np2py314h53a0733_27.conda
+      - conda: https://prefix.dev/robostack-lyrical/linux-64/ros2-ament-index-cpp-1.13.3-np2py314h53a0733_27.conda
+      - conda: https://prefix.dev/robostack-lyrical/linux-64/ros2-ament-index-python-1.13.3-np2py314h53a0733_27.conda
+      - conda: https://prefix.dev/robostack-lyrical/linux-64/ros2-ament-lint-0.20.6-np2py314h53a0733_27.conda
+      - conda: https://prefix.dev/robostack-lyrical/linux-64/ros2-ament-lint-auto-0.20.6-np2py314h53a0733_27.conda
+      - conda: https://prefix.dev/robostack-lyrical/linux-64/ros2-ament-lint-cmake-0.20.6-np2py314h53a0733_27.conda
+      - conda: https://prefix.dev/robostack-lyrical/linux-64/ros2-ament-lint-common-0.20.6-np2py314h53a0733_27.conda
+      - conda: https://prefix.dev/robostack-lyrical/linux-64/ros2-ament-mypy-0.20.6-np2py314h53a0733_27.conda
+      - conda: https://prefix.dev/robostack-lyrical/linux-64/ros2-ament-package-0.18.3-np2py314h53a0733_27.conda
+      - conda: https://prefix.dev/robostack-lyrical/linux-64/ros2-ament-pep257-0.20.6-np2py314h53a0733_27.conda
+      - conda: https://prefix.dev/robostack-lyrical/linux-64/ros2-ament-uncrustify-0.20.6-np2py314h53a0733_27.conda
+      - conda: https://prefix.dev/robostack-lyrical/linux-64/ros2-ament-xmllint-0.20.6-np2py314h53a0733_27.conda
+      - conda: https://prefix.dev/robostack-lyrical/linux-64/ros2-angles-1.16.1-np2py314h53a0733_27.conda
+      - conda: https://prefix.dev/robostack-lyrical/linux-64/ros2-builtin-interfaces-2.4.5-np2py314h53a0733_27.conda
+      - conda: https://prefix.dev/robostack-lyrical/linux-64/ros2-class-loader-2.9.4-np2py314hac0c0d2_27.conda
+      - conda: https://prefix.dev/robostack-lyrical/linux-64/ros2-common-interfaces-5.9.3-np2py314h53a0733_27.conda
+      - conda: https://prefix.dev/robostack-lyrical/linux-64/ros2-composition-0.37.9-np2py314h53a0733_27.conda
+      - conda: https://prefix.dev/robostack-lyrical/linux-64/ros2-composition-interfaces-2.4.5-np2py314h53a0733_27.conda
+      - conda: https://prefix.dev/robostack-lyrical/linux-64/ros2-console-bridge-vendor-1.9.1-np2py314hac0c0d2_27.conda
+      - conda: https://prefix.dev/robostack-lyrical/linux-64/ros2-cv-bridge-4.1.0-np2py314hcb5d97e_27.conda
+      - conda: https://prefix.dev/robostack-lyrical/linux-64/ros2-cyclonedds-11.0.1-py314hd7f02ef_27.conda
+      - conda: https://prefix.dev/robostack-lyrical/linux-64/ros2-data-tamer-cpp-1.0.3-np2py314h53a0733_27.conda
+      - conda: https://prefix.dev/robostack-lyrical/linux-64/ros2-data-tamer-msgs-1.0.3-np2py314h53a0733_27.conda
+      - conda: https://prefix.dev/robostack-lyrical/linux-64/ros2-demo-nodes-cpp-0.37.9-np2py314h53a0733_27.conda
+      - conda: https://prefix.dev/robostack-lyrical/linux-64/ros2-demo-nodes-cpp-native-0.37.9-np2py314h53a0733_27.conda
+      - conda: https://prefix.dev/robostack-lyrical/linux-64/ros2-demo-nodes-py-0.37.9-np2py314h53a0733_27.conda
+      - conda: https://prefix.dev/robostack-lyrical/linux-64/ros2-depthimage-to-laserscan-2.5.1-np2py314hb935b5b_27.conda
+      - conda: https://prefix.dev/robostack-lyrical/linux-64/ros2-desktop-0.13.0-np2py314h53a0733_27.conda
+      - conda: https://prefix.dev/robostack-lyrical/linux-64/ros2-diagnostic-msgs-5.9.3-np2py314h53a0733_27.conda
+      - conda: https://prefix.dev/robostack-lyrical/linux-64/ros2-distro-mutex-0.21.0-lyrical_27.conda
+      - conda: https://prefix.dev/robostack-lyrical/linux-64/ros2-dummy-map-server-0.37.9-np2py314h53a0733_27.conda
+      - conda: https://prefix.dev/robostack-lyrical/linux-64/ros2-dummy-robot-bringup-0.37.9-np2py314h53a0733_27.conda
+      - conda: https://prefix.dev/robostack-lyrical/linux-64/ros2-dummy-sensors-0.37.9-np2py314h53a0733_27.conda
+      - conda: https://prefix.dev/robostack-lyrical/linux-64/ros2-eigen3-cmake-module-0.5.1-np2py314h53a0733_27.conda
+      - conda: https://prefix.dev/robostack-lyrical/linux-64/ros2-example-interfaces-0.14.1-np2py314h53a0733_27.conda
+      - conda: https://prefix.dev/robostack-lyrical/linux-64/ros2-examples-rclcpp-minimal-action-client-0.21.5-np2py314h53a0733_27.conda
+      - conda: https://prefix.dev/robostack-lyrical/linux-64/ros2-examples-rclcpp-minimal-action-server-0.21.5-np2py314h53a0733_27.conda
+      - conda: https://prefix.dev/robostack-lyrical/linux-64/ros2-examples-rclcpp-minimal-client-0.21.5-np2py314h53a0733_27.conda
+      - conda: https://prefix.dev/robostack-lyrical/linux-64/ros2-examples-rclcpp-minimal-composition-0.21.5-np2py314h53a0733_27.conda
+      - conda: https://prefix.dev/robostack-lyrical/linux-64/ros2-examples-rclcpp-minimal-publisher-0.21.5-np2py314h53a0733_27.conda
+      - conda: https://prefix.dev/robostack-lyrical/linux-64/ros2-examples-rclcpp-minimal-service-0.21.5-np2py314h53a0733_27.conda
+      - conda: https://prefix.dev/robostack-lyrical/linux-64/ros2-examples-rclcpp-minimal-subscriber-0.21.5-np2py314h53a0733_27.conda
+      - conda: https://prefix.dev/robostack-lyrical/linux-64/ros2-examples-rclcpp-minimal-timer-0.21.5-np2py314h53a0733_27.conda
+      - conda: https://prefix.dev/robostack-lyrical/linux-64/ros2-examples-rclcpp-multithreaded-executor-0.21.5-np2py314h53a0733_27.conda
+      - conda: https://prefix.dev/robostack-lyrical/linux-64/ros2-examples-rclpy-executors-0.21.5-np2py314h53a0733_27.conda
+      - conda: https://prefix.dev/robostack-lyrical/linux-64/ros2-examples-rclpy-minimal-action-client-0.21.5-np2py314h53a0733_27.conda
+      - conda: https://prefix.dev/robostack-lyrical/linux-64/ros2-examples-rclpy-minimal-action-server-0.21.5-np2py314h53a0733_27.conda
+      - conda: https://prefix.dev/robostack-lyrical/linux-64/ros2-examples-rclpy-minimal-client-0.21.5-np2py314h53a0733_27.conda
+      - conda: https://prefix.dev/robostack-lyrical/linux-64/ros2-examples-rclpy-minimal-publisher-0.21.5-np2py314h53a0733_27.conda
+      - conda: https://prefix.dev/robostack-lyrical/linux-64/ros2-examples-rclpy-minimal-service-0.21.5-np2py314h53a0733_27.conda
+      - conda: https://prefix.dev/robostack-lyrical/linux-64/ros2-examples-rclpy-minimal-subscriber-0.21.5-np2py314h53a0733_27.conda
+      - conda: https://prefix.dev/robostack-lyrical/linux-64/ros2-fastcdr-2.3.6-np2py314h53a0733_27.conda
+      - conda: https://prefix.dev/robostack-lyrical/linux-64/ros2-fastdds-3.6.2-np2py314h0ed7e73_27.conda
+      - conda: https://prefix.dev/robostack-lyrical/linux-64/ros2-foonathan-memory-vendor-1.4.1-np2py314h53a0733_27.conda
+      - conda: https://prefix.dev/robostack-lyrical/linux-64/ros2-geometry-msgs-5.9.3-np2py314h53a0733_27.conda
+      - conda: https://prefix.dev/robostack-lyrical/linux-64/ros2-geometry2-0.45.10-np2py314h53a0733_27.conda
+      - conda: https://prefix.dev/robostack-lyrical/linux-64/ros2-gtest-vendor-1.16.1-np2py314h53a0733_27.conda
+      - conda: https://prefix.dev/robostack-lyrical/linux-64/ros2-gz-cmake-vendor-0.4.5-np2py314h53a0733_27.conda
+      - conda: https://prefix.dev/robostack-lyrical/linux-64/ros2-gz-math-vendor-0.4.5-np2py314h53a0733_27.conda
+      - conda: https://prefix.dev/robostack-lyrical/linux-64/ros2-gz-utils-vendor-0.4.1-np2py314h53a0733_27.conda
+      - conda: https://prefix.dev/robostack-lyrical/linux-64/ros2-iceoryx-binding-c-2.95.8-py314h02e3bbf_27.conda
+      - conda: https://prefix.dev/robostack-lyrical/linux-64/ros2-iceoryx-hoofs-2.95.8-py314h02e3bbf_27.conda
+      - conda: https://prefix.dev/robostack-lyrical/linux-64/ros2-iceoryx-posh-2.95.8-py314h02e3bbf_27.conda
+      - conda: https://prefix.dev/robostack-lyrical/linux-64/ros2-image-geometry-4.1.0-np2py314hb935b5b_27.conda
+      - conda: https://prefix.dev/robostack-lyrical/linux-64/ros2-image-tools-0.37.9-np2py314hb935b5b_27.conda
+      - conda: https://prefix.dev/robostack-lyrical/linux-64/ros2-image-transport-6.4.10-np2py314hc703c99_27.conda
+      - conda: https://prefix.dev/robostack-lyrical/linux-64/ros2-interactive-markers-2.8.4-np2py314h53a0733_27.conda
+      - conda: https://prefix.dev/robostack-lyrical/linux-64/ros2-intra-process-demo-0.37.9-np2py314hb935b5b_27.conda
+      - conda: https://prefix.dev/robostack-lyrical/linux-64/ros2-joy-3.3.0-np2py314h53a0733_27.conda
+      - conda: https://prefix.dev/robostack-lyrical/linux-64/ros2-kdl-parser-3.0.1-np2py314h53a0733_27.conda
+      - conda: https://prefix.dev/robostack-lyrical/linux-64/ros2-keyboard-handler-0.5.1-np2py314h53a0733_27.conda
+      - conda: https://prefix.dev/robostack-lyrical/linux-64/ros2-laser-geometry-2.11.3-np2py314h53a0733_27.conda
+      - conda: https://prefix.dev/robostack-lyrical/linux-64/ros2-launch-3.9.8-np2py314h53a0733_27.conda
+      - conda: https://prefix.dev/robostack-lyrical/linux-64/ros2-launch-ros-0.29.9-np2py314h53a0733_27.conda
+      - conda: https://prefix.dev/robostack-lyrical/linux-64/ros2-launch-testing-3.9.8-np2py314h53a0733_27.conda
+      - conda: https://prefix.dev/robostack-lyrical/linux-64/ros2-launch-testing-ament-cmake-3.9.8-np2py314h53a0733_27.conda
+      - conda: https://prefix.dev/robostack-lyrical/linux-64/ros2-launch-testing-ros-0.29.9-np2py314h53a0733_27.conda
+      - conda: https://prefix.dev/robostack-lyrical/linux-64/ros2-launch-xml-3.9.8-np2py314h53a0733_27.conda
+      - conda: https://prefix.dev/robostack-lyrical/linux-64/ros2-launch-yaml-3.9.8-np2py314h53a0733_27.conda
+      - conda: https://prefix.dev/robostack-lyrical/linux-64/ros2-libstatistics-collector-2.1.2-np2py314h53a0733_27.conda
+      - conda: https://prefix.dev/robostack-lyrical/linux-64/ros2-libyaml-vendor-1.8.1-np2py314h53a0733_27.conda
+      - conda: https://prefix.dev/robostack-lyrical/linux-64/ros2-lifecycle-0.37.9-np2py314h53a0733_27.conda
+      - conda: https://prefix.dev/robostack-lyrical/linux-64/ros2-lifecycle-msgs-2.4.5-np2py314h53a0733_27.conda
+      - conda: https://prefix.dev/robostack-lyrical/linux-64/ros2-logging-demo-0.37.9-np2py314h53a0733_27.conda
+      - conda: https://prefix.dev/robostack-lyrical/linux-64/ros2-lz4-cmake-module-0.33.4-np2py314h53a0733_27.conda
+      - conda: https://prefix.dev/robostack-lyrical/linux-64/ros2-map-msgs-2.6.1-np2py314h53a0733_27.conda
+      - conda: https://prefix.dev/robostack-lyrical/linux-64/ros2-mcap-vendor-0.33.4-np2py314h53a0733_27.conda
+      - conda: https://prefix.dev/robostack-lyrical/linux-64/ros2-message-filters-7.4.2-np2py314h53a0733_27.conda
+      - conda: https://prefix.dev/robostack-lyrical/linux-64/ros2-nav-msgs-5.9.3-np2py314h53a0733_27.conda
+      - conda: https://prefix.dev/robostack-lyrical/linux-64/ros2-pcl-conversions-2.10.0-np2py314h11ce379_27.conda
+      - conda: https://prefix.dev/robostack-lyrical/linux-64/ros2-pcl-msgs-1.0.0-np2py314h53a0733_27.conda
+      - conda: https://prefix.dev/robostack-lyrical/linux-64/ros2-pendulum-control-0.37.9-np2py314h53a0733_27.conda
+      - conda: https://prefix.dev/robostack-lyrical/linux-64/ros2-pendulum-msgs-0.37.9-np2py314h53a0733_27.conda
+      - conda: https://prefix.dev/robostack-lyrical/linux-64/ros2-plotjuggler-3.17.2-np2py314hf75fb9a_27.conda
+      - conda: https://prefix.dev/robostack-lyrical/linux-64/ros2-plotjuggler-msgs-0.2.3-np2py314h53a0733_27.conda
+      - conda: https://prefix.dev/robostack-lyrical/linux-64/ros2-plotjuggler-ros-2.3.1-np2py314h41ff008_27.conda
+      - conda: https://prefix.dev/robostack-lyrical/linux-64/ros2-pluginlib-5.8.5-np2py314hc703c99_27.conda
+      - conda: https://prefix.dev/robostack-lyrical/linux-64/ros2-point-cloud-transport-5.4.3-np2py314hc703c99_27.conda
+      - conda: https://prefix.dev/robostack-lyrical/linux-64/ros2-python-qt-binding-2.5.5-np2py314h1b8acf9_27.conda
+      - conda: https://prefix.dev/robostack-lyrical/linux-64/ros2-qt-dotgraph-2.11.1-np2py314h53a0733_27.conda
+      - conda: https://prefix.dev/robostack-lyrical/linux-64/ros2-qt-gui-2.11.1-np2py314h53a0733_27.conda
+      - conda: https://prefix.dev/robostack-lyrical/linux-64/ros2-qt-gui-cpp-2.11.1-np2py314h12db2e0_27.conda
+      - conda: https://prefix.dev/robostack-lyrical/linux-64/ros2-qt-gui-py-common-2.11.1-np2py314h53a0733_27.conda
+      - conda: https://prefix.dev/robostack-lyrical/linux-64/ros2-quality-of-service-demo-cpp-0.37.9-np2py314h53a0733_27.conda
+      - conda: https://prefix.dev/robostack-lyrical/linux-64/ros2-quality-of-service-demo-py-0.37.9-np2py314h53a0733_27.conda
+      - conda: https://prefix.dev/robostack-lyrical/linux-64/ros2-rcl-10.4.5-np2py314h53a0733_27.conda
+      - conda: https://prefix.dev/robostack-lyrical/linux-64/ros2-rcl-action-10.4.5-np2py314h53a0733_27.conda
+      - conda: https://prefix.dev/robostack-lyrical/linux-64/ros2-rcl-interfaces-2.4.5-np2py314h53a0733_27.conda
+      - conda: https://prefix.dev/robostack-lyrical/linux-64/ros2-rcl-lifecycle-10.4.5-np2py314h53a0733_27.conda
+      - conda: https://prefix.dev/robostack-lyrical/linux-64/ros2-rcl-logging-implementation-3.4.1-np2py314h53a0733_27.conda
+      - conda: https://prefix.dev/robostack-lyrical/linux-64/ros2-rcl-logging-interface-3.4.1-np2py314h53a0733_27.conda
+      - conda: https://prefix.dev/robostack-lyrical/linux-64/ros2-rcl-logging-noop-3.4.1-np2py314h53a0733_27.conda
+      - conda: https://prefix.dev/robostack-lyrical/linux-64/ros2-rcl-logging-spdlog-3.4.1-np2py314h1781256_27.conda
+      - conda: https://prefix.dev/robostack-lyrical/linux-64/ros2-rcl-yaml-param-parser-10.4.5-np2py314h53a0733_27.conda
+      - conda: https://prefix.dev/robostack-lyrical/linux-64/ros2-rclcpp-32.0.3-np2py314h53a0733_27.conda
+      - conda: https://prefix.dev/robostack-lyrical/linux-64/ros2-rclcpp-action-32.0.3-np2py314h53a0733_27.conda
+      - conda: https://prefix.dev/robostack-lyrical/linux-64/ros2-rclcpp-components-32.0.3-np2py314h53a0733_27.conda
+      - conda: https://prefix.dev/robostack-lyrical/linux-64/ros2-rclcpp-lifecycle-32.0.3-np2py314h53a0733_27.conda
+      - conda: https://prefix.dev/robostack-lyrical/linux-64/ros2-rclpy-10.0.11-np2py314h53a0733_27.conda
+      - conda: https://prefix.dev/robostack-lyrical/linux-64/ros2-rcpputils-2.14.5-np2py314h53a0733_27.conda
+      - conda: https://prefix.dev/robostack-lyrical/linux-64/ros2-rcutils-7.1.3-np2py314h53a0733_27.conda
+      - conda: https://prefix.dev/robostack-lyrical/linux-64/ros2-resource-retriever-3.9.3-np2py314h3ce6a4a_27.conda
+      - conda: https://prefix.dev/robostack-lyrical/linux-64/ros2-resource-retriever-interfaces-0.0.3-np2py314h53a0733_27.conda
+      - conda: https://prefix.dev/robostack-lyrical/linux-64/ros2-resource-retriever-service-plugin-0.0.3-np2py314h53a0733_27.conda
+      - conda: https://prefix.dev/robostack-lyrical/linux-64/ros2-rmw-7.10.2-np2py314h53a0733_27.conda
+      - conda: https://prefix.dev/robostack-lyrical/linux-64/ros2-rmw-connextdds-1.2.8-np2py314h53a0733_27.conda
+      - conda: https://prefix.dev/robostack-lyrical/linux-64/ros2-rmw-connextdds-common-1.2.8-np2py314h53a0733_27.conda
+      - conda: https://prefix.dev/robostack-lyrical/linux-64/ros2-rmw-cyclonedds-cpp-4.1.5-np2py314h53a0733_27.conda
+      - conda: https://prefix.dev/robostack-lyrical/linux-64/ros2-rmw-dds-common-6.0.0-np2py314h53a0733_27.conda
+      - conda: https://prefix.dev/robostack-lyrical/linux-64/ros2-rmw-fastrtps-cpp-9.4.10-np2py314h53a0733_27.conda
+      - conda: https://prefix.dev/robostack-lyrical/linux-64/ros2-rmw-fastrtps-dynamic-cpp-9.4.10-np2py314h53a0733_27.conda
+      - conda: https://prefix.dev/robostack-lyrical/linux-64/ros2-rmw-fastrtps-shared-cpp-9.4.10-np2py314h53a0733_27.conda
+      - conda: https://prefix.dev/robostack-lyrical/linux-64/ros2-rmw-implementation-3.1.6-np2py314h53a0733_27.conda
+      - conda: https://prefix.dev/robostack-lyrical/linux-64/ros2-rmw-implementation-cmake-7.10.2-np2py314h53a0733_27.conda
+      - conda: https://prefix.dev/robostack-lyrical/linux-64/ros2-rmw-security-common-7.10.2-np2py314h53a0733_27.conda
+      - conda: https://prefix.dev/robostack-lyrical/linux-64/ros2-rmw-test-fixture-0.15.8-np2py314h53a0733_27.conda
+      - conda: https://prefix.dev/robostack-lyrical/linux-64/ros2-rmw-test-fixture-implementation-0.15.8-np2py314h53a0733_27.conda
+      - conda: https://prefix.dev/robostack-lyrical/linux-64/ros2-rmw-zenoh-cpp-0.10.6-np2py314hc614d3d_27.conda
+      - conda: https://prefix.dev/robostack-lyrical/linux-64/ros2-robot-state-publisher-3.5.6-np2py314h53a0733_27.conda
+      - conda: https://prefix.dev/robostack-lyrical/linux-64/ros2-ros-base-0.13.0-np2py314h53a0733_27.conda
+      - conda: https://prefix.dev/robostack-lyrical/linux-64/ros2-ros-core-0.13.0-np2py314h53a0733_27.conda
+      - conda: https://prefix.dev/robostack-lyrical/linux-64/ros2-ros-environment-4.5.1-np2py314h53a0733_27.conda
+      - conda: https://prefix.dev/robostack-lyrical/linux-64/ros2-ros-workspace-1.0.3-np2py314h53a0733_27.conda
+      - conda: https://prefix.dev/robostack-lyrical/linux-64/ros2-ros2action-0.40.9-np2py314h53a0733_27.conda
+      - conda: https://prefix.dev/robostack-lyrical/linux-64/ros2-ros2bag-0.33.4-np2py314h53a0733_27.conda
+      - conda: https://prefix.dev/robostack-lyrical/linux-64/ros2-ros2cli-0.40.9-np2py314h53a0733_27.conda
+      - conda: https://prefix.dev/robostack-lyrical/linux-64/ros2-ros2cli-common-extensions-0.5.2-np2py314h53a0733_27.conda
+      - conda: https://prefix.dev/robostack-lyrical/linux-64/ros2-ros2component-0.40.9-np2py314h53a0733_27.conda
+      - conda: https://prefix.dev/robostack-lyrical/linux-64/ros2-ros2doctor-0.40.9-np2py314h53a0733_27.conda
+      - conda: https://prefix.dev/robostack-lyrical/linux-64/ros2-ros2interface-0.40.9-np2py314h53a0733_27.conda
+      - conda: https://prefix.dev/robostack-lyrical/linux-64/ros2-ros2launch-0.29.9-np2py314h53a0733_27.conda
+      - conda: https://prefix.dev/robostack-lyrical/linux-64/ros2-ros2lifecycle-0.40.9-np2py314h53a0733_27.conda
+      - conda: https://prefix.dev/robostack-lyrical/linux-64/ros2-ros2multicast-0.40.9-np2py314h53a0733_27.conda
+      - conda: https://prefix.dev/robostack-lyrical/linux-64/ros2-ros2node-0.40.9-np2py314h53a0733_27.conda
+      - conda: https://prefix.dev/robostack-lyrical/linux-64/ros2-ros2param-0.40.9-np2py314h53a0733_27.conda
+      - conda: https://prefix.dev/robostack-lyrical/linux-64/ros2-ros2pkg-0.40.9-np2py314h53a0733_27.conda
+      - conda: https://prefix.dev/robostack-lyrical/linux-64/ros2-ros2plugin-5.8.5-np2py314h53a0733_27.conda
+      - conda: https://prefix.dev/robostack-lyrical/linux-64/ros2-ros2run-0.40.9-np2py314h53a0733_27.conda
+      - conda: https://prefix.dev/robostack-lyrical/linux-64/ros2-ros2service-0.40.9-np2py314h53a0733_27.conda
+      - conda: https://prefix.dev/robostack-lyrical/linux-64/ros2-ros2topic-0.40.9-np2py314h53a0733_27.conda
+      - conda: https://prefix.dev/robostack-lyrical/linux-64/ros2-rosbag2-0.33.4-np2py314h53a0733_27.conda
+      - conda: https://prefix.dev/robostack-lyrical/linux-64/ros2-rosbag2-compression-0.33.4-np2py314h53a0733_27.conda
+      - conda: https://prefix.dev/robostack-lyrical/linux-64/ros2-rosbag2-compression-zstd-0.33.4-np2py314h53a0733_27.conda
+      - conda: https://prefix.dev/robostack-lyrical/linux-64/ros2-rosbag2-cpp-0.33.4-np2py314h53a0733_27.conda
+      - conda: https://prefix.dev/robostack-lyrical/linux-64/ros2-rosbag2-interfaces-0.33.4-np2py314h53a0733_27.conda
+      - conda: https://prefix.dev/robostack-lyrical/linux-64/ros2-rosbag2-py-0.33.4-np2py314h53a0733_27.conda
+      - conda: https://prefix.dev/robostack-lyrical/linux-64/ros2-rosbag2-storage-0.33.4-np2py314h53a0733_27.conda
+      - conda: https://prefix.dev/robostack-lyrical/linux-64/ros2-rosbag2-storage-default-plugins-0.33.4-np2py314h53a0733_27.conda
+      - conda: https://prefix.dev/robostack-lyrical/linux-64/ros2-rosbag2-storage-mcap-0.33.4-np2py314h53a0733_27.conda
+      - conda: https://prefix.dev/robostack-lyrical/linux-64/ros2-rosbag2-storage-sqlite3-0.33.4-np2py314h53a0733_27.conda
+      - conda: https://prefix.dev/robostack-lyrical/linux-64/ros2-rosbag2-transport-0.33.4-np2py314h53a0733_27.conda
+      - conda: https://prefix.dev/robostack-lyrical/linux-64/ros2-rosgraph-msgs-2.4.5-np2py314h53a0733_27.conda
+      - conda: https://prefix.dev/robostack-lyrical/linux-64/ros2-rosidl-adapter-5.2.1-np2py314h53a0733_27.conda
+      - conda: https://prefix.dev/robostack-lyrical/linux-64/ros2-rosidl-buffer-5.2.1-np2py314h53a0733_27.conda
+      - conda: https://prefix.dev/robostack-lyrical/linux-64/ros2-rosidl-buffer-backend-5.2.1-np2py314h53a0733_27.conda
+      - conda: https://prefix.dev/robostack-lyrical/linux-64/ros2-rosidl-buffer-backend-registry-5.2.1-np2py314h53a0733_27.conda
+      - conda: https://prefix.dev/robostack-lyrical/linux-64/ros2-rosidl-buffer-py-5.2.1-np2py314h53a0733_27.conda
+      - conda: https://prefix.dev/robostack-lyrical/linux-64/ros2-rosidl-cli-5.2.1-np2py314h53a0733_27.conda
+      - conda: https://prefix.dev/robostack-lyrical/linux-64/ros2-rosidl-cmake-5.2.1-np2py314h53a0733_27.conda
+      - conda: https://prefix.dev/robostack-lyrical/linux-64/ros2-rosidl-core-generators-0.4.3-np2py314h53a0733_27.conda
+      - conda: https://prefix.dev/robostack-lyrical/linux-64/ros2-rosidl-core-runtime-0.4.3-np2py314h53a0733_27.conda
+      - conda: https://prefix.dev/robostack-lyrical/linux-64/ros2-rosidl-default-generators-1.8.1-np2py314h53a0733_27.conda
+      - conda: https://prefix.dev/robostack-lyrical/linux-64/ros2-rosidl-default-runtime-1.8.1-np2py314h53a0733_27.conda
+      - conda: https://prefix.dev/robostack-lyrical/linux-64/ros2-rosidl-dynamic-typesupport-0.4.1-np2py314h53a0733_27.conda
+      - conda: https://prefix.dev/robostack-lyrical/linux-64/ros2-rosidl-dynamic-typesupport-fastrtps-0.5.1-np2py314h53a0733_27.conda
+      - conda: https://prefix.dev/robostack-lyrical/linux-64/ros2-rosidl-generator-c-5.2.1-np2py314h53a0733_27.conda
+      - conda: https://prefix.dev/robostack-lyrical/linux-64/ros2-rosidl-generator-cpp-5.2.1-np2py314h53a0733_27.conda
+      - conda: https://prefix.dev/robostack-lyrical/linux-64/ros2-rosidl-generator-dds-idl-0.13.0-np2py314h53a0733_27.conda
+      - conda: https://prefix.dev/robostack-lyrical/linux-64/ros2-rosidl-generator-py-0.27.2-np2py314h53a0733_27.conda
+      - conda: https://prefix.dev/robostack-lyrical/linux-64/ros2-rosidl-generator-rs-0.5.0-np2py314h53a0733_27.conda
+      - conda: https://prefix.dev/robostack-lyrical/linux-64/ros2-rosidl-generator-type-description-5.2.1-np2py314h53a0733_27.conda
+      - conda: https://prefix.dev/robostack-lyrical/linux-64/ros2-rosidl-parser-5.2.1-np2py314h53a0733_27.conda
+      - conda: https://prefix.dev/robostack-lyrical/linux-64/ros2-rosidl-pycommon-5.2.1-np2py314h53a0733_27.conda
+      - conda: https://prefix.dev/robostack-lyrical/linux-64/ros2-rosidl-runtime-c-5.2.1-np2py314h53a0733_27.conda
+      - conda: https://prefix.dev/robostack-lyrical/linux-64/ros2-rosidl-runtime-cpp-5.2.1-np2py314h53a0733_27.conda
+      - conda: https://prefix.dev/robostack-lyrical/linux-64/ros2-rosidl-runtime-py-0.15.2-np2py314h53a0733_27.conda
+      - conda: https://prefix.dev/robostack-lyrical/linux-64/ros2-rosidl-typesupport-c-3.4.2-np2py314h53a0733_27.conda
+      - conda: https://prefix.dev/robostack-lyrical/linux-64/ros2-rosidl-typesupport-cpp-3.4.2-np2py314h53a0733_27.conda
+      - conda: https://prefix.dev/robostack-lyrical/linux-64/ros2-rosidl-typesupport-fastrtps-c-3.9.7-np2py314h53a0733_27.conda
+      - conda: https://prefix.dev/robostack-lyrical/linux-64/ros2-rosidl-typesupport-fastrtps-cpp-3.9.7-np2py314h53a0733_27.conda
+      - conda: https://prefix.dev/robostack-lyrical/linux-64/ros2-rosidl-typesupport-interface-5.2.1-np2py314h53a0733_27.conda
+      - conda: https://prefix.dev/robostack-lyrical/linux-64/ros2-rosidl-typesupport-introspection-c-5.2.1-np2py314h53a0733_27.conda
+      - conda: https://prefix.dev/robostack-lyrical/linux-64/ros2-rosidl-typesupport-introspection-cpp-5.2.1-np2py314h53a0733_27.conda
+      - conda: https://prefix.dev/robostack-lyrical/linux-64/ros2-rpyutils-0.7.2-np2py314h53a0733_27.conda
+      - conda: https://prefix.dev/robostack-lyrical/linux-64/ros2-rqt-action-2.5.0-np2py314h53a0733_27.conda
+      - conda: https://prefix.dev/robostack-lyrical/linux-64/ros2-rqt-bag-2.2.5-np2py314h53a0733_27.conda
+      - conda: https://prefix.dev/robostack-lyrical/linux-64/ros2-rqt-bag-plugins-2.2.5-np2py314h53a0733_27.conda
+      - conda: https://prefix.dev/robostack-lyrical/linux-64/ros2-rqt-common-plugins-1.2.0-np2py314h53a0733_27.conda
+      - conda: https://prefix.dev/robostack-lyrical/linux-64/ros2-rqt-console-2.4.4-np2py314h53a0733_27.conda
+      - conda: https://prefix.dev/robostack-lyrical/linux-64/ros2-rqt-graph-1.8.5-np2py314h53a0733_27.conda
+      - conda: https://prefix.dev/robostack-lyrical/linux-64/ros2-rqt-gui-1.10.6-np2py314h53a0733_27.conda
+      - conda: https://prefix.dev/robostack-lyrical/linux-64/ros2-rqt-gui-cpp-1.10.6-np2py314h1b8acf9_27.conda
+      - conda: https://prefix.dev/robostack-lyrical/linux-64/ros2-rqt-gui-py-1.10.6-np2py314h53a0733_27.conda
+      - conda: https://prefix.dev/robostack-lyrical/linux-64/ros2-rqt-image-view-2.0.5-np2py314h09c209a_27.conda
+      - conda: https://prefix.dev/robostack-lyrical/linux-64/ros2-rqt-msg-1.7.4-np2py314h53a0733_27.conda
+      - conda: https://prefix.dev/robostack-lyrical/linux-64/ros2-rqt-plot-1.7.6-np2py314h09c209a_28.conda
+      - conda: https://prefix.dev/robostack-lyrical/linux-64/ros2-rqt-publisher-1.10.4-np2py314h53a0733_27.conda
+      - conda: https://prefix.dev/robostack-lyrical/linux-64/ros2-rqt-py-common-1.10.6-np2py314h09c209a_28.conda
+      - conda: https://prefix.dev/robostack-lyrical/linux-64/ros2-rqt-py-console-1.5.3-np2py314h53a0733_27.conda
+      - conda: https://prefix.dev/robostack-lyrical/linux-64/ros2-rqt-reconfigure-1.8.6-np2py314h53a0733_27.conda
+      - conda: https://prefix.dev/robostack-lyrical/linux-64/ros2-rqt-service-caller-1.5.4-np2py314h53a0733_27.conda
+      - conda: https://prefix.dev/robostack-lyrical/linux-64/ros2-rqt-shell-1.4.2-np2py314h53a0733_27.conda
+      - conda: https://prefix.dev/robostack-lyrical/linux-64/ros2-rqt-srv-1.4.1-np2py314h53a0733_27.conda
+      - conda: https://prefix.dev/robostack-lyrical/linux-64/ros2-rqt-topic-2.1.2-np2py314h53a0733_27.conda
+      - conda: https://prefix.dev/robostack-lyrical/linux-64/ros2-rti-connext-dds-cmake-module-1.2.8-np2py314h53a0733_27.conda
+      - conda: https://prefix.dev/robostack-lyrical/linux-64/ros2-rttest-0.20.1-np2py314h53a0733_27.conda
+      - conda: https://prefix.dev/robostack-lyrical/linux-64/ros2-rviz-common-15.2.6-np2py314h0b7be35_28.conda
+      - conda: https://prefix.dev/robostack-lyrical/linux-64/ros2-rviz-default-plugins-15.2.6-np2py314h09c209a_28.conda
+      - conda: https://prefix.dev/robostack-lyrical/linux-64/ros2-rviz-ogre-vendor-15.2.6-np2py314h8771833_27.conda
+      - conda: https://prefix.dev/robostack-lyrical/linux-64/ros2-rviz-rendering-15.2.6-np2py314heff3e26_28.conda
+      - conda: https://prefix.dev/robostack-lyrical/linux-64/ros2-rviz2-15.2.6-np2py314h09c209a_28.conda
+      - conda: https://prefix.dev/robostack-lyrical/linux-64/ros2-sdl2-vendor-3.3.0-np2py314h1f34c7c_27.conda
+      - conda: https://prefix.dev/robostack-lyrical/linux-64/ros2-sensor-msgs-5.9.3-np2py314h53a0733_27.conda
+      - conda: https://prefix.dev/robostack-lyrical/linux-64/ros2-sensor-msgs-py-5.9.3-np2py314h53a0733_27.conda
+      - conda: https://prefix.dev/robostack-lyrical/linux-64/ros2-service-msgs-2.4.5-np2py314h53a0733_27.conda
+      - conda: https://prefix.dev/robostack-lyrical/linux-64/ros2-shape-msgs-5.9.3-np2py314h53a0733_27.conda
+      - conda: https://prefix.dev/robostack-lyrical/linux-64/ros2-spdlog-vendor-1.8.0-np2py314h1781256_27.conda
+      - conda: https://prefix.dev/robostack-lyrical/linux-64/ros2-sros2-0.16.6-np2py314h53a0733_27.conda
+      - conda: https://prefix.dev/robostack-lyrical/linux-64/ros2-sros2-cmake-0.16.6-np2py314h53a0733_27.conda
+      - conda: https://prefix.dev/robostack-lyrical/linux-64/ros2-statistics-msgs-2.4.5-np2py314h53a0733_27.conda
+      - conda: https://prefix.dev/robostack-lyrical/linux-64/ros2-std-msgs-5.9.3-np2py314h53a0733_27.conda
+      - conda: https://prefix.dev/robostack-lyrical/linux-64/ros2-std-srvs-5.9.3-np2py314h53a0733_27.conda
+      - conda: https://prefix.dev/robostack-lyrical/linux-64/ros2-stereo-msgs-5.9.3-np2py314h53a0733_27.conda
+      - conda: https://prefix.dev/robostack-lyrical/linux-64/ros2-tango-icons-vendor-0.5.1-np2py314h53a0733_27.conda
+      - conda: https://prefix.dev/robostack-lyrical/linux-64/ros2-teleop-twist-joy-2.6.5-np2py314h53a0733_27.conda
+      - conda: https://prefix.dev/robostack-lyrical/linux-64/ros2-teleop-twist-keyboard-2.4.1-np2py314h53a0733_27.conda
+      - conda: https://prefix.dev/robostack-lyrical/linux-64/ros2-tf2-0.45.10-np2py314h53a0733_27.conda
+      - conda: https://prefix.dev/robostack-lyrical/linux-64/ros2-tf2-bullet-0.45.10-np2py314h53a0733_27.conda
+      - conda: https://prefix.dev/robostack-lyrical/linux-64/ros2-tf2-eigen-0.45.10-np2py314h53a0733_27.conda
+      - conda: https://prefix.dev/robostack-lyrical/linux-64/ros2-tf2-eigen-kdl-0.45.10-np2py314habcfd04_27.conda
+      - conda: https://prefix.dev/robostack-lyrical/linux-64/ros2-tf2-geometry-msgs-0.45.10-np2py314h53a0733_27.conda
+      - conda: https://prefix.dev/robostack-lyrical/linux-64/ros2-tf2-kdl-0.45.10-np2py314h53a0733_27.conda
+      - conda: https://prefix.dev/robostack-lyrical/linux-64/ros2-tf2-msgs-0.45.10-np2py314h53a0733_27.conda
+      - conda: https://prefix.dev/robostack-lyrical/linux-64/ros2-tf2-py-0.45.10-np2py314h53a0733_27.conda
+      - conda: https://prefix.dev/robostack-lyrical/linux-64/ros2-tf2-ros-0.45.10-np2py314h53a0733_27.conda
+      - conda: https://prefix.dev/robostack-lyrical/linux-64/ros2-tf2-ros-py-0.45.10-np2py314h53a0733_27.conda
+      - conda: https://prefix.dev/robostack-lyrical/linux-64/ros2-tf2-sensor-msgs-0.45.10-np2py314h53a0733_27.conda
+      - conda: https://prefix.dev/robostack-lyrical/linux-64/ros2-tf2-tools-0.45.10-np2py314h53a0733_27.conda
+      - conda: https://prefix.dev/robostack-lyrical/linux-64/ros2-tlsf-0.11.1-np2py314h53a0733_27.conda
+      - conda: https://prefix.dev/robostack-lyrical/linux-64/ros2-tlsf-cpp-0.20.1-np2py314h53a0733_27.conda
+      - conda: https://prefix.dev/robostack-lyrical/linux-64/ros2-topic-monitor-0.37.9-np2py314h53a0733_27.conda
+      - conda: https://prefix.dev/robostack-lyrical/linux-64/ros2-tracetools-8.10.2-np2py314h53a0733_27.conda
+      - conda: https://prefix.dev/robostack-lyrical/linux-64/ros2-trajectory-msgs-5.9.3-np2py314h53a0733_27.conda
+      - conda: https://prefix.dev/robostack-lyrical/linux-64/ros2-turtlesim-1.10.9-np2py314h09c209a_28.conda
+      - conda: https://prefix.dev/robostack-lyrical/linux-64/ros2-turtlesim-msgs-1.10.9-np2py314h53a0733_27.conda
+      - conda: https://prefix.dev/robostack-lyrical/linux-64/ros2-type-description-interfaces-2.4.5-np2py314h53a0733_27.conda
+      - conda: https://prefix.dev/robostack-lyrical/linux-64/ros2-uncrustify-vendor-3.2.0-np2py314h53a0733_27.conda
+      - conda: https://prefix.dev/robostack-lyrical/linux-64/ros2-unique-identifier-msgs-2.8.1-np2py314h53a0733_27.conda
+      - conda: https://prefix.dev/robostack-lyrical/linux-64/ros2-urdf-2.13.2-np2py314hc703c99_27.conda
+      - conda: https://prefix.dev/robostack-lyrical/linux-64/ros2-urdf-parser-plugin-2.13.2-np2py314h53a0733_27.conda
+      - conda: https://prefix.dev/robostack-lyrical/linux-64/ros2-urdfdom-6.0.0-py314h2f0392c_27.conda
+      - conda: https://prefix.dev/robostack-lyrical/linux-64/ros2-urdfdom-headers-3.0.0-py314h02e3bbf_27.conda
+      - conda: https://prefix.dev/robostack-lyrical/linux-64/ros2-visualization-msgs-5.9.3-np2py314h53a0733_27.conda
+      - conda: https://prefix.dev/robostack-lyrical/linux-64/ros2-yaml-cpp-vendor-9.2.1-np2py314h53a0733_27.conda
+      - conda: https://prefix.dev/robostack-lyrical/linux-64/ros2-zenoh-cpp-vendor-0.10.6-np2py314hc614d3d_27.conda
+      - conda: https://prefix.dev/robostack-lyrical/linux-64/ros2-zstd-cmake-module-0.33.4-np2py314h53a0733_27.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/rosdistro-1.1.0-pyhd8ed1ab_0.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/rospkg-1.6.3-pyh5ded981_0.conda
       - conda: https://conda.anaconda.org/conda-forge/linux-64/ruby-3.4.2-he7af4c9_0.conda
       - conda: https://conda.anaconda.org/conda-forge/linux-64/scipy-1.18.1-py314h36f0660_1.conda
       - conda: https://conda.anaconda.org/conda-forge/linux-64/sdl2-2.32.56-h54a6638_0.conda
-      - conda: https://conda.anaconda.org/conda-forge/linux-64/sdl3-3.4.18-h5330f5c_0.conda
+      - conda: https://conda.anaconda.org/conda-forge/linux-64/sdl3-3.4.16-h5330f5c_0.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/setuptools-79.0.1-pyhff2d567_0.conda
-      - conda: https://conda.anaconda.org/conda-forge/linux-64/shaderc-2026.3-hcebf71c_1.conda
+      - conda: https://conda.anaconda.org/conda-forge/linux-64/shaderc-2026.2-h718be3e_0.conda
       - conda: https://conda.anaconda.org/conda-forge/linux-64/sip-6.15.3-py314ha160325_0.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/six-1.17.0-pyhe01879c_1.conda
       - conda: https://conda.anaconda.org/conda-forge/linux-64/snappy-1.2.2-h34e00bb_2.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/snowballstemmer-3.1.1-pyhd8ed1ab_0.conda
       - conda: https://conda.anaconda.org/conda-forge/linux-64/spdlog-1.17.0-hb6aa676_2.conda
-      - conda: https://conda.anaconda.org/conda-forge/linux-64/spirv-tools-2026.4-h7148c6a_0.conda
-      - conda: https://conda.anaconda.org/conda-forge/linux-64/sqlite-3.54.0-h9ffa6c4_1.conda
+      - conda: https://conda.anaconda.org/conda-forge/linux-64/spirv-tools-2026.3-h7148c6a_1.conda
+      - conda: https://conda.anaconda.org/conda-forge/linux-64/sqlite-3.53.4-h9ffa6c4_1.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/stack_data-0.6.3-pyhd8ed1ab_1.conda
       - conda: https://conda.anaconda.org/conda-forge/linux-64/svt-av1-4.2.0-hd2095e1_1.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/sysroot_linux-64-2.28-h4ee821c_9.conda
       - conda: https://conda.anaconda.org/conda-forge/linux-64/tbb-2023.1.0-hfd44327_0.conda
       - conda: https://conda.anaconda.org/conda-forge/linux-64/tbb-devel-2023.1.0-hfd44327_0.conda
-      - conda: https://conda.anaconda.org/conda-forge/linux-64/tinyxml-2.6.2-h4dbf13b_4.conda
       - conda: https://conda.anaconda.org/conda-forge/linux-64/tinyxml2-11.0.0-hee9eb32_1.conda
       - conda: https://conda.anaconda.org/conda-forge/linux-64/tk-8.6.13-noxft_h1df4ec4_4.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/toml-0.10.2-pyhcf101f3_3.conda
-      - conda: https://conda.anaconda.org/conda-forge/noarch/tomli-2.5.0-pyh5ded981_0.conda
+      - conda: https://conda.anaconda.org/conda-forge/noarch/tomli-2.4.1-pyhcf101f3_0.conda
       - conda: https://conda.anaconda.org/conda-forge/linux-64/tornado-6.5.10-py314h89acca1_0.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/tqdm-4.70.1-pyhfa0c392_0.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/traitlets-5.16.1-pyhcf101f3_0.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/typing-extensions-4.16.0-h69aa097_0.conda
+      - conda: https://conda.anaconda.org/conda-forge/noarch/typing-inspection-0.4.4-pyhcf101f3_0.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/typing_extensions-4.16.0-pyhcf101f3_0.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/tzdata-2026c-h151e31d_0.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/u-msgpack-python-2.8.0-pyhff2d567_1.conda
@@ -780,8 +804,9 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/linux-64/vtk-io-ffmpeg-9.7.0-py314h31a7b7e_1.conda
       - conda: https://conda.anaconda.org/conda-forge/linux-64/wayland-1.26.0-hc1c935e_2.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/wayland-protocols-1.49-hd8ed1ab_0.conda
-      - conda: https://conda.anaconda.org/conda-forge/linux-64/wcwidth-0.9.2-py311hd139983_0.conda
-      - conda: https://conda.anaconda.org/conda-forge/noarch/wslink-2.6.0-pyhd8ed1ab_0.conda
+      - conda: https://conda.anaconda.org/conda-forge/linux-64/wcwidth-0.9.1-py311h34ddc6a_1.conda
+      - conda: https://conda.anaconda.org/conda-forge/linux-64/wrapt-2.5.0-py314hfe1a184_0.conda
+      - conda: https://conda.anaconda.org/conda-forge/noarch/wslink-2.5.7-pyhd8ed1ab_0.conda
       - conda: https://conda.anaconda.org/conda-forge/linux-64/x264-1!164.3095-h7cc23a3_3.conda
       - conda: https://conda.anaconda.org/conda-forge/linux-64/x265-3.5-h73f68a7_4.conda
       - conda: https://conda.anaconda.org/conda-forge/linux-64/xcb-util-0.4.1-h4f16b4b_2.conda
@@ -816,22 +841,22 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/linux-64/xorg-xorgproto-2025.1-hebe6cf0_3.conda
       - conda: https://conda.anaconda.org/conda-forge/linux-64/yaml-0.2.5-hebe6cf0_3.conda
       - conda: https://conda.anaconda.org/conda-forge/linux-64/yaml-cpp-0.8.0-h54a6638_1.conda
-      - conda: https://conda.anaconda.org/conda-forge/linux-64/yarl-1.25.1-py314hd42368d_0.conda
+      - conda: https://conda.anaconda.org/conda-forge/noarch/yarl-1.24.5-pyh7db6752_0.conda
+      - conda: https://conda.anaconda.org/conda-forge/linux-64/zenoh-rust-abi-1.10.1.1.97.1-py311hcf3f0e6_0.conda
       - conda: https://conda.anaconda.org/conda-forge/linux-64/zeromq-4.3.5-h901266b_12.conda
       - conda: https://conda.anaconda.org/conda-forge/linux-64/zfp-1.0.1-h79e284d_6.conda
-      - conda: https://conda.anaconda.org/conda-forge/noarch/zipp-4.1.1-pyh5ded981_0.conda
       - conda: https://conda.anaconda.org/conda-forge/linux-64/zlib-1.3.2-h25fd6f3_3.conda
       - conda: https://conda.anaconda.org/conda-forge/linux-64/zlib-ng-2.3.3-hce19668_1.conda
       - conda: https://conda.anaconda.org/conda-forge/linux-64/zstd-1.5.7-hb78ec9c_7.conda
       - conda: https://conda.anaconda.org/conda-forge/linux-64/zziplib-0.13.69-he45264a_2.conda
-      - pypi: https://files.pythonhosted.org/packages/b3/7d/01e62f59e4166af1be6238d9f2b7f3453630c51b8044b412d05b5606532a/absl_py-2.5.1-py3-none-any.whl
+      - pypi: https://files.pythonhosted.org/packages/58/0a/a10b45aab35b175aded078a462dc8d0c698f5b13946e7cb0869097b78bb6/absl_py-2.5.0-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/ee/10/f6d93731ac46a4616e910e1e28eb2656b6fb6db7ac0f52305f88c6c86c8d/adam_robotics-0.5.0-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/86/16/1a8fd2b19544b84575cf84ef7aa3ad4c173b756d5f087c91f85d1b295777/array_api_compat-1.15.0-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/a3/49/7a3769c43e432b0434dd46424058b47af4347167f0dfca1ecb27e2de92a1/cuda_bindings-13.4.3-cp314-cp314-manylinux_2_24_x86_64.manylinux_2_28_x86_64.whl
-      - pypi: https://files.pythonhosted.org/packages/b9/fb/f8e1890428f9f590b4beebd63b068aac1ce32a3331510c847b9f9a78f261/cuda_pathfinder-1.8.3-py3-none-any.whl
+      - pypi: https://files.pythonhosted.org/packages/98/59/239c7259e669c46ddbcac0aa60e3a0ef00bfeaaa687f905b24dd6a7a10fe/cuda_pathfinder-1.8.2-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/d1/c7/a79086a62c98befcdb8349656c6f114e2db3b8b2422f6e25c97a7f2a9a3c/cuda_toolkit-13.0.3.0-py2.py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/5a/3d/589663aeeacd59bb2f3e8596bfd3e81cf0fb18d70bb433199041f469771b/etils-1.14.0-py3-none-any.whl
-      - pypi: https://files.pythonhosted.org/packages/ee/86/032133892a5de43b5a98200b01aadcad68cc255e274a762f08b8a76d2912/filelock-4.1.0-py3-none-any.whl
+      - pypi: https://files.pythonhosted.org/packages/06/cf/1731c0dd182ee35f80a39e63afb3d03056ea0dd561b7498932b10b2e34d9/filelock-4.0.7-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/6c/c0/a98505f18594f1bce828bb159cec0fcf9860562f1a2c85913409fc8f3d9e/fsspec-2026.9.0-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/a0/61/5c78b91c3143ed5c14207f463aecfc8f9dbb5092fb2869baf37c273b2705/gitdb-4.0.12-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/fa/48/f36d233ce749d1bb880cb5e6f8bb171dc2effabc7435c31da604d831b3ec/gitpython-3.2.0-py3-none-any.whl
@@ -842,10 +867,10 @@ environments:
       - pypi: https://files.pythonhosted.org/packages/35/2e/85156ae0a42292ef8e648c503437c65e434f6c4370f44e7fe5d4f845e6da/jaxlib-0.11.2-cp314-cp314-manylinux_2_27_x86_64.whl
       - pypi: https://files.pythonhosted.org/packages/62/a1/3d680cbfd5f4b8f15abc1d571870c5fc3e594bb582bc3b64ea099db13e56/jinja2-3.1.6-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/37/98/29d815431b967554ac185739ef1da0dc9a8378a66809b65233d07b66d194/liecasadi-0.0.7-py3-none-any.whl
-      - pypi: https://files.pythonhosted.org/packages/8f/db/d7282caf7ab03af44d5d6fdbaa019b35c7d7f1c90588b839c07cba640d6a/markupsafe-3.0.4-cp314-cp314-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl
+      - pypi: https://files.pythonhosted.org/packages/41/3c/a36c2450754618e62008bf7435ccb0f88053e07592e6028a34776213d877/markupsafe-3.0.3-cp314-cp314-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl
       - pypi: https://files.pythonhosted.org/packages/1c/b1/1831dd8c9b06c013085d31a2ac4f03392d43bd36bfc6ff591a08bcedc1cf/ml_dtypes-0.6.0-cp314-cp314-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl
       - pypi: https://files.pythonhosted.org/packages/43/e3/7d92a15f894aa0c9c4b49b8ee9ac9850d6e63b03c9c32c0367a13ae62209/mpmath-1.3.0-py3-none-any.whl
-      - pypi: https://files.pythonhosted.org/packages/e1/b3/76230a8523a8cbaa8f15616eec169e663b50d54ba6f4e9accf3b7b35a822/mujoco-3.15.0-cp314-cp314-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl
+      - pypi: https://files.pythonhosted.org/packages/80/80/aff9e53b7000c71e85a4f3077cd598acc69de17a678d3238c85b36b341b9/mujoco-3.14.0-cp314-cp314-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl
       - pypi: https://files.pythonhosted.org/packages/7e/cd/fe58041e9011f307c490e3e17dd48cc516448f7c698a3f2d9d9d65d7e6a8/networkx-3.7-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/18/29/bb830ee6d934311e17a7a4fa1368faf3e73fbb09c0d80fc44e41828df177/noise-1.2.2.tar.gz
       - pypi: https://files.pythonhosted.org/packages/3b/cd/154ca20c38269e05eff77c1464e6c1da89f50a6390b565e9d82e06bc11e1/nvidia_cublas-13.1.1.3-py3-none-manylinux_2_27_x86_64.whl
@@ -870,10 +895,11 @@ environments:
       - pypi: https://files.pythonhosted.org/packages/b4/20/0c26cc62b49e91fb5597c45de37f43ad3dca42c3056e9e2e5bf62227b36a/robot_descriptions-3.2.0-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/c1/d4/59e74daffcb57a07668852eeeb6035af9f32cbfd7a1d2511f17d2fe6a738/smmap-5.0.3-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/a2/09/77d55d46fd61b4a135c444fc97158ef34a095e5681d0a6c10b75bf356191/sympy-1.14.0-py3-none-any.whl
-      - pypi: https://files.pythonhosted.org/packages/fd/df/23c69e9b9fd19fe6563422f1bc59f89601bda47234a89a1cf432cfde3aee/torch-2.14.1-cp314-cp314-manylinux_2_28_x86_64.whl
+      - pypi: https://files.pythonhosted.org/packages/50/75/8d2b9a7e724759470c209489b79260cac537f091cc9aac8001c8d2bc845c/torch-2.14.0-cp314-cp314-manylinux_2_28_x86_64.whl
       - pypi: https://files.pythonhosted.org/packages/93/d9/08c75f3459f19ad00425b564058e40efa4bcd79b816064cf27499303ea42/triton-3.8.0-cp314-cp314-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl
       - pypi: https://files.pythonhosted.org/packages/b6/c8/207c94f4eef75ed76f838b7008a03e1aeb31ba5d41bb5a00df87c12f98cc/urdfdom_py-1.2.1.post1-py3-none-any.whl
-      - pypi: https://files.pythonhosted.org/packages/9f/fd/47b8a0361c49da939b976a07b27a72a9f893d01dfcf4d2a28b53419ce1ef/websockets-17.2-cp314-cp314-manylinux1_x86_64.manylinux_2_28_x86_64.manylinux_2_5_x86_64.whl
+      - pypi: https://files.pythonhosted.org/packages/46/c8/d8372256e00c4e3cab1115c45075d1eeedb642a3f2b42bd70c4deae03f06/websockets-17.1-cp314-cp314-manylinux1_x86_64.manylinux_2_28_x86_64.manylinux_2_5_x86_64.whl
+      - pypi: https://files.pythonhosted.org/packages/b5/98/df615823cd9419131ce19fba00de53a663794369e198aade064a244b385d/zipp-4.1.1-py3-none-any.whl
       - pypi: ./
   humble-cuda:
     channels:

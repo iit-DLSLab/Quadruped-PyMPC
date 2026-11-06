@@ -71,7 +71,8 @@ ros-humble-rosidl-generator-dds-idl = "*"
 ros-humble-plotjuggler-ros = "*"
 
 [tool.pixi.environments]
-default = ["common", "no-cuda", "humble"]
+# `pixi shell` (no -e) activates lyrical-no-cuda
+default = ["common", "no-cuda", "lyrical"]
 lyrical-no-cuda = ["common", "no-cuda", "lyrical"]
 lyrical-cuda = ["common", "cuda", "lyrical"]
 humble-no-cuda = ["common", "no-cuda", "humble"]

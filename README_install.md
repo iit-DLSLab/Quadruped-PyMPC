@@ -12,10 +12,10 @@ You can install this repo with Pixi (preferred), Conda or Docker.
 2. create the environment, choosing the ROS 2 distro (**lyrical** or **humble**) and whether you want the **cuda** build:
 
 ```bash
-pixi shell -e humble-no-cuda     # humble, no cuda (or just pixi shell)
-pixi shell -e humble-cuda        # humble, cuda
-pixi shell -e lyrical-no-cuda    # lyrical, no cuda 
+pixi shell                      # lyrical, no cuda (or pixi shell -e lyrical-no-cuda)
 pixi shell -e lyrical-cuda       # lyrical, cuda
+pixi shell -e humble-no-cuda     # humble, no cuda
+pixi shell -e humble-cuda        # humble, cuda
 ```
 
 3. go to Common Steps section
