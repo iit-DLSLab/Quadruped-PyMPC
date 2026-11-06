@@ -41,6 +41,7 @@ from dls2_interface.msg import BaseState, BlindState, ControlSignal, TimeDebug
 from sensor_msgs.msg import Joy
 
 import time
+import gc
 import numpy as np
 np.set_printoptions(precision=3, suppress=True)
 
@@ -341,6 +342,11 @@ class Quadruped_PyMPC_Node(Node):
         # This process runs forever!
         last_mpc_process_time = time.time()
         last_mpc_solve_time = None
+        # Move everything inherited from the parent and allocated so far out of the garbage collector,
+        # so that its full collections do not stall the MPC (same as in main)
+        gc.collect()
+        gc.freeze()
+
         while True:
             #if time.time() - last_mpc_process_time > 1.0 / cfg.mpc_params['frequency']:
             if(input_data_process.empty()):
@@ -403,6 +409,11 @@ class Quadruped_PyMPC_Node(Node):
 
         last_mpc_process_time = time.time()
         last_mpc_solve_time = None
+        # Move everything inherited from the parent and allocated so far out of the garbage collector,
+        # so that its full collections do not stall the MPC (same as in main)
+        gc.collect()
+        gc.freeze()
+
         while True:
             #if time.time() - last_mpc_process_time > 1.0 / cfg.mpc_params['frequency']:
             if(input_data_process.empty()):
@@ -821,6 +832,11 @@ def main():
     rclpy.init()
 
     controller_node = Quadruped_PyMPC_Node()
+
+    # Move everything allocated at startup (modules, model, controllers, node) out of the garbage collector:
+    # otherwise its full collections scan all of them and stall the control loop for tens of ms
+    gc.collect()
+    gc.freeze()
 
     # Created after the node, so after the MPC process has been forked
     rclpy.spin(controller_node, create_executor())
