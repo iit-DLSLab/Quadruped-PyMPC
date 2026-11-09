@@ -1,6 +1,11 @@
 #!/bin/bash
 echo "Remember to run this file with: source ros2_localhost_connect.sh"
+# Jazzy+ (incl. lyrical) ignore ROS_LOCALHOST_ONLY: the discovery scope comes from
+# ROS_AUTOMATIC_DISCOVERY_RANGE, which ros_environment defaults to SUBNET.
+# Keep ROS_LOCALHOST_ONLY for humble.
+export ROS_AUTOMATIC_DISCOVERY_RANGE=LOCALHOST
 export ROS_LOCALHOST_ONLY=1
+unset ROS_STATIC_PEERS
 unset CYCLONEDDS_URI
 unset RMW_IMPLEMENTATION
 unset ROS_DISCOVERY_SERVER

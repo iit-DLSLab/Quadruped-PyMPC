@@ -8,7 +8,7 @@ version = "1.0.0"
 
 [tool.pixi.workspace]
 name = "quadruped_pympc_env"
-channels = ["conda-forge", "nvidia"]
+channels = ["conda-forge", "nvidia", "https://prefix.dev/gbionics/conda-forge-staging"]
 platforms = ["linux-64"]
 requires-pixi = ">=0.63.0"
 
@@ -16,6 +16,7 @@ requires-pixi = ">=0.63.0"
 pip = "*"
 python = "*"
 casadi = "*"
+acados-template = "*"
 numpy = "*"
 matplotlib = "*"
 meshcat-python = "*"

@@ -1,4 +1,4 @@
-# Build from the repository root (with the acados submodule checked out), choosing the ROS 2 distro:
+# Build from the repository root, choosing the ROS 2 distro:
 #   docker build -f installation/docker/nvidia/dockerfile --build-arg ROS_DISTRO=humble  -t quadruped_pympc:humble-cuda .
 #   docker build -f installation/docker/nvidia/dockerfile --build-arg ROS_DISTRO=lyrical -t quadruped_pympc:lyrical-cuda .
 # Run from the repository root with the NVIDIA Container Toolkit and X11:
@@ -7,7 +7,7 @@
 #     -v /tmp/.X11-unix:/tmp/.X11-unix:rw -v ${XAUTHORITY:-$HOME/.Xauthority}:/tmp/.Xauthority:ro \
 #     -v "$(pwd)":/workspace quadruped_pympc:humble-cuda
 # The CUDA libraries come from the jax[cuda12] wheels, so only the host driver is needed.
-# The pixi env and acados live in /opt, so mounting the repo in /workspace does not hide them.
+# The pixi env lives in /opt, so mounting the repo in /workspace does not hide it.
 FROM ubuntu:24.04
 
 # -----------------------------
@@ -63,27 +63,6 @@ RUN mkdir -p /etc/pixi \
     && pixi install -e "$PIXI_ENV" \
     && pixi clean cache --yes \
     && pixi shell-hook --frozen -e "$PIXI_ENV" > /opt/pixi/activate.sh
-
-# ---------------------------------------
-# Build acados (at the submodule checkout) + install template, in /opt/acados
-# ---------------------------------------
-COPY quadruped_pympc/acados /opt/acados
-RUN test -f /opt/acados/CMakeLists.txt \
-    || (echo "ERROR: acados submodule missing, run 'git submodule update --init --recursive' first" \
-        && exit 1)
-
-ENV ACADOS_SOURCE_DIR=/opt/acados
-ENV LD_LIBRARY_PATH=/opt/acados/lib
-
-RUN pixi run --frozen -e "$PIXI_ENV" bash -c '\
-      set -euo pipefail && \
-      cd /opt/acados && \
-      mkdir -p build && \
-      cd build && \
-      cmake -DACADOS_WITH_SYSTEM_BLASFEO:BOOL=OFF -DCMAKE_POLICY_VERSION_MINIMUM=3.5 .. && \
-      make install -j$(nproc) && \
-      python -m pip install --no-cache-dir -e ../interfaces/acados_template \
-    '
 
 # -----------------------------
 # Copy local repo, used when it is not mounted in /workspace
