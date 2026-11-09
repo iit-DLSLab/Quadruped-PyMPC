@@ -12,7 +12,7 @@ You can install this repo with Pixi (preferred), Conda or Docker.
 2. create the environment, choosing the ROS 2 distro (**lyrical** or **humble**) and whether you want the **cuda** build:
 
 ```bash
-pixi shell                      # lyrical, no cuda (or pixi shell -e lyrical-no-cuda)
+pixi shell                       # lyrical, no cuda (or pixi shell -e lyrical-no-cuda)
 pixi shell -e lyrical-cuda       # lyrical, cuda
 pixi shell -e humble-no-cuda     # humble, no cuda
 pixi shell -e humble-cuda        # humble, cuda
@@ -20,28 +20,6 @@ pixi shell -e humble-cuda        # humble, cuda
 
 3. go to Common Steps section
 
-
-### Conda installation
-
-1. install [miniforge/conda](https://github.com/conda-forge/miniforge/releases) (x86_64 or arm64 depending on your platform)
-
-2. create an environment using the file in the folder [installation](./installation) choosing between **nvidia, integrated gpu and ros2 version**:
-
-
-```bash
-conda env create -f mamba_environment_humble.yml
-conda activate quadruped_pympc_env
-
-conda env create -f mamba_environment_lyrical.yml
-conda activate quadruped_pympc_env
-```
-
-
-3. go to Common Steps section
-
-
-
-### Common steps between Pixi and Conda
 
 4. go to Quadruped-PyMPC initial folder and install it:
 
@@ -57,9 +35,9 @@ conda activate quadruped_pympc_env
 2. from the Quadruped-PyMPC folder, build the image choosing between **integrated gpu or nvidia** and the ROS 2 distro (**lyrical** or **humble**):
 
 ```bash
-docker build -f installation/docker/integrated_gpu/dockerfile --build-arg ROS_DISTRO=humble -t quadruped_pympc:humble .         # integrated gpu
+docker build -f docker/integrated_gpu/dockerfile --build-arg ROS_DISTRO=humble -t quadruped_pympc:humble .         # integrated gpu
 
-docker build -f installation/docker/nvidia/dockerfile --build-arg ROS_DISTRO=humble -t quadruped_pympc:humble-cuda .           # nvidia
+docker build -f docker/nvidia/dockerfile --build-arg ROS_DISTRO=humble -t quadruped_pympc:humble-cuda .           # nvidia
 ```
 
 3. run the container from the Quadruped-PyMPC folder, which is mounted in `/workspace`:
