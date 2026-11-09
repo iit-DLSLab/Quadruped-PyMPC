@@ -1,4 +1,4 @@
-You can install it using only pixi, or using docker (which will internally call pixi automatically).
+You can install this repository by using only pixi directly, or via docker (which will automatically call pixi).
 
 ### Pixi installation
 
