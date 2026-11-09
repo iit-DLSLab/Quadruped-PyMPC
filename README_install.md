@@ -1,10 +1,3 @@
-## Dependencies
-Gradient-based MPC: It uses [CasADI](https://web.casadi.org/) to define the model and [acados](https://github.com/acados/acados) to solve the optimal control problem. Sampling-based MPC: [jax](https://github.com/google/jax) for both. The simulation environment is based on [Mujoco](https://mujoco.org/).
-
-You can install this repo with Pixi (preferred) or Docker (that in any case will use pixi internally). 
-
----
-
 ### Pixi installation
 
 1. install [pixi](https://pixi.sh/latest/)
