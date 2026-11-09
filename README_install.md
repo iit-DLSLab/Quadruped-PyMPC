@@ -89,4 +89,4 @@ ctrl -> set zero all velocities
 
 6. for general commands from terminal see [here](./ros2/console.py)
 
-7. for a real-robot deployment, use a nice [state estimator](https://github.com/iit-DLSLab/muse)
+7. for a real-robot deployment use a nice [state estimator](https://github.com/iit-DLSLab/muse)
