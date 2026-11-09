@@ -87,6 +87,6 @@ ctrl -> set zero all velocities
     ros2 launch teleop_twist_joy teleop-launch.py joy_config:='xbox'
     ```
 
-6. general commands from terminal available [here](https://github.com/iit-DLSLab/Quadruped-PyMPC/blob/335779f1eecc315511b8036d84d986a66f2450c5/ros2/console.py#L358)
+6. for general commands from terminal see [here](./ros2/console.py)
 
 7. for a real-robot deployment, use a nice [state estimator](https://github.com/iit-DLSLab/muse)
