@@ -53,7 +53,7 @@ Quadruped-PyMPC is already built inside the image, and the pixi environment is a
 
 ### How to run - Simulation
 
-1. activate your pixi, conda or docker environment
+1. activate your pixi or docker environment
    
 
 2. go in the main Quadruped-PyMPC [folder](https://github.com/iit-DLSLab/Quadruped-PyMPC) and press
@@ -73,7 +73,7 @@ ctrl -> set zero all velocities
 
 ### How to run - ROS2
 
-1. activate your pixi, conda or docker environment
+1. activate your pixi or docker environment
    
 
 2. you can run now the script
