@@ -45,7 +45,7 @@ Supported robots:
 
 ## Installation and Run
 
-See [here](https://github.com/iit-DLSLab/Quadruped-PyMPC/blob/main/README_install.md).
+See [here](./README_install.md).
 
 ## How to contribute
 
