@@ -1,3 +1,5 @@
+You can install it using only pixi, or using docker (which will internally call pixi automatically).
+
 ### Pixi installation
 
 1. install [pixi](https://pixi.sh/latest/)
@@ -39,9 +41,6 @@ docker run -it --rm --gpus all --network host --ipc host -e DISPLAY \
   -v /tmp/.X11-unix:/tmp/.X11-unix:rw -v ${XAUTHORITY:-$HOME/.Xauthority}:/tmp/.Xauthority:ro \
   -v "$(pwd)":/workspace quadruped_pympc:humble-cuda
 ```
-
-Quadruped-PyMPC is already built inside the image, and the pixi environment is activated in every new terminal.
-
 
 
 ### How to run - Simulation
