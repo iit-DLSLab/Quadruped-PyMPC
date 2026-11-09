@@ -18,15 +18,6 @@ pixi shell -e humble-no-cuda     # humble, no cuda
 pixi shell -e humble-cuda        # humble, cuda
 ```
 
-3. go to Common Steps section
-
-
-4. go to Quadruped-PyMPC initial folder and install it:
-
-    ```
-    pip install -e .
-    ```
-
 
 ### Docker installation
 
@@ -56,7 +47,7 @@ docker run -it --rm --gpus all --network host --ipc host -e DISPLAY \
   -v "$(pwd)":/workspace quadruped_pympc:humble-cuda
 ```
 
-Quadruped-PyMPC is already built inside the image, and the pixi environment is activated in every new terminal, so you can skip the Common Steps section.
+Quadruped-PyMPC is already built inside the image, and the pixi environment is activated in every new terminal.
 
 
 
