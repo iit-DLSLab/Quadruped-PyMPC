@@ -41,7 +41,9 @@ class Acados_NMPC_Lyapunov:
         self.optimal_next_state = np.zeros((24,))
         self.previous_optimal_GRF = np.zeros((12,))
 
-        self.phi_predicted = np.zeros((3,))
+        # Adaptive estimate theta_hat [N] of the constant disturbance force on the com (eq. 6)
+        self.disturbance_estimate = np.zeros((3,))
+        self.adaptation_gain = np.array(config.mpc_params["lyapunov_adaptation_gain"], dtype=float)
 
         # For centering the variable around 0, 0, 0 (World frame)
         self.initial_base_position = np.array([0, 0, 0])
@@ -56,6 +58,12 @@ class Acados_NMPC_Lyapunov:
 
         # Create the acados ocp solver
         self.ocp = self.create_ocp_solver_description(acados_model)
+
+        # Time of each stage, to move the com reference of the Lyapunov coordinates along the horizon
+        if config.mpc_params['use_nonuniform_discretization']:
+            self.stage_times = np.array(self.ocp.solver_options.shooting_nodes)
+        else:
+            self.stage_times = np.arange(self.horizon + 1) * self.dt
 
         code_export_dir = pathlib.Path(__file__).parent / "c_generated_code"
         self.ocp.code_export_directory = str(code_export_dir)
@@ -116,9 +124,19 @@ class Acados_NMPC_Lyapunov:
         ocp.model.con_h_expr = expr_h_friction
         ocp.constraints.uh = self.constr_uh_friction
         ocp.constraints.lh = self.constr_lh_friction
-        ocp.model.con_h_expr_0 = expr_h_friction
-        ocp.constraints.uh_0 = self.constr_uh_friction
-        ocp.constraints.lh_0 = self.constr_lh_friction
+        # Lyapunov stability constraint (17), imposed also at the first stage, whose control is the one applied
+        expr_h_lyapunov, self.constr_uh_lyapunov, self.constr_lh_lyapunov = self.create_lyapunov_constraints()
+        ocp.model.con_h_expr_0 = cs.vertcat(expr_h_friction, expr_h_lyapunov)
+        ocp.constraints.uh_0 = np.concatenate((self.constr_uh_friction, self.constr_uh_lyapunov))
+        ocp.constraints.lh_0 = np.concatenate((self.constr_lh_friction, self.constr_lh_lyapunov))
+        ns_0 = expr_h_lyapunov.shape[0]
+        ocp.constraints.idxsh_0 = np.arange(expr_h_friction.shape[0], expr_h_friction.shape[0] + ns_0)
+        ocp.constraints.lsh_0 = np.zeros(ns_0)
+        ocp.constraints.ush_0 = np.zeros(ns_0)
+        ocp.cost.zl_0 = 1000 * np.ones((ns_0,))
+        ocp.cost.Zl_0 = 1 * np.ones((ns_0,))
+        ocp.cost.zu_0 = 1000 * np.ones((ns_0,))
+        ocp.cost.Zu_0 = 1 * np.ones((ns_0,))
         nsh = expr_h_friction.shape[0]
         nsh_state_constraint_start = copy.copy(nsh)
 
@@ -145,13 +163,12 @@ class Acados_NMPC_Lyapunov:
             self.nsh_stability_end = copy.copy(nsh)
 
         # Set lyapunov constraints
-        expr_h_support_lyapunov, self.constr_uh_lyapunov, self.constr_lh_lyapunov = self.create_lyapunov_constraints()
-        ocp.model.con_h_expr = cs.vertcat(ocp.model.con_h_expr, expr_h_support_lyapunov)
+        ocp.model.con_h_expr = cs.vertcat(ocp.model.con_h_expr, expr_h_lyapunov)
         ocp.constraints.uh = np.concatenate((ocp.constraints.uh, self.constr_uh_lyapunov))
         ocp.constraints.lh = np.concatenate((ocp.constraints.lh, self.constr_lh_lyapunov))
-        nsh += expr_h_support_lyapunov.shape[0]
+        nsh += expr_h_lyapunov.shape[0]
 
-        # Set residual dynamics constraints
+        # Set residual dynamics constraints (internal dynamics eta)
         expr_h_residual_dynamics, self.constr_uh_residual_dynamics, self.constr_lh_residual_dynamics = (
             self.create_residual_dynamics_constraint()
         )
@@ -159,6 +176,19 @@ class Acados_NMPC_Lyapunov:
         ocp.constraints.uh = np.concatenate((ocp.constraints.uh, self.constr_uh_residual_dynamics))
         ocp.constraints.lh = np.concatenate((ocp.constraints.lh, self.constr_lh_residual_dynamics))
         nsh += expr_h_residual_dynamics.shape[0]
+
+        # The constraints hold for all k = 0, ..., n_p: at the last stage there is no control, so only eta
+        ocp.model.con_h_expr_e = expr_h_residual_dynamics
+        ocp.constraints.uh_e = self.constr_uh_residual_dynamics
+        ocp.constraints.lh_e = self.constr_lh_residual_dynamics
+        ns_e = expr_h_residual_dynamics.shape[0]
+        ocp.constraints.idxsh_e = np.arange(ns_e)
+        ocp.constraints.lsh_e = np.zeros(ns_e)
+        ocp.constraints.ush_e = np.zeros(ns_e)
+        ocp.cost.zl_e = 1000 * np.ones((ns_e,))
+        ocp.cost.Zl_e = 1 * np.ones((ns_e,))
+        ocp.cost.zu_e = 1000 * np.ones((ns_e,))
+        ocp.cost.Zu_e = 1 * np.ones((ns_e,))
 
         nsh_state_constraint_end = copy.copy(nsh)
 
@@ -202,6 +232,9 @@ class Acados_NMPC_Lyapunov:
         init_external_wrench = np.array([0, 0, 0, 0, 0, 0])
         init_inertia = config.inertia.reshape((9,))
         init_mass = np.array([config.mass])
+        init_ref_com_position = np.zeros((3,))
+        init_ref_com_velocity = np.zeros((3,))
+        init_disturbance_estimate = np.zeros((3,))
 
         ocp.parameter_values = np.concatenate(
             (
@@ -213,6 +246,9 @@ class Acados_NMPC_Lyapunov:
                 init_external_wrench,
                 init_inertia,
                 init_mass,
+                init_ref_com_position,
+                init_ref_com_velocity,
+                init_disturbance_estimate,
             )
         )
 
@@ -294,8 +330,11 @@ class Acados_NMPC_Lyapunov:
 
     # Create Lyapunov constraints
     def create_lyapunov_constraints(self):
-        z1 = self.centroidal_model.states[24:27]
-        z2 = self.centroidal_model.states[27:30]
+        """Stability constraint (17) of the (z, theta_hat) subdynamics, from V = z1'z1 + z2'z2 + theta_tilde'theta_tilde:
+
+        V_dot = -z1' k1 z1 - z2' k2 z2 + z1' z2 + z2' nu / m <= 0, where nu is the force optimized by the mpc.
+        """
+        z1, z2 = self.centroidal_model.lyapunov_coordinates(self.centroidal_model.states, self.centroidal_model.param)
         K_z1 = config.mpc_params["K_z1"]
         K_z2 = config.mpc_params["K_z2"]
 
@@ -317,18 +356,18 @@ class Acados_NMPC_Lyapunov:
         F_delta += foot_force_rr @ stanceRR
 
         V_dot = -z1.T @ np.diag(K_z1) @ z1 - z2.T @ np.diag(K_z2) @ z2 + z1.T @ z2 + z2.T @ F_delta / mass
-        # V_dot += self.centroidal_model.states[6:12].T@self.acados_model.f_expl_expr[6:12]
 
         ub = np.ones(1) * 0
-        lb = np.ones(1) * -1000
+        lb = np.ones(1) * -1e6
 
         return V_dot, ub, lb
 
     # Create Residual Dynamics constraint
     def create_residual_dynamics_constraint(self):
-        w = self.centroidal_model.states[9:12]
-        angles = self.centroidal_model.states[6:9]
-        eta = cs.vertcat(angles, w)
+        """Bound on the internal dynamics eta. For the quadruped, as in the paper, eta is made of roll, pitch
+        and Euler rates (the yaw is discarded): ||eta||^2 <= residual_dynamics_upper_bound."""
+        states = self.centroidal_model.states
+        eta = cs.vertcat(states[6:8], self.centroidal_model.euler_rates(states))
 
         residual = eta.T @ eta
         ub = np.array([config.mpc_params['residual_dynamics_upper_bound']])
@@ -536,19 +575,8 @@ class Acados_NMPC_Lyapunov:
         Jbu[18, 9:12] = n * mu + t
         Jbu[19, 9:12] = n
 
-        # Calculate the adaptive law
-        K_z1 = config.mpc_params["K_z1"]
-        K_z2 = config.mpc_params["K_z2"]
-        p_ddot = np.array([0, 0, 0])  
-        gravity = np.array([0, 0, -self.centroidal_model.gravity_constant])
-        mass = self.centroidal_model.param[28]
-
-        z1 = self.centroidal_model.states[24:27]
-        z2 = self.centroidal_model.states[27:30]
-        phi = self.centroidal_model.states[36:39]
-        squared_K_z1 = np.array([K_z1[0] * K_z1[0], K_z1[1] * K_z1[1], K_z1[2] * K_z1[2]])
-        F_star = mass * (-(K_z1 + K_z2) * z2 + squared_K_z1 * z1 - gravity + p_ddot)
-        F_star -= phi
+        # The friction cone is imposed on the whole force u = u_n + nu (eq. 18), not only on nu
+        F_star = self.centroidal_model.adaptive_force(self.centroidal_model.states, self.centroidal_model.param)
 
         stanceFL = self.centroidal_model.param[0]
         stanceFR = self.centroidal_model.param[1]
@@ -560,17 +588,12 @@ class Acados_NMPC_Lyapunov:
         foot_force_rl = self.centroidal_model.inputs[18:21]
         foot_force_rr = self.centroidal_model.inputs[21:24]
 
-        # Redistribute the lyapunov forces to the leg
-        num_leg_contact = stanceFL + stanceFR + stanceRL + stanceRR
-        # foot_force_fl_final = foot_force_fl@stanceFL + (F_star/num_leg_contact)@stanceFL
-        # foot_force_fr_final = foot_force_fr@stanceFR + (F_star/num_leg_contact)@stanceFR
-        # foot_force_rl_final = foot_force_rl@stanceRL + (F_star/num_leg_contact)@stanceRL
-        # foot_force_rr_final = foot_force_rr@stanceRR + (F_star/num_leg_contact)@stanceRR
-
-        foot_force_fl_final = foot_force_fl + (F_star / num_leg_contact)
-        foot_force_fr_final = foot_force_fr + (F_star / num_leg_contact)
-        foot_force_rl_final = foot_force_rl + (F_star / num_leg_contact)
-        foot_force_rr_final = foot_force_rr + (F_star / num_leg_contact)
+        # Redistribute the adaptive force to the legs in stance
+        num_leg_contact = cs.fmax(stanceFL + stanceFR + stanceRL + stanceRR, 1)
+        foot_force_fl_final = foot_force_fl + F_star / num_leg_contact
+        foot_force_fr_final = foot_force_fr + F_star / num_leg_contact
+        foot_force_rl_final = foot_force_rl + F_star / num_leg_contact
+        foot_force_rr_final = foot_force_rr + F_star / num_leg_contact
 
         feet_forces_final = cs.vertcat(
             foot_force_fl_final, foot_force_fr_final, foot_force_rl_final, foot_force_rr_final
@@ -612,8 +635,6 @@ class Acados_NMPC_Lyapunov:
         Q_base_angle_rates = np.array([20, 20, 50])  # roll_rate, pitch_rate, yaw_rate
         Q_foot_pos = np.array([300, 300, 300])  # f_x, f_y, f_z (should be 4 times this, once per foot)
 
-        Q_lyapunov_states = np.array([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0])  # z1, z2, eta, phi
-
         R_foot_vel = np.array([0.0001, 0.0001, 0.00001])  # v_x, v_y, v_z (should be 4 times this, once per foot)
         R_foot_force = np.array([0.001, 0.001, 0.001])  # f_x, f_y, f_z (should be 4 times this, once per foot)
 
@@ -628,7 +649,6 @@ class Acados_NMPC_Lyapunov:
                     Q_foot_pos,
                     Q_foot_pos,
                     Q_foot_pos,
-                    Q_lyapunov_states,
                 )
             )
         )
@@ -649,34 +669,43 @@ class Acados_NMPC_Lyapunov:
             build=False,
             generate=False,
         )
-        self.phi_predicted = self.phi_predicted * 0.0
+        self.disturbance_estimate = np.zeros((3,))
+
+    def stage_bounds(self, j, ub_middle=np.zeros(0), lb_middle=np.zeros(0)):
+        """Bounds of the nonlinear constraints of stage j, in the order of con_h_expr_0 and con_h_expr.
+
+        First stage: friction cone and Lyapunov. Intermediate stages: friction cone, foothold and stability
+        constraints (ub_middle, lb_middle), Lyapunov and residual dynamics. Last stage: residual dynamics.
+        """
+        if j == 0:
+            ub = np.concatenate((self.constr_uh_friction, self.constr_uh_lyapunov))
+            lb = np.concatenate((self.constr_lh_friction, self.constr_lh_lyapunov))
+            return ub, lb
+
+        ub_residual = self.constr_uh_residual_dynamics
+        if config.mpc_params["use_residual_dynamics_decay"]:
+            ub_residual = ub_residual / (j + 1)
+
+        if j == self.horizon:
+            return ub_residual, self.constr_lh_residual_dynamics
+
+        ub = np.concatenate((self.constr_uh_friction, ub_middle, self.constr_uh_lyapunov, ub_residual))
+        lb = np.concatenate(
+            (self.constr_lh_friction, lb_middle, self.constr_lh_lyapunov, self.constr_lh_residual_dynamics)
+        )
+        return ub, lb
 
     def set_residual_dynamics_constraint(self):
-        try:
-            ub_friction = self.constr_uh_friction
-            lb_friction = self.constr_lh_friction
-
-            ub_lyapunov = self.constr_uh_lyapunov
-            lb_lyapunov = self.constr_lh_lyapunov
-
-            for j in range(0, self.horizon):
-                ub_residual = config.mpc_params['residual_dynamics_upper_bound'] * (1 / (j + 1))
-                lb_residual = 0.0
-
-                # Only friction costraints at the beginning
-                if j == 0:
-                    self.acados_ocp_solver.constraints_set(j, "uh", ub_friction)
-                    self.acados_ocp_solver.constraints_set(j, "lh", lb_friction)
-                if j > 0:
-                    ub_total = np.concatenate((ub_friction, ub_lyapunov, np.array([ub_residual])))
-                    lb_total = np.concatenate((lb_friction, lb_lyapunov, np.array([lb_residual])))
-                    self.acados_ocp_solver.constraints_set(j, "uh", ub_total)
-                    self.acados_ocp_solver.constraints_set(j, "lh", lb_total)
-
-        except:
-            if self.verbose:
-                print("Error in setting the residual constraint")
-            pass
+        """Decaying bound of the residual dynamics along the horizon. With foothold or stability constraints
+        the intermediate stages are set by set_stage_constraint, here only the last one."""
+        if self.use_foothold_constraints or self.use_stability_constraints:
+            stages = [self.horizon]
+        else:
+            stages = range(1, self.horizon + 1)
+        for j in stages:
+            ub_total, lb_total = self.stage_bounds(j)
+            self.acados_ocp_solver.constraints_set(j, "uh", ub_total)
+            self.acados_ocp_solver.constraints_set(j, "lh", lb_total)
 
     def set_stage_constraint(self, constraint, state, reference, contact_sequence, h_R_w, stance_proximity):
         """
@@ -1111,13 +1140,12 @@ class Acados_NMPC_Lyapunov:
                     ub_total = np.concatenate((ub_total, ub_support))
                     lb_total = np.concatenate((lb_total, lb_support))
 
-                # Only friction costraints at the beginning
-                if j == 0:
-                    self.acados_ocp_solver.constraints_set(j, "uh", ub_friction)
-                    self.acados_ocp_solver.constraints_set(j, "lh", lb_friction)
-                if j > 0:
-                    self.acados_ocp_solver.constraints_set(j, "uh", ub_total)
-                    self.acados_ocp_solver.constraints_set(j, "lh", lb_total)
+                # Only friction and Lyapunov costraints at the beginning
+                ub_total, lb_total = self.stage_bounds(
+                    j, ub_total[ub_friction.shape[0] :], lb_total[lb_friction.shape[0] :]
+                )
+                self.acados_ocp_solver.constraints_set(j, "uh", ub_total)
+                self.acados_ocp_solver.constraints_set(j, "lh", lb_total)
 
                 # save the constraint for logging
                 self.upper_bound[j] = ub_total.tolist()
@@ -1410,6 +1438,13 @@ class Acados_NMPC_Lyapunov:
                     mass,
                 ]
             )
+            # Lyapunov parameters: com reference moving with the reference velocity, and theta_hat
+            ref_com_position = reference["ref_position"] + reference["ref_linear_velocity"] * self.stage_times[j]
+            param = np.concatenate(
+                (param, ref_com_position, reference["ref_linear_velocity"], self.disturbance_estimate)
+            )
+            if j == 0:
+                param_0 = copy.deepcopy(param)
             self.acados_ocp_solver.set(j, "p", copy.deepcopy(param))
 
         # Set initial state constraint. We teleported the robot foothold
@@ -1428,14 +1463,6 @@ class Acados_NMPC_Lyapunov:
         if RR_contact_sequence[0] == 0:
             state["foot_RR"] = reference["ref_foot_RR"][0]
 
-        # Calculate state of the lyapunov function
-        K_z1 = config.mpc_params["K_z1"]
-        K_z2 = config.mpc_params["K_z2"]
-        z1 = state["position"] - reference['ref_position']
-        z2 = state["linear_velocity"] - reference['ref_linear_velocity'] + K_z1 * z1
-        eta = np.concatenate((state["orientation"], state["angular_velocity"]))
-        phi = self.phi_predicted
-
         # Set initial state constraint acados, converting first the dictionary to np array
         state_acados = np.concatenate(
             (
@@ -1447,10 +1474,6 @@ class Acados_NMPC_Lyapunov:
                 state["foot_FR"],
                 state["foot_RL"],
                 state["foot_RR"],
-                z1,
-                z2,
-                eta,
-                phi,
             )
         ).reshape((self.states_dim, 1))
         self.acados_ocp_solver.set(0, "lbx", state_acados)
@@ -1496,18 +1519,22 @@ class Acados_NMPC_Lyapunov:
         optimal_GRF = control[12:]
         optimal_foothold = np.zeros((4, 3))
         optimal_footholds_assigned = np.zeros((4,), dtype='bool')
-        self.phi_predicted = self.acados_ocp_solver.get(1, "x")[36:39]
 
-        # Now i add the component from the adaptive control law
-        p_ddot = np.array([0, 0, 0])
-        gravity = np.array([0, 0, -self.centroidal_model.gravity_constant])
-        squared_K_z1 = np.array([K_z1[0] * K_z1[0], K_z1[1] * K_z1[1], K_z1[2] * K_z1[2]])
-        F_star = mass * (-(K_z1 + K_z2) * z2 + squared_K_z1 * z1 - gravity + p_ddot)
-        F_star -= phi
-
+        # Add the adaptive feedback u_n (eq. 5) to the GRFs of the legs in stance, u = u_n + nu (eq. 8)
+        F_star = np.array(self.centroidal_model.fun_adaptive_force(state_acados, param_0)).flatten()
         num_leg_contact = FL_contact_sequence[0] + FR_contact_sequence[0]
         num_leg_contact += RL_contact_sequence[0] + RR_contact_sequence[0]
-        GRF_star = F_star / num_leg_contact
+        GRF_star = F_star / max(num_leg_contact, 1)
+
+        # Adaptive law theta_hat_dot = gain * m * z2 (eq. 6, with the mass), integrated until the next mpc call.
+        # theta_hat is bounded to the robot weight, as the disturbance is assumed in a compact set
+        z1 = state["position"] - reference["ref_position"]
+        z2 = config.mpc_params["K_z1"] * z1 + state["linear_velocity"] - reference["ref_linear_velocity"]
+        self.disturbance_estimate = self.disturbance_estimate + self.adaptation_gain * mass * z2 / config.mpc_params[
+            "frequency"
+        ]
+        max_disturbance = mass * self.centroidal_model.gravity_constant
+        self.disturbance_estimate = np.clip(self.disturbance_estimate, -max_disturbance, max_disturbance)
 
         optimal_GRF[0:3] = copy.deepcopy(optimal_GRF[0:3] * FL_contact_sequence[0] + GRF_star * FL_contact_sequence[0])
         optimal_GRF[3:6] = copy.deepcopy(optimal_GRF[3:6] * FR_contact_sequence[0] + GRF_star * FR_contact_sequence[0])
@@ -1757,5 +1784,5 @@ class Acados_NMPC_Lyapunov:
         optimal_next_state[18:21] = optimal_foothold[2]
         optimal_next_state[21:24] = optimal_foothold[3]
 
-        # Return the optimal GRF, the optimal foothold, the next state and the status of the optimization and the phi predicted
+        # Return the optimal GRF, the optimal foothold, the next state and the status of the optimization
         return optimal_GRF, optimal_foothold, optimal_next_state, status

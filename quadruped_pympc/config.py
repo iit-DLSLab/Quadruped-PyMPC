@@ -207,9 +207,13 @@ mpc_params = {
     'passive_arm_compensation':                True,
 
 
-    # Gain for Lyapunov-based MPC
+    # Lyapunov-based MPC, see https://arxiv.org/abs/2409.01144
+    # gains k1, k2 of the coordinates change z1 = p - p_ref, z2 = k1 z1 + v - v_ref and of the feedback u_n
     'K_z1': np.array([1, 1, 10]),
     'K_z2': np.array([1, 4, 10]),
+    # gain [1/s] of the adaptive law of the disturbance force estimate, theta_hat_dot = gain * mass * z2
+    'lyapunov_adaptation_gain': np.array([10.0, 10.0, 10.0]),
+    # bound on ||eta||^2, with eta = (roll, pitch, euler rates), optionally decaying along the horizon
     'residual_dynamics_upper_bound': 30,
     'use_residual_dynamics_decay': False,
 
