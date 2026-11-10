@@ -99,7 +99,7 @@ class TerrainEstimator:
 
         z_foot_mean_temp = (z_foot_FL + z_foot_FR + z_foot_RL + z_foot_RR) / 4
         #self.terrain_height = self.terrain_height * 0.2 + (base_position[2] - z_foot_mean_temp) * 0.8
-        self.terrain_height = self.terrain_height * 0.2 + (z_foot_mean_temp) * 0.8
+        self.terrain_height = self.terrain_height * 0.9 + (z_foot_mean_temp) * 0.1
 
 
         feet_to_base_FL = base_position[2] - feet_pos["FL"][2]
@@ -107,7 +107,7 @@ class TerrainEstimator:
         feet_to_base_RL = base_position[2] - feet_pos["RL"][2]
         feet_to_base_RR = base_position[2] - feet_pos["RR"][2] 
         feet_to_base_mean = (feet_to_base_FL + feet_to_base_FR + feet_to_base_RL + feet_to_base_RR) / 4
-        self.robot_height = self.robot_height * 0.2 + (feet_to_base_mean) * 0.8
+        self.robot_height = self.robot_height * 0.9 + (feet_to_base_mean) * 0.1
 
 
         return self.terrain_roll, self.terrain_pitch, self.terrain_height, self.robot_height
