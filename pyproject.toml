@@ -51,7 +51,11 @@ cuda = "12"
 jax = { version = "*", extras = ["cuda12"] }
 
 [tool.pixi.feature.common.activation.env]
+# Restrict DDS discovery to this machine. Each distro reads only one of the two:
+# humble -> ROS_LOCALHOST_ONLY; jazzy+/lyrical -> ROS_AUTOMATIC_DISCOVERY_RANGE
+# (ros_environment otherwise defaults it to SUBNET, i.e. the whole LAN).
 ROS_LOCALHOST_ONLY = "1"
+ROS_AUTOMATIC_DISCOVERY_RANGE = "LOCALHOST"
 
 [tool.pixi.feature.lyrical]
 channels = ["https://prefix.dev/robostack-lyrical"]
