@@ -366,8 +366,10 @@ class Acados_NMPC_Lyapunov:
             x = 0.0
             y = 0.0
         else:
-            # Compute the ZMP
-            robotHeight = base_w[2]
+            # Compute the ZMP. The height is the one of the com above the feet: the com position is set to zero
+            # by perform_scaling, so base_w[2] alone would be ~0 and the ZMP would collapse onto the com.
+            # Feet are relative to the com, and for a foot in swing the z is the one of its touchdown
+            robotHeight = base_w[2] - (FL[2] + FR[2] + RL[2] + RR[2]) / 4
             foot_force_fl = self.centroidal_model.inputs[12:15]  # @self.centroidal_model.param[0]
             foot_force_fr = self.centroidal_model.inputs[15:18]  # @self.centroidal_model.param[1]
             foot_force_rl = self.centroidal_model.inputs[18:21]  # @self.centroidal_model.param[2]
@@ -1123,22 +1125,6 @@ class Acados_NMPC_Lyapunov:
 
                     ub_total = np.concatenate((ub_total, ub_support))
                     lb_total = np.concatenate((lb_total, lb_support))
-
-                # No friction constraint at the end! we don't have u_N
-                if j == self.horizon:
-                    if self.use_foothold_constraints:
-                        if self.use_stability_constraints:
-                            ub_total = np.concatenate((ub_foot, ub_support))
-                            lb_total = np.concatenate((lb_foot, lb_support))
-                        else:
-                            ub_total = ub_foot
-                            lb_total = lb_foot
-                    else:
-                        if self.use_stability_constraints:
-                            ub_total = ub_support
-                            lb_total = lb_support
-                        else:
-                            continue
 
                 # Only friction costraints at the beginning
                 if j == 0:
