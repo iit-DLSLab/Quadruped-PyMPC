@@ -145,7 +145,7 @@ mpc_params = {
 
     # If True, the Riccati feedback gain of the first stage is taken from acados (hpipm), and the whole body
     # controller corrects the MPC GRFs at every control step with GRF = GRF_mpc + K (x_now - x_mpc), closing
-    # the loop without waiting for the next MPC solution. Only for the 'nominal' mpc, not with 'use_DDP'.
+    # the loop without waiting for the next MPC solution. Only for the 'nominal' mpc (also with 'use_DDP').
     # For the 'sampling' mpc (mppi and cem_mppi) the gain is computed as in Feedback-MPPI
     # (https://arxiv.org/abs/2506.14855), differentiating the MPPI weights through the rollouts
     'use_riccati_feedback':                    False,

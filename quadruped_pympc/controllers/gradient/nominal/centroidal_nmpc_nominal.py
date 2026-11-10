@@ -177,14 +177,8 @@ class Acados_NMPC_Nominal:
 
         # Set initial state constraint
         X0 = np.zeros(shape=(nx,))
-        if self.use_riccati_feedback:
-            # Same equality bounds as constraints.x0, but without eliminating x0 from the QP,
-            # otherwise hpipm cannot return the Riccati gain of the first stage
-            ocp.constraints.idxbx_0 = np.arange(nx)
-            ocp.constraints.lbx_0 = X0
-            ocp.constraints.ubx_0 = X0
-        else:
-            ocp.constraints.x0 = X0
+        # with use_riccati_feedback (and no DDP) the elimination of x0 is removed at the end of this function
+        ocp.constraints.x0 = X0
 
         # Set initialize parameters
         init_contact_status = np.array([1.0, 1.0, 1.0, 1.0])
@@ -212,9 +206,7 @@ class Acados_NMPC_Nominal:
         # Set options
         ocp.solver_options.qp_solver = "PARTIAL_CONDENSING_HPIPM"  # FULL_CONDENSING_QPOASES PARTIAL_CONDENSING_OSQP
         if self.use_riccati_feedback:
-            if self.use_DDP:
-                raise ValueError("use_riccati_feedback is not compatible with use_DDP")
-            # The Riccati gains are available only without condensing
+            # The Riccati gains are available only without condensing (as required by DDP anyway)
             ocp.solver_options.qp_solver_cond_N = self.horizon
         # PARTIAL_CONDENSING_HPIPM
         ocp.solver_options.hessian_approx = "GAUSS_NEWTON"  # 'GAUSS_NEWTON', 'EXACT'
@@ -287,7 +279,30 @@ class Acados_NMPC_Nominal:
                 shooting_nodes[i + 1] = shooting_nodes[i] + time_steps[i]
             ocp.solver_options.shooting_nodes = shooting_nodes
 
+        if self.use_riccati_feedback and not self.use_DDP:
+            # Keep the x0 equality bounds, but without eliminating x0 from the QP, otherwise hpipm cannot
+            # return the Riccati gain of the first stage.
+            # With DDP we keep the elimination: the QP has no other inequalities, and with the x0 bounds hpipm
+            # would need interior point iterations instead of a single Riccati pass (about 2x slower).
+            # The gain of the first stage is then computed in compute_ddp_riccati_gain
+            ocp.constraints.remove_x0_elimination()
+
         return ocp
+
+    def compute_ddp_riccati_gain(self):
+        """Riccati gain of the first stage when x0 is eliminated from the QP (DDP), where hpipm does not return it.
+
+        One step of the Riccati recursion from the cost-to-go Hessian of the second stage:
+        K0 = -(R0 + B0' P1 B0)^-1 (S0 + B0' P1 A0). Exact for DDP, since the QP has no inequality constraints.
+        """
+        solver = self.acados_ocp_solver
+        A = solver.get_from_qp_in(0, "A")
+        B = solver.get_from_qp_in(0, "B")
+        R = solver.get_from_qp_in(0, "R")
+        S = solver.get_from_qp_in(0, "S")
+        P1 = solver.get_from_qp_in(1, "P")
+        P1B = P1 @ B
+        return -np.linalg.solve(R + B.T @ P1B, S + P1B.T @ A)
 
     # Create a constraint for  stability (COM, ZMP or CP inside support polygon)
     def create_stability_constraints(self) -> None:
@@ -1485,7 +1500,10 @@ class Acados_NMPC_Nominal:
             # Feedback gain of the first stage of the last QP, u = K x + k. We keep only the rows of the GRFs
             # and the columns of the physical states (no integrators). The scaling of the state (position
             # subtracted) cancels out in the difference x_now - riccati_x, so riccati_x is not scaled
-            K = self.acados_ocp_solver.get_from_qp_in(0, "K")
+            if self.use_DDP:
+                K = self.compute_ddp_riccati_gain()
+            else:
+                K = self.acados_ocp_solver.get_from_qp_in(0, "K")
             self.riccati_K = K[12:24, 0:24].copy()
             self.riccati_x = riccati_x
 
