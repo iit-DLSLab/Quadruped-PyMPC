@@ -155,11 +155,6 @@ mpc_params = {
     # this is used if you want to manually warm start the mpc
     'use_warm_start':                          False,
 
-    # this enables integrators for height, linear velocities, roll and pitch
-    'use_integrators':                         False,
-    'alpha_integrator':                        0.1,
-    'integrator_cap':                          [0.5, 0.2, 0.2, 0.0, 0.0, 1.0],
-
     # if this is off, the mpc will not optimize the footholds and will
     # use only the ones provided in the reference
     'use_foothold_optimization':               True,
@@ -287,7 +282,17 @@ locomotion_params = {
     'reflex_trigger_mode':       'tracking', # 'tracking', 'geom_contact', False
     'reflex_max_step_height':    0.5 * hip_height,  # this is the maximum step height that the robot can do if reflexes are enabled
     'reflex_next_steps_height_enhancement': False,
-    'velocity_modulator': True,
+
+    # Reference modulator, it modifies the reference given to the mpc (for all the mpc types)
+    # The velocity modulator sets the reference velocities to zero if a foot is too far from its nominal position
+    'use_velocity_modulator':      True,
+    # Integrators for height, linear velocities, roll, pitch and yaw rate: the integral of the tracking error is
+    # subtracted from the reference, to compensate for model mismatch. integrator_gain [1/s] is the rate of the
+    # integral, integrator_cap the max offset on the reference:
+    # z [m], x_vel, y_vel (heading frame), z_vel [m/s], roll, pitch [rad], yaw_rate [rad/s]
+    'use_integrators':             False,
+    'integrator_gain':             1.0,
+    'integrator_cap':              [0.05, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1],
 
     'ref_z':                       hip_height,
     }

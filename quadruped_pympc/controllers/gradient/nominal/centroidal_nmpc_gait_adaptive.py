@@ -25,7 +25,6 @@ class Acados_NMPC_GaitAdaptive:
         self.dt = config.mpc_params['dt']
         self.T_horizon = self.horizon * self.dt
         self.use_RTI = config.mpc_params["use_RTI"]
-        self.use_integrators = config.mpc_params["use_integrators"]
         self.use_warm_start = config.mpc_params["use_warm_start"]
         self.use_foothold_constraints = config.mpc_params["use_foothold_constraints"]
 
@@ -39,8 +38,6 @@ class Acados_NMPC_GaitAdaptive:
         self.previous_contact_sequence = np.zeros((4, self.horizon))
         self.optimal_next_state = np.zeros((24,))
         self.previous_optimal_GRF = np.zeros((12,))
-
-        self.integral_errors = np.zeros((6,))
 
         # For centering the variable around 0, 0, 0 (World frame)
         self.initial_base_position = np.array([0, 0, 0])
@@ -515,12 +512,6 @@ class Acados_NMPC_GaitAdaptive:
         Q_base_angle = np.array([500, 500, 0])  # roll, pitch, yaw
         Q_base_angle_rates = np.array([20, 20, 50])  # roll_rate, pitch_rate, yaw_rate
         Q_foot_pos = np.array([300, 300, 300])  # f_x, f_y, f_z (should be 4 times this, once per foot)
-        Q_com_position_z_integral = np.array([50])  # integral of z_com
-        Q_com_velocity_x_integral = np.array([10])  # integral of x_com
-        Q_com_velocity_y_integral = np.array([10])  # integral of y_com
-        Q_com_velocity_z_integral = np.array([10])  # integral of z_com_vel
-        Q_roll_integral_integral = np.array([10])  # integral of roll
-        Q_pitch_integral_integral = np.array([10])  # integral of pitch
 
         R_foot_vel = np.array([0.0001, 0.0001, 0.00001])  # v_x, v_y, v_z (should be 4 times this, once per foot)
         if config.robot == "hyqreal":
@@ -541,12 +532,6 @@ class Acados_NMPC_GaitAdaptive:
                     Q_foot_pos,
                     Q_foot_pos,
                     Q_foot_pos,
-                    Q_com_position_z_integral,
-                    Q_com_velocity_x_integral,
-                    Q_com_velocity_y_integral,
-                    Q_com_velocity_z_integral,
-                    Q_roll_integral_integral,
-                    Q_pitch_integral_integral,
                 )
             )
         )
@@ -1121,7 +1106,6 @@ class Acados_NMPC_GaitAdaptive:
                 state["foot_FR"],
                 state["foot_RL"],
                 state["foot_RR"],
-                self.integral_errors,
             )
         )  # .reshape((self.states_dim, 1))
 

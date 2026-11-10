@@ -41,16 +41,6 @@ class Centroidal_Model_Nominal:
         foot_position_rl = cs.SX.sym("foot_position_rl", 3, 1)
         foot_position_rr = cs.SX.sym("foot_position_rr", 3, 1)
 
-        com_position_z_integral = cs.SX.sym("com_position_z_integral")
-        com_velocity_x_integral = cs.SX.sym("com_velocity_x_integral")
-        com_velocity_y_integral = cs.SX.sym("com_velocity_y_integral")
-        com_velocity_z_integral = cs.SX.sym("com_velocity_z_integral")
-        roll_integral = cs.SX.sym("roll_integral")
-        pitch_integral = cs.SX.sym("pitch_integral")
-        omega_x_integral = cs.SX.sym("omega_x_integral")
-        omega_y_integral = cs.SX.sym("omega_y_integral")
-        omega_z_integral = cs.SX.sym("omega_z_integral")
-
         self.states = cs.vertcat(
             com_position_x,
             com_position_y,
@@ -68,12 +58,6 @@ class Centroidal_Model_Nominal:
             foot_position_fr,
             foot_position_rl,
             foot_position_rr,
-            com_position_z_integral,
-            com_velocity_x_integral,
-            com_velocity_y_integral,
-            com_velocity_z_integral,
-            roll_integral,
-            pitch_integral,
         )
 
         # Define state dot
@@ -86,10 +70,6 @@ class Centroidal_Model_Nominal:
             cs.SX.sym("linear_vel_foot_FR", 3, 1),
             cs.SX.sym("linear_vel_foot_RL", 3, 1),
             cs.SX.sym("linear_vel_foot_RR", 3, 1),
-            cs.SX.sym("linear_com_vel_z_integral", 1, 1),
-            cs.SX.sym("linear_com_acc_integral", 3, 1),
-            cs.SX.sym("euler_rates_roll_integral", 1, 1),
-            cs.SX.sym("euler_rates_pitch_integral", 1, 1),
         )
 
         # Define input and its casadi variables
@@ -285,15 +265,6 @@ class Centroidal_Model_Nominal:
         linear_foot_vel_RL = foot_velocity_rl @ (1 - stanceRL) @ (1 - stance_proximity_RL)
         linear_foot_vel_RR = foot_velocity_rr @ (1 - stanceRR) @ (1 - stance_proximity_RR)
 
-        # Integral states
-        integral_states = states[24:]
-        integral_states[0] += states[2]
-        integral_states[1] += states[3]
-        integral_states[2] += states[4]
-        integral_states[3] += states[5]
-        integral_states[4] += roll
-        integral_states[5] += pitch
-
         # The order of the return should be equal to the order of the states_dot
         return cs.vertcat(
             linear_com_vel,
@@ -304,7 +275,6 @@ class Centroidal_Model_Nominal:
             linear_foot_vel_FR,
             linear_foot_vel_RL,
             linear_foot_vel_RR,
-            integral_states,
         )
 
     def export_robot_model(self) -> AcadosModel:

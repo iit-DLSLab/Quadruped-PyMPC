@@ -41,16 +41,6 @@ class Centroidal_Model_Lyapunov:
         foot_position_rl = cs.SX.sym("foot_position_rl", 3, 1)
         foot_position_rr = cs.SX.sym("foot_position_rr", 3, 1)
 
-        com_position_z_integral = cs.SX.sym("com_position_z_integral")
-        com_velocity_x_integral = cs.SX.sym("com_velocity_x_integral")
-        com_velocity_y_integral = cs.SX.sym("com_velocity_y_integral")
-        com_velocity_z_integral = cs.SX.sym("com_velocity_z_integral")
-        roll_integral = cs.SX.sym("roll_integral")
-        pitch_integral = cs.SX.sym("pitch_integral")
-        omega_x_integral = cs.SX.sym("omega_x_integral")
-        omega_y_integral = cs.SX.sym("omega_y_integral")
-        omega_z_integral = cs.SX.sym("omega_z_integral")
-
         z1 = cs.SX.sym("z1", 3, 1)
         z2 = cs.SX.sym("z2", 3, 1)
         eta = cs.SX.sym("eta", 6, 1)
@@ -73,12 +63,6 @@ class Centroidal_Model_Lyapunov:
             foot_position_fr,
             foot_position_rl,
             foot_position_rr,
-            com_position_z_integral,
-            com_velocity_x_integral,
-            com_velocity_y_integral,
-            com_velocity_z_integral,
-            roll_integral,
-            pitch_integral,
             z1,
             z2,
             eta,
@@ -95,10 +79,6 @@ class Centroidal_Model_Lyapunov:
             cs.SX.sym("linear_vel_foot_FR", 3, 1),
             cs.SX.sym("linear_vel_foot_RL", 3, 1),
             cs.SX.sym("linear_vel_foot_RR", 3, 1),
-            cs.SX.sym("linear_com_vel_z_integral", 1, 1),
-            cs.SX.sym("linear_com_acc_integral", 3, 1),
-            cs.SX.sym("euler_rates_roll_integral", 1, 1),
-            cs.SX.sym("euler_rates_pitch_integral", 1, 1),
             cs.SX.sym("z1_dot", 3, 1),
             cs.SX.sym("z2_dot", 3, 1),
             cs.SX.sym("eta_dot", 6, 1),
@@ -217,9 +197,9 @@ class Centroidal_Model_Lyapunov:
         K_z2 = config.mpc_params["K_z2"]
         p_ddot = np.array([0, 0, 0])
 
-        z1 = states[30:33]
-        z2 = states[33:36]
-        phi = states[42:45]
+        z1 = states[24:27]
+        z2 = states[27:30]
+        phi = states[36:39]
 
         phi_dot = -z2
 
@@ -332,15 +312,6 @@ class Centroidal_Model_Lyapunov:
         linear_foot_vel_RL = foot_velocity_rl @ (1 - stanceRL) @ (1 - stance_proximity_RL)
         linear_foot_vel_RR = foot_velocity_rr @ (1 - stanceRR) @ (1 - stance_proximity_RR)
 
-        # Integral states
-        integral_states = states[24:30]
-        integral_states[0] += states[2]
-        integral_states[1] += states[3]
-        integral_states[2] += states[4]
-        integral_states[3] += states[5]
-        integral_states[4] += roll
-        integral_states[5] += pitch
-
         # STILL LYAPUNOV FOR ETA
         eta_dot_temp = cs.inv(inertia) @ (b_R_w @ temp2 - cs.skew(w) @ inertia @ w)
         eta_dot = cs.vertcat(w, eta_dot_temp)
@@ -355,7 +326,6 @@ class Centroidal_Model_Lyapunov:
             linear_foot_vel_FR,
             linear_foot_vel_RL,
             linear_foot_vel_RR,
-            integral_states,
             z1_dot,
             z2_dot,
             eta_dot,

@@ -38,16 +38,6 @@ class Centroidal_Model_InputRates:
         foot_position_rl = cs.SX.sym("foot_position_rl", 3, 1)
         foot_position_rr = cs.SX.sym("foot_position_rr", 3, 1)
 
-        com_position_z_integral = cs.SX.sym("com_position_z_integral")
-        com_velocity_x_integral = cs.SX.sym("com_velocity_x_integral")
-        com_velocity_y_integral = cs.SX.sym("com_velocity_y_integral")
-        com_velocity_z_integral = cs.SX.sym("com_velocity_z_integral")
-        roll_integral = cs.SX.sym("roll_integral")
-        pitch_integral = cs.SX.sym("pitch_integral")
-        omega_x_integral = cs.SX.sym("omega_x_integral")
-        omega_y_integral = cs.SX.sym("omega_y_integral")
-        omega_z_integral = cs.SX.sym("omega_z_integral")
-
         foot_force_fl = cs.SX.sym("foot_force_fl", 3, 1)
         foot_force_fr = cs.SX.sym("foot_force_fr", 3, 1)
         foot_force_rl = cs.SX.sym("foot_force_rl", 3, 1)
@@ -70,12 +60,6 @@ class Centroidal_Model_InputRates:
             foot_position_fr,
             foot_position_rl,
             foot_position_rr,
-            com_position_z_integral,
-            com_velocity_x_integral,
-            com_velocity_y_integral,
-            com_velocity_z_integral,
-            roll_integral,
-            pitch_integral,
             foot_force_fl,
             foot_force_fr,
             foot_force_rl,
@@ -92,10 +76,6 @@ class Centroidal_Model_InputRates:
             cs.SX.sym("linear_vel_foot_FR", 3, 1),
             cs.SX.sym("linear_vel_foot_RL", 3, 1),
             cs.SX.sym("linear_vel_foot_RR", 3, 1),
-            cs.SX.sym("linear_com_vel_z_integral", 1, 1),
-            cs.SX.sym("linear_com_acc_integral", 3, 1),
-            cs.SX.sym("euler_rates_roll_integral", 1, 1),
-            cs.SX.sym("euler_rates_pitch_integral", 1, 1),
             cs.SX.sym("foot_force_rate_FL", 3, 1),
             cs.SX.sym("foot_force_rate_FR", 3, 1),
             cs.SX.sym("foot_force_rate_RL", 3, 1),
@@ -191,10 +171,10 @@ class Centroidal_Model_InputRates:
         foot_position_rl = states[18:21]
         foot_position_rr = states[21:24]
 
-        foot_force_fl = states[30:33]
-        foot_force_fr = states[33:36]
-        foot_force_rl = states[36:39]
-        foot_force_rr = states[39:42]
+        foot_force_fl = states[24:27]
+        foot_force_fr = states[27:30]
+        foot_force_rl = states[30:33]
+        foot_force_rr = states[33:36]
 
         stanceFL = param[0]
         stanceFR = param[1]
@@ -301,15 +281,6 @@ class Centroidal_Model_InputRates:
         linear_foot_vel_RL = foot_velocity_rl @ (1 - stanceRL) @ (1 - stance_proximity_RL)
         linear_foot_vel_RR = foot_velocity_rr @ (1 - stanceRR) @ (1 - stance_proximity_RR)
 
-        # Integral states
-        integral_states = states[24:30]
-        integral_states[0] += states[2]
-        integral_states[1] += states[3]
-        integral_states[2] += states[4]
-        integral_states[3] += states[5]
-        integral_states[4] += roll
-        integral_states[5] += pitch
-
         # Input Rates
         foot_force_rate_FL = foot_force_rate_fl
         foot_force_rate_FR = foot_force_rate_fr
@@ -326,7 +297,6 @@ class Centroidal_Model_InputRates:
             linear_foot_vel_FR,
             linear_foot_vel_RL,
             linear_foot_vel_RR,
-            integral_states,
             foot_force_rate_FL,
             foot_force_rate_FR,
             foot_force_rate_RL,

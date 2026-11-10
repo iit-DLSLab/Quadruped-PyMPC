@@ -55,13 +55,6 @@ class Centroidal_Model_Collaborative:
         foot_position_rl = cs.SX.sym("foot_position_rl", 3, 1)
         foot_position_rr = cs.SX.sym("foot_position_rr", 3, 1)
 
-        com_position_z_integral = cs.SX.sym("com_position_z_integral")
-        com_velocity_x_integral = cs.SX.sym("com_velocity_x_integral")
-        com_velocity_y_integral = cs.SX.sym("com_velocity_y_integral")
-        com_velocity_z_integral = cs.SX.sym("com_velocity_z_integral")
-        roll_integral = cs.SX.sym("roll_integral")
-        pitch_integral = cs.SX.sym("pitch_integral")
-
         passive_arm_force = cs.SX.sym("passive_arm_force", 6, 1)
 
         self.states = cs.vertcat(
@@ -81,12 +74,6 @@ class Centroidal_Model_Collaborative:
             foot_position_fr,
             foot_position_rl,
             foot_position_rr,
-            com_position_z_integral,
-            com_velocity_x_integral,
-            com_velocity_y_integral,
-            com_velocity_z_integral,
-            roll_integral,
-            pitch_integral,
             passive_arm_force,
         )
 
@@ -100,10 +87,6 @@ class Centroidal_Model_Collaborative:
             cs.SX.sym("linear_vel_foot_FR", 3, 1),
             cs.SX.sym("linear_vel_foot_RL", 3, 1),
             cs.SX.sym("linear_vel_foot_RR", 3, 1),
-            cs.SX.sym("linear_com_vel_z_integral", 1, 1),
-            cs.SX.sym("linear_com_acc_integral", 3, 1),
-            cs.SX.sym("euler_rates_roll_integral", 1, 1),
-            cs.SX.sym("euler_rates_pitch_integral", 1, 1),
             cs.SX.sym("passive_arm_force_dot", 6, 1),
         )
 
@@ -264,8 +247,8 @@ class Centroidal_Model_Collaborative:
 
         # We can choose between a fixed external compensation or a dynamic one
         if config.mpc_params['passive_arm_compensation']:
-            external_wrench_linear = states[30:33]
-            external_wrench_angular = states[33:36]
+            external_wrench_linear = states[24:27]
+            external_wrench_angular = states[27:30]
         else:
             external_wrench_linear = param[13:16]
             external_wrench_angular = param[16:19]
@@ -319,15 +302,6 @@ class Centroidal_Model_Collaborative:
         linear_foot_vel_RL = foot_velocity_rl @ (1 - stanceRL) @ (1 - stance_proximity_RL)
         linear_foot_vel_RR = foot_velocity_rr @ (1 - stanceRR) @ (1 - stance_proximity_RR)
 
-        # Integral states
-        integral_states = states[24:30]
-        integral_states[0] += states[2]
-        integral_states[1] += states[3]
-        integral_states[2] += states[4]
-        integral_states[3] += states[5]
-        integral_states[4] += roll
-        integral_states[5] += pitch
-
         # The order of the return should be equal to the order of the states_dot
         return cs.vertcat(
             linear_com_vel,
@@ -338,7 +312,6 @@ class Centroidal_Model_Collaborative:
             linear_foot_vel_FR,
             linear_foot_vel_RL,
             linear_foot_vel_RR,
-            integral_states,
             passive_arm_force_dot,
         )
 

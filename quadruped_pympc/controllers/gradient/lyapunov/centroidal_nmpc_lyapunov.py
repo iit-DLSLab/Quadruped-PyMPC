@@ -25,7 +25,6 @@ class Acados_NMPC_Lyapunov:
         self.dt = config.mpc_params['dt']
         self.T_horizon = self.horizon * self.dt
         self.use_RTI = config.mpc_params['use_RTI']
-        self.use_integrators = config.mpc_params['use_integrators']
         self.use_warm_start = config.mpc_params['use_warm_start']
         self.use_foothold_constraints = config.mpc_params['use_foothold_constraints']
 
@@ -43,8 +42,6 @@ class Acados_NMPC_Lyapunov:
         self.previous_optimal_GRF = np.zeros((12,))
 
         self.phi_predicted = np.zeros((3,))
-
-        self.integral_errors = np.zeros((6,))
 
         # For centering the variable around 0, 0, 0 (World frame)
         self.initial_base_position = np.array([0, 0, 0])
@@ -297,8 +294,8 @@ class Acados_NMPC_Lyapunov:
 
     # Create Lyapunov constraints
     def create_lyapunov_constraints(self):
-        z1 = self.centroidal_model.states[30:33]
-        z2 = self.centroidal_model.states[33:36]
+        z1 = self.centroidal_model.states[24:27]
+        z2 = self.centroidal_model.states[27:30]
         K_z1 = config.mpc_params["K_z1"]
         K_z2 = config.mpc_params["K_z2"]
 
@@ -546,9 +543,9 @@ class Acados_NMPC_Lyapunov:
         gravity = np.array([0, 0, -self.centroidal_model.gravity_constant])
         mass = self.centroidal_model.param[28]
 
-        z1 = self.centroidal_model.states[30:33]
-        z2 = self.centroidal_model.states[33:36]
-        phi = self.centroidal_model.states[42:45]
+        z1 = self.centroidal_model.states[24:27]
+        z2 = self.centroidal_model.states[27:30]
+        phi = self.centroidal_model.states[36:39]
         squared_K_z1 = np.array([K_z1[0] * K_z1[0], K_z1[1] * K_z1[1], K_z1[2] * K_z1[2]])
         F_star = mass * (-(K_z1 + K_z2) * z2 + squared_K_z1 * z1 - gravity + p_ddot)
         F_star -= phi
@@ -614,12 +611,6 @@ class Acados_NMPC_Lyapunov:
         Q_base_angle = np.array([500, 500, 0])  # roll, pitch, yaw
         Q_base_angle_rates = np.array([20, 20, 50])  # roll_rate, pitch_rate, yaw_rate
         Q_foot_pos = np.array([300, 300, 300])  # f_x, f_y, f_z (should be 4 times this, once per foot)
-        Q_com_position_z_integral = np.array([50])  # integral of z_com
-        Q_com_velocity_x_integral = np.array([10])  # integral of x_com
-        Q_com_velocity_y_integral = np.array([10])  # integral of y_com
-        Q_com_velocity_z_integral = np.array([10])  # integral of z_com_vel
-        Q_roll_integral_integral = np.array([10])  # integral of roll
-        Q_pitch_integral_integral = np.array([10])  # integral of pitch
 
         Q_lyapunov_states = np.array([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0])  # z1, z2, eta, phi
 
@@ -637,12 +628,6 @@ class Acados_NMPC_Lyapunov:
                     Q_foot_pos,
                     Q_foot_pos,
                     Q_foot_pos,
-                    Q_com_position_z_integral,
-                    Q_com_velocity_x_integral,
-                    Q_com_velocity_y_integral,
-                    Q_com_velocity_z_integral,
-                    Q_roll_integral_integral,
-                    Q_pitch_integral_integral,
                     Q_lyapunov_states,
                 )
             )
@@ -1443,63 +1428,6 @@ class Acados_NMPC_Lyapunov:
         if RR_contact_sequence[0] == 0:
             state["foot_RR"] = reference["ref_foot_RR"][0]
 
-        if self.use_integrators:
-            # Compute error for integral action
-            alpha_integrator = config.mpc_params["alpha_integrator"]
-            self.integral_errors[0] += (state["position"][2] - reference["ref_position"][2]) * alpha_integrator
-            self.integral_errors[1] += (
-                state["linear_velocity"][0] - reference["ref_linear_velocity"][0]
-            ) * alpha_integrator
-            self.integral_errors[2] += (
-                state["linear_velocity"][1] - reference["ref_linear_velocity"][1]
-            ) * alpha_integrator
-            self.integral_errors[3] += (
-                state["linear_velocity"][2] - reference["ref_linear_velocity"][2]
-            ) * alpha_integrator
-            self.integral_errors[4] += (state["orientation"][0] - reference["ref_orientation"][0]) * (alpha_integrator)
-            self.integral_errors[5] += (state["orientation"][1] - reference["ref_orientation"][1]) * alpha_integrator
-
-            cap_integrator_z = config.mpc_params["integrator_cap"][0]
-            cap_integrator_x_dot = config.mpc_params["integrator_cap"][1]
-            cap_integrator_y_dot = config.mpc_params["integrator_cap"][2]
-            cap_integrator_z_dot = config.mpc_params["integrator_cap"][3]
-            cap_integrator_roll = config.mpc_params["integrator_cap"][4]
-            cap_integrator_pitch = config.mpc_params["integrator_cap"][5]
-
-            self.integral_errors[0] = np.where(
-                np.abs(self.integral_errors[0]) > cap_integrator_z,
-                cap_integrator_z * np.sign(self.integral_errors[0]),
-                self.integral_errors[0],
-            )
-            self.integral_errors[1] = np.where(
-                np.abs(self.integral_errors[1]) > cap_integrator_x_dot,
-                cap_integrator_x_dot * np.sign(self.integral_errors[1]),
-                self.integral_errors[1],
-            )
-            self.integral_errors[2] = np.where(
-                np.abs(self.integral_errors[2]) > cap_integrator_y_dot,
-                cap_integrator_y_dot * np.sign(self.integral_errors[2]),
-                self.integral_errors[2],
-            )
-            self.integral_errors[3] = np.where(
-                np.abs(self.integral_errors[3]) > cap_integrator_z_dot,
-                cap_integrator_z_dot * np.sign(self.integral_errors[3]),
-                self.integral_errors[3],
-            )
-            self.integral_errors[4] = np.where(
-                np.abs(self.integral_errors[4]) > cap_integrator_roll,
-                cap_integrator_roll * np.sign(self.integral_errors[4]),
-                self.integral_errors[4],
-            )
-            self.integral_errors[5] = np.where(
-                np.abs(self.integral_errors[5]) > cap_integrator_pitch,
-                cap_integrator_pitch * np.sign(self.integral_errors[5]),
-                self.integral_errors[5],
-            )
-
-            if self.verbose:
-                print("self.integral_errors: ", self.integral_errors)
-
         # Calculate state of the lyapunov function
         K_z1 = config.mpc_params["K_z1"]
         K_z2 = config.mpc_params["K_z2"]
@@ -1519,7 +1447,6 @@ class Acados_NMPC_Lyapunov:
                 state["foot_FR"],
                 state["foot_RL"],
                 state["foot_RR"],
-                self.integral_errors,
                 z1,
                 z2,
                 eta,
@@ -1569,7 +1496,7 @@ class Acados_NMPC_Lyapunov:
         optimal_GRF = control[12:]
         optimal_foothold = np.zeros((4, 3))
         optimal_footholds_assigned = np.zeros((4,), dtype='bool')
-        self.phi_predicted = self.acados_ocp_solver.get(1, "x")[42:45]
+        self.phi_predicted = self.acados_ocp_solver.get(1, "x")[36:39]
 
         # Now i add the component from the adaptive control law
         p_ddot = np.array([0, 0, 0])

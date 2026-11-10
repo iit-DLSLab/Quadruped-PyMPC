@@ -33,14 +33,12 @@ class Acados_NMPC_InputRates:
             dt (float): Time step duration.
             use_RTI (bool): Flag indicating whether to use Real-Time Iteration.
             use_warm_start (bool): Flag indicating whether to use warm start.
-            use_integrators (bool): Flag indicating whether to use integrators.
         """
 
         self.horizon = config.mpc_params['horizon']  # Define the number of discretization steps
         self.dt = config.mpc_params['dt']
         self.T_horizon = self.horizon * self.dt
         self.use_RTI = config.mpc_params['use_RTI']
-        self.use_integrators = config.mpc_params['use_integrators']
         self.use_warm_start = config.mpc_params['use_warm_start']
         self.use_foothold_constraints = config.mpc_params['use_foothold_constraints']
 
@@ -58,8 +56,6 @@ class Acados_NMPC_InputRates:
         self.previous_contact_sequence = np.zeros((4, self.horizon))
         self.optimal_next_state = np.zeros((24,))
         self.previous_optimal_GRF = np.zeros((12,))
-
-        self.integral_errors = np.zeros((6,))
 
         self.force_FL = np.zeros((3,))
         self.force_FR = np.zeros((3,))
@@ -352,10 +348,10 @@ class Acados_NMPC_InputRates:
             # by perform_scaling, so base_w[2] alone would be ~0 and the ZMP would collapse onto the com.
             # Feet are relative to the com, and for a foot in swing the z is the one of its touchdown
             robotHeight = base_w[2] - (FL[2] + FR[2] + RL[2] + RR[2]) / 4
-            foot_force_fl = self.centroidal_model.states[30:33]  # @self.centroidal_model.param[0]
-            foot_force_fr = self.centroidal_model.states[33:36]  # @self.centroidal_model.param[1]
-            foot_force_rl = self.centroidal_model.states[36:39]  # @self.centroidal_model.param[2]
-            foot_force_rr = self.centroidal_model.states[39:42]  # @self.centroidal_model.param[3]
+            foot_force_fl = self.centroidal_model.states[24:27]  # @self.centroidal_model.param[0]
+            foot_force_fr = self.centroidal_model.states[27:30]  # @self.centroidal_model.param[1]
+            foot_force_rl = self.centroidal_model.states[30:33]  # @self.centroidal_model.param[2]
+            foot_force_rr = self.centroidal_model.states[33:36]  # @self.centroidal_model.param[3]
             temp = foot_force_fl + foot_force_fr + foot_force_rl + foot_force_rr
             gravity = np.array([0, 0, -self.centroidal_model.gravity_constant])
             linear_com_acc = (1 / self.centroidal_model.mass) @ temp + gravity
@@ -522,7 +518,7 @@ class Acados_NMPC_InputRates:
         Jbu[19, 9:12] = n
 
         # C matrix
-        Jbu = Jbu @ cs.vertcat(self.centroidal_model.states[30:42])
+        Jbu = Jbu @ cs.vertcat(self.centroidal_model.states[24:36])
 
         # lower bound (-ACADOS_INFTY is "almost" -inf)
         lbu = np.zeros(20)
@@ -566,12 +562,6 @@ class Acados_NMPC_InputRates:
         Q_base_angle = np.array([500, 500, 0])  # roll, pitch, yaw
         Q_base_angle_rates = np.array([20, 20, 600])  # roll_rate, pitch_rate, yaw_rate
         Q_foot_pos = np.array([300, 300, 300])  # f_x, f_y, f_z (should be 4 times this, once per foot)
-        Q_com_position_z_integral = np.array([50])  # integral of z_com
-        Q_com_velocity_x_integral = np.array([10])  # integral of x_com
-        Q_com_velocity_y_integral = np.array([10])  # integral of y_com
-        Q_com_velocity_z_integral = np.array([10])  # integral of z_com_vel
-        Q_roll_integral_integral = np.array([10])  # integral of roll
-        Q_pitch_integral_integral = np.array([10])  # integral of pitch
 
         if config.robot == "hyqreal":
             Q_foot_force = np.array(
@@ -596,12 +586,6 @@ class Acados_NMPC_InputRates:
                     Q_foot_pos,
                     Q_foot_pos,
                     Q_foot_pos,
-                    Q_com_position_z_integral,
-                    Q_com_velocity_x_integral,
-                    Q_com_velocity_y_integral,
-                    Q_com_velocity_z_integral,
-                    Q_roll_integral_integral,
-                    Q_pitch_integral_integral,
                     Q_foot_force,
                     Q_foot_force,
                     Q_foot_force,
@@ -1264,10 +1248,10 @@ class Acados_NMPC_InputRates:
             reference_force_fr_z = reference_force_stance_legs * FR_contact_sequence[j]
             reference_force_rl_z = reference_force_stance_legs * RL_contact_sequence[j]
             reference_force_rr_z = reference_force_stance_legs * RR_contact_sequence[j]
-            yref[32] = reference_force_fl_z
-            yref[35] = reference_force_fr_z
-            yref[38] = reference_force_rl_z
-            yref[41] = reference_force_rr_z
+            yref[26] = reference_force_fl_z
+            yref[29] = reference_force_fr_z
+            yref[32] = reference_force_rl_z
+            yref[35] = reference_force_rr_z
 
             # Setting the reference to acados
             if self.use_DDP:
@@ -1291,10 +1275,10 @@ class Acados_NMPC_InputRates:
         yref_N[15:18] = reference['ref_foot_FR'][idx_ref_foot_to_assign[1]]
         yref_N[18:21] = reference['ref_foot_RL'][idx_ref_foot_to_assign[2]]
         yref_N[21:24] = reference['ref_foot_RR'][idx_ref_foot_to_assign[3]]
-        yref_N[32] = reference_force_fl_z
-        yref_N[35] = reference_force_fr_z
-        yref_N[38] = reference_force_rl_z
-        yref_N[41] = reference_force_rr_z
+        yref_N[26] = reference_force_fl_z
+        yref_N[29] = reference_force_fr_z
+        yref_N[32] = reference_force_rl_z
+        yref_N[35] = reference_force_rr_z
         # Setting the reference to acados
         self.acados_ocp_solver.set(self.horizon, "yref", yref_N)
 
@@ -1409,63 +1393,6 @@ class Acados_NMPC_InputRates:
         if RR_contact_sequence[0] == 0:
             state["foot_RR"] = reference["ref_foot_RR"][0]
 
-        if self.use_integrators:
-            # Compute error for integral action
-            alpha_integrator = config.mpc_params["alpha_integrator"]
-            self.integral_errors[0] += (state["position"][2] - reference["ref_position"][2]) * alpha_integrator
-            self.integral_errors[1] += (
-                state["linear_velocity"][0] - reference["ref_linear_velocity"][0]
-            ) * alpha_integrator
-            self.integral_errors[2] += (
-                state["linear_velocity"][1] - reference["ref_linear_velocity"][1]
-            ) * alpha_integrator
-            self.integral_errors[3] += (
-                state["linear_velocity"][2] - reference["ref_linear_velocity"][2]
-            ) * alpha_integrator
-            self.integral_errors[4] += (state["orientation"][0] - reference["ref_orientation"][0]) * (alpha_integrator)
-            self.integral_errors[5] += (state["orientation"][1] - reference["ref_orientation"][1]) * alpha_integrator
-
-            cap_integrator_z = config.mpc_params["integrator_cap"][0]
-            cap_integrator_x_dot = config.mpc_params["integrator_cap"][1]
-            cap_integrator_y_dot = config.mpc_params["integrator_cap"][2]
-            cap_integrator_z_dot = config.mpc_params["integrator_cap"][3]
-            cap_integrator_roll = config.mpc_params["integrator_cap"][4]
-            cap_integrator_pitch = config.mpc_params["integrator_cap"][5]
-
-            self.integral_errors[0] = np.where(
-                np.abs(self.integral_errors[0]) > cap_integrator_z,
-                cap_integrator_z * np.sign(self.integral_errors[0]),
-                self.integral_errors[0],
-            )
-            self.integral_errors[1] = np.where(
-                np.abs(self.integral_errors[1]) > cap_integrator_x_dot,
-                cap_integrator_x_dot * np.sign(self.integral_errors[1]),
-                self.integral_errors[1],
-            )
-            self.integral_errors[2] = np.where(
-                np.abs(self.integral_errors[2]) > cap_integrator_y_dot,
-                cap_integrator_y_dot * np.sign(self.integral_errors[2]),
-                self.integral_errors[2],
-            )
-            self.integral_errors[3] = np.where(
-                np.abs(self.integral_errors[3]) > cap_integrator_z_dot,
-                cap_integrator_z_dot * np.sign(self.integral_errors[3]),
-                self.integral_errors[3],
-            )
-            self.integral_errors[4] = np.where(
-                np.abs(self.integral_errors[4]) > cap_integrator_roll,
-                cap_integrator_roll * np.sign(self.integral_errors[4]),
-                self.integral_errors[4],
-            )
-            self.integral_errors[5] = np.where(
-                np.abs(self.integral_errors[5]) > cap_integrator_pitch,
-                cap_integrator_pitch * np.sign(self.integral_errors[5]),
-                self.integral_errors[5],
-            )
-
-            if self.verbose:
-                print("self.integral_errors\n", self.integral_errors)
-
         # Set initial state constraint acados, converting first the dictionary to np array
         state_acados = np.concatenate(
             (
@@ -1477,7 +1404,6 @@ class Acados_NMPC_InputRates:
                 state["foot_FR"],
                 state["foot_RL"],
                 state["foot_RR"],
-                self.integral_errors,
                 self.force_FL,
                 self.force_FR,
                 self.force_RL,
@@ -1530,14 +1456,14 @@ class Acados_NMPC_InputRates:
         self.optimal_next_state = self.acados_ocp_solver.get(optimal_next_state_index, "x")[0:24]
 
         if self.use_input_prediction:
-            optimal_GRF = self.acados_ocp_solver.get(optimal_next_state_index, "x")[30:42]
+            optimal_GRF = self.acados_ocp_solver.get(optimal_next_state_index, "x")[24:36]
             self.force_FL = optimal_GRF[0:3]
             self.force_FR = optimal_GRF[3:6]
             self.force_RL = optimal_GRF[6:9]
             self.force_RR = optimal_GRF[9:12]
         else:
-            optimal_GRF = self.acados_ocp_solver.get(0, "x")[30:42]
-            optimal_next_GRF = self.acados_ocp_solver.get(1, "x")[30:42]
+            optimal_GRF = self.acados_ocp_solver.get(0, "x")[24:36]
+            optimal_next_GRF = self.acados_ocp_solver.get(1, "x")[24:36]
             self.force_FL = optimal_next_GRF[0:3]
             self.force_FR = optimal_next_GRF[3:6]
             self.force_RL = optimal_next_GRF[6:9]

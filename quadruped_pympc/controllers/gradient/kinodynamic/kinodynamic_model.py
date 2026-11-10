@@ -165,13 +165,6 @@ class KinoDynamic_Model:
         joint_position_rl = cs.SX.sym("joint_position_rl", 3, 1)
         joint_position_rr = cs.SX.sym("joint_position_rr", 3, 1)
 
-        com_position_z_integral = cs.SX.sym("com_position_z_integral")
-        com_velocity_x_integral = cs.SX.sym("com_velocity_x_integral")
-        com_velocity_y_integral = cs.SX.sym("com_velocity_y_integral")
-        com_velocity_z_integral = cs.SX.sym("com_velocity_z_integral")
-        roll_integral = cs.SX.sym("roll_integral")
-        pitch_integral = cs.SX.sym("pitch_integral")
-
         self.states = cs.vertcat(
             com_position_x,
             com_position_y,
@@ -189,12 +182,6 @@ class KinoDynamic_Model:
             joint_position_fr,
             joint_position_rl,
             joint_position_rr,
-            com_position_z_integral,
-            com_velocity_x_integral,
-            com_velocity_y_integral,
-            com_velocity_z_integral,
-            roll_integral,
-            pitch_integral,
         )
 
         # Define state dot
@@ -207,10 +194,6 @@ class KinoDynamic_Model:
             cs.SX.sym("joint_vel_FR", 3, 1),
             cs.SX.sym("joint_vel_RL", 3, 1),
             cs.SX.sym("joint_vel_RR", 3, 1),
-            cs.SX.sym("linear_com_vel_z_integral", 1, 1),
-            cs.SX.sym("linear_com_acc_integral", 3, 1),
-            cs.SX.sym("euler_rates_roll_integral", 1, 1),
-            cs.SX.sym("euler_rates_pitch_integral", 1, 1),
         )
 
         # Define input and its casadi variables
@@ -417,15 +400,6 @@ class KinoDynamic_Model:
         linear_joint_vel_RL = joint_velocity_rl
         linear_joint_vel_RR = joint_velocity_rr
 
-        # Integral states
-        integral_states = states[24:]
-        integral_states[0] += states[2]
-        integral_states[1] += states[3]
-        integral_states[2] += states[4]
-        integral_states[3] += states[5]
-        integral_states[4] += roll
-        integral_states[5] += pitch
-
         # The order of the return should be equal to the order of the states_dot
         return cs.vertcat(
             linear_com_vel,
@@ -436,7 +410,6 @@ class KinoDynamic_Model:
             linear_joint_vel_FR,
             linear_joint_vel_RL,
             linear_joint_vel_RR,
-            integral_states,
         )
 
     def export_robot_model(self) -> AcadosModel:

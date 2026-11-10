@@ -33,7 +33,6 @@ class Acados_NMPC_Collaborative:
         self.dt = config.mpc_params['dt']
         self.T_horizon = self.horizon * self.dt
         self.use_RTI = config.mpc_params['use_RTI']
-        self.use_integrators = config.mpc_params['use_integrators']
         self.use_warm_start = config.mpc_params['use_warm_start']
         self.use_foothold_constraints = config.mpc_params['use_foothold_constraints']
 
@@ -45,8 +44,6 @@ class Acados_NMPC_Collaborative:
         self.previous_contact_sequence = np.zeros((4, self.horizon))
         self.optimal_next_state = np.zeros((24,))
         self.previous_optimal_GRF = np.zeros((12,))
-
-        self.integral_errors = np.zeros((6,))
 
         # For centering the variable around 0, 0, 0 (World frame)
         self.initial_base_position = np.array([0, 0, 0])
@@ -310,7 +307,7 @@ class Acados_NMPC_Collaborative:
             linear_com_acc = (1 / self.centroidal_model.mass) @ temp + gravity
             zmp = base_w[0:2] - linear_com_acc[0:2] * (robotHeight / (-gravity[2]))
 
-            external_forces_linear = self.centroidal_model.states[30:33]
+            external_forces_linear = self.centroidal_model.states[24:27]
             end_effector_position = self.centroidal_model.param[19:22]
 
             zmp_x = (
@@ -554,12 +551,6 @@ class Acados_NMPC_Collaborative:
         Q_base_angle = np.array([1000, 1200, 0])  # roll, pitch, yaw
         Q_base_angle_rates = np.array([20, 20, 600])  # roll_rate, pitch_rate, yaw_rate
         Q_foot_pos = np.array([300, 300, 300])  # f_x, f_y, f_z (should be 4 times this, once per foot)
-        Q_com_position_z_integral = np.array([50])  # integral of z_com
-        Q_com_velocity_x_integral = np.array([10])  # integral of x_com
-        Q_com_velocity_y_integral = np.array([10])  # integral of y_com
-        Q_com_velocity_z_integral = np.array([10])  # integral of z_com_vel
-        Q_roll_integral_integral = np.array([10])  # integral of roll
-        Q_pitch_integral_integral = np.array([10])  # integral of pitch
         Q_passive_arm_force = np.array([0, 0, 0, 0, 0, 0])  # end_effector_position_z
 
         R_foot_vel = np.array([0.0001, 0.0001, 0.00001])  # v_x, v_y, v_z (should be 4 times this, once per foot)
@@ -581,12 +572,6 @@ class Acados_NMPC_Collaborative:
                     Q_foot_pos,
                     Q_foot_pos,
                     Q_foot_pos,
-                    Q_com_position_z_integral,
-                    Q_com_velocity_x_integral,
-                    Q_com_velocity_y_integral,
-                    Q_com_velocity_z_integral,
-                    Q_roll_integral_integral,
-                    Q_pitch_integral_integral,
                     Q_passive_arm_force,
                 )
             )
@@ -1224,7 +1209,7 @@ class Acados_NMPC_Collaborative:
             yref[18:21] = reference["ref_foot_RL"][idx_ref_foot_to_assign[2]]
             yref[21:24] = reference["ref_foot_RR"][idx_ref_foot_to_assign[3]]
 
-            yref[30:32] = np.array([desired_force[0], desired_force[1]])
+            yref[24:26] = np.array([desired_force[0], desired_force[1]])
 
             # Update the idx_ref_foot_to_assign. Every time there is a change in the contact phase
             # between 1 and 0, it means that the leg go into swing and a new reference is needed!!!
@@ -1258,10 +1243,10 @@ class Acados_NMPC_Collaborative:
             reference_force_rl_z = reference_force_stance_legs * RL_contact_sequence[j]
             reference_force_rr_z = reference_force_stance_legs * RR_contact_sequence[j]
 
-            yref[50] = reference_force_fl_z
-            yref[53] = reference_force_fr_z
-            yref[56] = reference_force_rl_z
-            yref[59] = reference_force_rr_z
+            yref[44] = reference_force_fl_z
+            yref[47] = reference_force_fr_z
+            yref[50] = reference_force_rl_z
+            yref[53] = reference_force_rr_z
 
             # Setting the reference to acados
             self.acados_ocp_solver.set(j, "yref", yref)
@@ -1292,7 +1277,7 @@ class Acados_NMPC_Collaborative:
         yref_N[15:18] = reference['ref_foot_FR'][idx_ref_foot_to_assign[1]]
         yref_N[18:21] = reference['ref_foot_RL'][idx_ref_foot_to_assign[2]]
         yref_N[21:24] = reference['ref_foot_RR'][idx_ref_foot_to_assign[3]]
-        yref_N[30:32] = np.array([desired_force[0], desired_force[1]])
+        yref_N[24:26] = np.array([desired_force[0], desired_force[1]])
         # Setting the reference to acados
         self.acados_ocp_solver.set(self.horizon, "yref", yref_N)
 
@@ -1432,62 +1417,6 @@ class Acados_NMPC_Collaborative:
         if RR_contact_sequence[0] == 0:
             state["foot_RR"] = reference["ref_foot_RR"][0]
 
-        if self.use_integrators:
-            # Compute error for integral action
-            alpha_integrator = config.mpc_params["alpha_integrator"]
-            self.integral_errors[0] += (state["position"][2] - reference["ref_position"][2]) * alpha_integrator
-            self.integral_errors[1] += (
-                state["linear_velocity"][0] - reference["ref_linear_velocity"][0]
-            ) * alpha_integrator
-            self.integral_errors[2] += (
-                state["linear_velocity"][1] - reference["ref_linear_velocity"][1]
-            ) * alpha_integrator
-            self.integral_errors[3] += (
-                state["linear_velocity"][2] - reference["ref_linear_velocity"][2]
-            ) * alpha_integrator
-            self.integral_errors[4] += (state["orientation"][0] - reference["ref_orientation"][0]) * (alpha_integrator)
-            self.integral_errors[5] += (state["orientation"][1] - reference["ref_orientation"][1]) * alpha_integrator
-
-            cap_integrator_z = config.mpc_params["integrator_cap"][0]
-            cap_integrator_x_dot = config.mpc_params["integrator_cap"][1]
-            cap_integrator_y_dot = config.mpc_params["integrator_cap"][2]
-            cap_integrator_z_dot = config.mpc_params["integrator_cap"][3]
-            cap_integrator_roll = config.mpc_params["integrator_cap"][4]
-            cap_integrator_pitch = config.mpc_params["integrator_cap"][5]
-
-            self.integral_errors[0] = np.where(
-                np.abs(self.integral_errors[0]) > cap_integrator_z,
-                cap_integrator_z * np.sign(self.integral_errors[0]),
-                self.integral_errors[0],
-            )
-            self.integral_errors[1] = np.where(
-                np.abs(self.integral_errors[1]) > cap_integrator_x_dot,
-                cap_integrator_x_dot * np.sign(self.integral_errors[1]),
-                self.integral_errors[1],
-            )
-            self.integral_errors[2] = np.where(
-                np.abs(self.integral_errors[2]) > cap_integrator_y_dot,
-                cap_integrator_y_dot * np.sign(self.integral_errors[2]),
-                self.integral_errors[2],
-            )
-            self.integral_errors[3] = np.where(
-                np.abs(self.integral_errors[3]) > cap_integrator_z_dot,
-                cap_integrator_z_dot * np.sign(self.integral_errors[3]),
-                self.integral_errors[3],
-            )
-            self.integral_errors[4] = np.where(
-                np.abs(self.integral_errors[4]) > cap_integrator_roll,
-                cap_integrator_roll * np.sign(self.integral_errors[4]),
-                self.integral_errors[4],
-            )
-            self.integral_errors[5] = np.where(
-                np.abs(self.integral_errors[5]) > cap_integrator_pitch,
-                cap_integrator_pitch * np.sign(self.integral_errors[5]),
-                self.integral_errors[5],
-            )
-
-            print("self.integral_errors: ", self.integral_errors)
-
         # Set initial state constraint acados, converting first the dictionary to np array
         state_acados = np.concatenate(
             (
@@ -1499,7 +1428,6 @@ class Acados_NMPC_Collaborative:
                 state["foot_FR"],
                 state["foot_RL"],
                 state["foot_RR"],
-                self.integral_errors,
                 state["passive_arm_force"],
             )
         ).reshape((self.states_dim, 1))

@@ -12,7 +12,7 @@ from quadruped_pympc.helpers.inverse_kinematics.inverse_kinematics_numeric_mujoc
 from quadruped_pympc.helpers.periodic_gait_generator import PeriodicGaitGenerator
 from quadruped_pympc.helpers.swing_trajectory_controller import SwingTrajectoryController
 from quadruped_pympc.helpers.terrain_estimator import TerrainEstimator
-from quadruped_pympc.helpers.velocity_modulator import VelocityModulator
+from quadruped_pympc.helpers.reference_modulator import ReferenceModulator
 from quadruped_pympc.helpers.early_stance_detector import EarlyStanceDetector
 
 if cfg.locomotion_params['visual_foothold_adaptation'] != 'blind':
@@ -109,8 +109,8 @@ class WBInterface:
                 legs_order=self.legs_order, adaptation_strategy=cfg.locomotion_params['visual_foothold_adaptation']
             )
 
-        # Velocity modulator ---------------------------------------------------------------------
-        self.vm = VelocityModulator()
+        # Reference modulator (velocity modulator and integrators) --------------------------------
+        self.rm = ReferenceModulator()
 
         # Early Stance detector -------------------------------------------------------------------
         self.esd = EarlyStanceDetector(feet_geom_id)
@@ -190,10 +190,9 @@ class WBInterface:
         )
 
         # Modulate the desired velocity if the robot is in strange positions
-        if self.vm.activated:
-            ref_base_lin_vel, ref_base_ang_vel = self.vm.modulate_velocities(
-                ref_base_lin_vel, ref_base_ang_vel, feet_pos, hip_pos, base_ori_euler_xyz[2]
-            )
+        ref_base_lin_vel, ref_base_ang_vel = self.rm.modulate_velocities(
+            ref_base_lin_vel, ref_base_ang_vel, feet_pos, hip_pos, base_ori_euler_xyz[2]
+        )
 
         # Update the desired contact sequence ---------------------------
         if self.pgg.start_and_stop_activated:
@@ -288,6 +287,12 @@ class WBInterface:
         # we modify the reference to bring the base at the desired height and not the CoM
         ref_pos[2] -= base_pos[2] - (com_pos[2] + self.frg.com_pos_offset_w[2])
 
+        ref_orientation = np.array([terrain_roll, terrain_pitch, 0.0])
+
+        # Integral action on height, linear velocities, roll, pitch and yaw rate, as an offset on the reference
+        ref_pos, ref_base_lin_vel, ref_orientation, ref_base_ang_vel = self.rm.integrate_references(
+            state_current, ref_pos, ref_base_lin_vel, ref_orientation, ref_base_ang_vel, simulation_dt
+        )
 
         if cfg.mpc_params['type'] != 'kinodynamic':
             ref_state = {}
@@ -303,7 +308,7 @@ class WBInterface:
                 # Also update the reference base linear velocity and
                 ref_linear_velocity=ref_base_lin_vel,
                 ref_angular_velocity=ref_base_ang_vel,
-                ref_orientation=np.array([terrain_roll, terrain_pitch, 0.0]),
+                ref_orientation=ref_orientation,
                 ref_position=ref_pos,
             )
 
@@ -514,6 +519,7 @@ class WBInterface:
         # self.stc.reset()
         # self.terrain_computation.reset()
         self.frg.lift_off_positions = initial_feet_pos
+        self.rm.reset()
         if cfg.locomotion_params['visual_foothold_adaptation'] != 'blind':
             self.vfa.reset()
         self.current_contact = np.array([1, 1, 1, 1])

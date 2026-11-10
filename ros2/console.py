@@ -246,13 +246,13 @@ class Console():
 
                     
 
-                    print("Use Integrators in MPC: ", self.controller_node.srbd_controller_interface.controller.use_integrators)
-                    temp = input("Use Integrators in MPC: >>> ")
+                    print("Use Integrators: ", self.controller_node.wb_interface.rm.use_integrators)
+                    temp = input("Use Integrators: >>> ")
                     if(temp != ""):
                         if(temp == "True"):
-                            self.controller_node.srbd_controller_interface.controller.use_integrators = True
+                            self.controller_node.wb_interface.rm.use_integrators = True
                         elif(temp == "False"):
-                            self.controller_node.srbd_controller_interface.controller.use_integrators = False
+                            self.controller_node.wb_interface.rm.use_integrators = False
 
                     
                     print("Com Offset: ", self.controller_node.wb_interface.frg.com_pos_offset_b)

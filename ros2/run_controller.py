@@ -624,6 +624,10 @@ class Quadruped_PyMPC_Node(Node):
         heightmaps = None
 
         
+        # Console commands hacks, added by the reference modulator before the integrators
+        self.wb_interface.rm.ref_height_offset = self.console.height_delta
+        self.wb_interface.rm.ref_pitch_offset = self.console.pitch_delta
+
         # Update the state and reference -------------------------
         state_current, \
         ref_state, \
@@ -642,12 +646,6 @@ class Quadruped_PyMPC_Node(Node):
                                                 simulation_dt,
                                                 ref_base_lin_vel,
                                                 ref_base_ang_vel)
-
-
-        
-        # Console commands hacks
-        ref_state["ref_position"][2] += self.console.height_delta
-        ref_state["ref_orientation"][1] += self.console.pitch_delta
 
 
         

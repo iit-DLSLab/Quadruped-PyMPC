@@ -24,7 +24,6 @@ class Acados_NMPC_Nominal:
         self.dt = config.mpc_params['dt']
         self.T_horizon = self.horizon * self.dt
         self.use_RTI = config.mpc_params["use_RTI"]
-        self.use_integrators = config.mpc_params["use_integrators"]
         self.use_warm_start = config.mpc_params["use_warm_start"]
         # Riccati feedback gain of the first stage, see 'use_riccati_feedback' in the config
         self.use_riccati_feedback = config.mpc_params.get("use_riccati_feedback", False)
@@ -44,8 +43,6 @@ class Acados_NMPC_Nominal:
         self.previous_contact_sequence = np.zeros((4, self.horizon))
         self.optimal_next_state = np.zeros((24,))
         self.previous_optimal_GRF = np.zeros((12,))
-
-        self.integral_errors = np.zeros((6,))
 
         # For centering the variable around 0, 0, 0 (World frame)
         self.initial_base_position = np.array([0, 0, 0])
@@ -539,12 +536,6 @@ class Acados_NMPC_Nominal:
         Q_base_angle = np.array([500, 500, 0])  # roll, pitch, yaw
         Q_base_angle_rates = np.array([20, 20, 50])  # roll_rate, pitch_rate, yaw_rate
         Q_foot_pos = np.array([300, 300, 300])  # f_x, f_y, f_z (should be 4 times this, once per foot)
-        Q_com_position_z_integral = np.array([50])  # integral of z_com
-        Q_com_velocity_x_integral = np.array([10])  # integral of x_com
-        Q_com_velocity_y_integral = np.array([10])  # integral of y_com
-        Q_com_velocity_z_integral = np.array([10])  # integral of z_com_vel
-        Q_roll_integral_integral = np.array([10])  # integral of roll
-        Q_pitch_integral_integral = np.array([10])  # integral of pitch
 
         R_foot_vel = np.array([0.0001, 0.0001, 0.00001])  # v_x, v_y, v_z (should be 4 times this, once per foot)
         if config.robot == "hyqreal":
@@ -565,12 +556,6 @@ class Acados_NMPC_Nominal:
                     Q_foot_pos,
                     Q_foot_pos,
                     Q_foot_pos,
-                    Q_com_position_z_integral,
-                    Q_com_velocity_x_integral,
-                    Q_com_velocity_y_integral,
-                    Q_com_velocity_z_integral,
-                    Q_roll_integral_integral,
-                    Q_pitch_integral_integral,
                 )
             )
         )
@@ -1235,10 +1220,10 @@ class Acados_NMPC_Nominal:
             reference_force_fr_z = reference_force_stance_legs * FR_contact_sequence[j]
             reference_force_rl_z = reference_force_stance_legs * RL_contact_sequence[j]
             reference_force_rr_z = reference_force_stance_legs * RR_contact_sequence[j]
-            yref[44] = reference_force_fl_z
-            yref[47] = reference_force_fr_z
-            yref[50] = reference_force_rl_z
-            yref[53] = reference_force_rr_z
+            yref[38] = reference_force_fl_z
+            yref[41] = reference_force_fr_z
+            yref[44] = reference_force_rl_z
+            yref[47] = reference_force_rr_z
 
             # Setting the reference to acados
             if self.use_DDP:
@@ -1376,63 +1361,6 @@ class Acados_NMPC_Nominal:
         if RR_contact_sequence[0] == 0:
             state["foot_RR"] = reference["ref_foot_RR"][0]
 
-        if self.use_integrators:
-            # Compute error for integral action
-            alpha_integrator = config.mpc_params["alpha_integrator"]
-            self.integral_errors[0] += (state["position"][2] - reference["ref_position"][2]) * alpha_integrator
-            self.integral_errors[1] += (
-                state["linear_velocity"][0] - reference["ref_linear_velocity"][0]
-            ) * alpha_integrator
-            self.integral_errors[2] += (
-                state["linear_velocity"][1] - reference["ref_linear_velocity"][1]
-            ) * alpha_integrator
-            self.integral_errors[3] += (
-                state["linear_velocity"][2] - reference["ref_linear_velocity"][2]
-            ) * alpha_integrator
-            self.integral_errors[4] += (state["orientation"][0] - reference["ref_orientation"][0]) * (alpha_integrator)
-            self.integral_errors[5] += (state["orientation"][1] - reference["ref_orientation"][1]) * alpha_integrator
-
-            cap_integrator_z = config.mpc_params["integrator_cap"][0]
-            cap_integrator_x_dot = config.mpc_params["integrator_cap"][1]
-            cap_integrator_y_dot = config.mpc_params["integrator_cap"][2]
-            cap_integrator_z_dot = config.mpc_params["integrator_cap"][3]
-            cap_integrator_roll = config.mpc_params["integrator_cap"][4]
-            cap_integrator_pitch = config.mpc_params["integrator_cap"][5]
-
-            self.integral_errors[0] = np.where(
-                np.abs(self.integral_errors[0]) > cap_integrator_z,
-                cap_integrator_z * np.sign(self.integral_errors[0]),
-                self.integral_errors[0],
-            )
-            self.integral_errors[1] = np.where(
-                np.abs(self.integral_errors[1]) > cap_integrator_x_dot,
-                cap_integrator_x_dot * np.sign(self.integral_errors[1]),
-                self.integral_errors[1],
-            )
-            self.integral_errors[2] = np.where(
-                np.abs(self.integral_errors[2]) > cap_integrator_y_dot,
-                cap_integrator_y_dot * np.sign(self.integral_errors[2]),
-                self.integral_errors[2],
-            )
-            self.integral_errors[3] = np.where(
-                np.abs(self.integral_errors[3]) > cap_integrator_z_dot,
-                cap_integrator_z_dot * np.sign(self.integral_errors[3]),
-                self.integral_errors[3],
-            )
-            self.integral_errors[4] = np.where(
-                np.abs(self.integral_errors[4]) > cap_integrator_roll,
-                cap_integrator_roll * np.sign(self.integral_errors[4]),
-                self.integral_errors[4],
-            )
-            self.integral_errors[5] = np.where(
-                np.abs(self.integral_errors[5]) > cap_integrator_pitch,
-                cap_integrator_pitch * np.sign(self.integral_errors[5]),
-                self.integral_errors[5],
-            )
-
-            if self.verbose:
-                print("self.integral_errors: ", self.integral_errors)
-
         # Set initial state constraint acados, converting first the dictionary to np array
         state_acados = np.concatenate(
             (
@@ -1444,7 +1372,6 @@ class Acados_NMPC_Nominal:
                 state["foot_FR"],
                 state["foot_RL"],
                 state["foot_RR"],
-                self.integral_errors,
             )
         ).reshape((self.states_dim, 1))
         self.acados_ocp_solver.set(0, "lbx", state_acados)
@@ -1483,8 +1410,8 @@ class Acados_NMPC_Nominal:
                 print("ocp time: ", self.acados_ocp_solver.get_stats('time_tot'))
 
         if self.use_riccati_feedback:
-            # Feedback gain of the first stage of the last QP, u = K x + k. We keep only the rows of the GRFs
-            # and the columns of the physical states (no integrators). The scaling of the state (position
+            # Feedback gain of the first stage of the last QP, u = K x + k. We keep only the rows of the GRFs.
+            # The scaling of the state (position
             # subtracted) cancels out in the difference x_now - riccati_x, so riccati_x is not scaled
             if self.use_DDP:
                 K = self.compute_ddp_riccati_gain()
