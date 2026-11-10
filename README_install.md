@@ -1,6 +1,6 @@
-You can install this repository by using only pixi directly, or via docker (which will automatically call pixi).
+You can install this repository by using pixi directly, or via docker (which will automatically install pixi inside).
 
-### Pixi installation
+### Method 1: Pixi installation
 
 1. install [pixi](https://pixi.sh/latest/)
 
@@ -14,7 +14,7 @@ pixi shell -e humble-cuda        # humble, cuda
 ```
 
 
-### Docker installation
+### Method 2: Docker installation
 
 1. install [Docker](https://docs.docker.com/engine/install/) (and the [NVIDIA Container Toolkit](https://docs.nvidia.com/datacenter/cloud-native/container-toolkit/latest/install-guide.html) if you want the **nvidia** image)
 
