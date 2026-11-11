@@ -213,6 +213,11 @@ mpc_params = {
     'K_z2': np.array([1, 4, 10]),
     # gain [1/s] of the adaptive law of the disturbance force estimate, theta_hat_dot = gain * mass * z2
     'lyapunov_adaptation_gain': np.array([10.0, 10.0, 10.0]),
+    # relaxed stability constraint V_dot <= -alpha V + epsilon instead of V_dot <= 0, with V = z1'z1 + z2'z2.
+    # epsilon lets V grow a bit when needed (e.g. com sway in crawl), alpha keeps the decay when V is large
+    'use_lyapunov_relaxed_constraint':         True,
+    'lyapunov_relaxation_alpha':               1.0,
+    'lyapunov_relaxation_epsilon':             0.1,
     # bound on ||eta||^2, with eta = (roll, pitch, euler rates), optionally decaying along the horizon
     'residual_dynamics_upper_bound': 30,
     'use_residual_dynamics_decay': False,

@@ -357,9 +357,15 @@ class Acados_NMPC_Lyapunov:
 
         V_dot = -z1.T @ np.diag(K_z1) @ z1 - z2.T @ np.diag(K_z2) @ z2 + z1.T @ z2 + z2.T @ F_delta / mass
 
-        ub = np.ones(1) * 0
         lb = np.ones(1) * -1e6
+        if config.mpc_params.get("use_lyapunov_relaxed_constraint", False):
+            # Relaxed constraint V_dot + alpha V <= epsilon
+            V = z1.T @ z1 + z2.T @ z2
+            expr = V_dot + config.mpc_params["lyapunov_relaxation_alpha"] * V
+            ub = np.ones(1) * config.mpc_params["lyapunov_relaxation_epsilon"]
+            return expr, ub, lb
 
+        ub = np.ones(1) * 0
         return V_dot, ub, lb
 
     # Create Residual Dynamics constraint
